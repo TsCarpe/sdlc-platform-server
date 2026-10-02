@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from platform_sdlc.common import ApiException, Times, jrequired, jtext
+from platform_sdlc.common import ApiException, Times, jint_or_400, jrequired, jtext
 from platform_sdlc.db import Database
 from platform_sdlc.models import DraftArtifact, Task
 from platform_sdlc.repositories import Repos
@@ -177,7 +177,7 @@ class TaskService:
             raise ApiException(409, "该需求已发布（终态锁定），不能写草稿")
         d = DraftArtifact(
             req_id=req_id, type=type_, md=jtext(body, "md", ""), content_json=jtext(body, "contentJson", ""),
-            task_id=body.get("taskId"), updated_at=Times.now(),
+            task_id=jint_or_400(body, "taskId"), updated_at=Times.now(),
         )
         if type_ == D_DIGEST and not d.content_json.strip():
             raise ApiException(400, "digest_bundle 草稿必须携带 contentJson（完整推送 payload）")

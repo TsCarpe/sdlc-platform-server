@@ -80,6 +80,8 @@ class DesignService:
         items = None if body is None else body.get("repos")
         if items is None:
             raise ApiException(400, "缺少 repos 字段（空数组 = 清空配置）")
+        if not isinstance(items, list):
+            raise ApiException(400, "repos 必须是数组（空数组 = 清空配置）")
         if len(items) > 8:
             raise ApiException(400, f"目标仓最多 8 条（当前 {len(items)}）")
         if not items:

@@ -121,3 +121,11 @@ def test_iteration_and_design_and_gate_shapes(client: TestClient) -> None:
     gv = client.get("/api/requirements/REQ-2026-001/gate").json()
     assert gv["phase"] == "blocked" and len(gv["checks"]) == 3
     assert client.get("/api/requirements/REQ-2026-001/gate/change-status").json()["changed"] is False
+
+
+def test_draft_task_id_binding_400(client: TestClient) -> None:
+    """PUT /drafts 的 taskId 非整数 → 400 {error}（原 500 / 落库毒化）。"""
+    _create(client)
+    r = client.put("/api/requirements/REQ-2026-001/drafts/standard",
+                   json={"md": "# x", "taskId": "abc"})
+    assert r.status_code == 400 and "必须是整数" in r.json()["error"]

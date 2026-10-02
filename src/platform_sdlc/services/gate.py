@@ -10,7 +10,7 @@ import json
 import re
 from typing import Any
 
-from platform_sdlc.common import ApiException, Times, jbool, jrequired, jtext
+from platform_sdlc.common import ApiException, Times, jbool, jint_or_400, jrequired, jtext
 from platform_sdlc.db import Database
 from platform_sdlc.models import GateIssue, GateRound, TestCase, string_list
 from platform_sdlc.repositories import Repos
@@ -162,7 +162,7 @@ class GateService:
                 scene = jtext(n, "scene", "")
                 if not scene.strip():
                     raise ApiException(400, f"{code} 场景列为空（check_trace 检查5：白话场景必填）")
-                merged_unit = int(n.get("mergedUnit") or 0) if isinstance(n, dict) else 0
+                merged_unit = jint_or_400(n, "mergedUnit", 0) if isinstance(n, dict) else 0
                 max_unit = max(max_unit, merged_unit)
                 if code not in d.md:
                     raise ApiException(400, f"机械校验失败：md 中找不到 {code}（contentJson 与 issues 文件不同源）")

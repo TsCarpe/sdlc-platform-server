@@ -6,6 +6,7 @@ Json 助手操作「已解析的 JSON 值」（dict/list/str/int/float/bool/None
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from typing import Any
 
@@ -96,6 +97,23 @@ def jint(n: Any, field: str, default: int) -> int:
     if isinstance(v, float) and v.is_integer():
         return int(v)
     return default
+
+
+def jint_or_400(n: Any, field: str, default: int | None = None) -> int | None:
+    """宽松整型绑定（入参面）：int / 整值 float / 纯数字串取整；存在但不可取整 → 400（对齐
+    Java HttpMessageNotReadable 的绑定失败口径，替代服务层裸 int() 的 500）。缺失/None 给 default。"""
+    v = n.get(field) if isinstance(n, dict) else None
+    if v is None:
+        return default
+    if isinstance(v, bool):
+        raise ApiException(400, f"非法 {field}：必须是整数（收到：{_as_text(v)}）")
+    if isinstance(v, int):
+        return v
+    if isinstance(v, float) and v.is_integer():
+        return int(v)
+    if isinstance(v, str) and re.fullmatch(r"[+-]?\d+", v.strip()):
+        return int(v.strip())
+    raise ApiException(400, f"非法 {field}：必须是整数（收到：{_as_text(v)}）")
 
 
 def jbool(n: Any, field: str, default: bool) -> bool:

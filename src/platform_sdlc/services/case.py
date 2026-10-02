@@ -6,7 +6,7 @@ import json
 import re
 from typing import Any
 
-from platform_sdlc.common import ApiException, ConflictException, Times, jrequired, jrequired_non_blank, jtext
+from platform_sdlc.common import ApiException, ConflictException, Times, jint_or_400, jrequired, jrequired_non_blank, jtext
 from platform_sdlc.db import Database
 from platform_sdlc.models import CaseComment, TestCase, string_list
 from platform_sdlc.repositories import Repos
@@ -28,8 +28,11 @@ class CaseService:
         if self.repos.requirement.find(req_id) is None:
             raise ApiException(404, f"需求不存在：{req_id}")
         items = body.get("items") or []
+        if not isinstance(items, list):
+            raise ApiException(400, "items 必须是数组（空数组走删除语义请另走表单）")
         if not items:
             raise ApiException(400, "items 不能为空")
+        seen_ids: set[str] = set()
 
         parsed: list[TestCase] = []
         expected: list[int] = []
@@ -42,8 +45,12 @@ class CaseService:
             status = jtext(n, "status", "draft")
             if status not in ("draft", "reviewed"):
                 raise ApiException(400, f"非法 status：{status}（用例 {jtext(n, 'id', '')}）")
+            cid = jrequired(n, "id")
+            if cid in seen_ids:
+                raise ApiException(400, f"用例编号重复：{cid}")
+            seen_ids.add(cid)
             t = TestCase(
-                req_id=req_id, id=jrequired(n, "id"), title=jrequired(n, "title"),
+                req_id=req_id, id=cid, title=jrequired(n, "title"),
                 points=_strings_json(n.get("points")), priority=priority,
                 pre=jtext(n, "pre", ""), steps=jtext(n, "steps", ""), expect=jtext(n, "expect", ""),
                 owner=jtext(n, "owner", ""), tool=jtext(n, "tool", "sdlc-test"), status=status,
@@ -51,8 +58,7 @@ class CaseService:
                 defect_refs=_strings_json(n.get("defectRefs")),
             )
             parsed.append(t)
-            ev = n.get("expectedVersion")
-            expected.append(-1 if ev is None else int(ev))
+            expected.append(jint_or_400(n, "expectedVersion", -1))
 
         conflicts: list[dict[str, Any]] = []
         is_insert: list[bool] = []
@@ -143,8 +149,7 @@ class CaseService:
             raise ApiException(404, f"用例不存在：{case_id}")
         if cur.tool != "表单":
             raise ApiException(409, f"该用例由 {cur.tool} 推送维护，平台只读；修改请评论反馈维护人 {cur.owner}")
-        ev_raw = body.get("expectedVersion")
-        ev = cur.version if ev_raw is None else int(ev_raw)
+        ev = jint_or_400(body, "expectedVersion", cur.version)
         if ev != cur.version:
             raise ApiException(409, f"版本已变化（当前 v{cur.version}，提交基于 v{ev}），请刷新后重试")
         # PATCH 语义：仅对显式携带的字段做严格校验——未携带沿用存量（历史脏值不锁死编辑通道）

@@ -310,3 +310,85 @@ def test_gate_release_and_case_mutual_recognition(env: tuple[Repos, Services]) -
     # 用例在放行前已全部定稿 → 互认转换 0 条（互认是防御性兜底：draft sdlc-test 用例自动置 reviewed）
     assert out["ok"] is True and out["casesConfirmed"] == 0
     assert repos.test_case.find(req_id, "TC-1").status == "reviewed"  # type: ignore[union-attr]
+
+
+# ---------- 入参绑定防 500（批次2：裸 int()/len() 与同批重复 id） ----------
+
+
+def test_sync_input_binding_no_500(env: tuple[Repos, Services]) -> None:
+    """expectedVersion 非整数、items 非数组、同批重复 id → 400 且整批零写入（原为 500/IntegrityError）。"""
+    repos, services = env
+    req_id = make_req(repos, services)
+    for bad in ("abc", 2.5, True, [1]):
+        with pytest.raises(ApiException) as e:
+            services.cases.sync_upsert(None, {"reqId": req_id, "items": [
+                {"id": "TC-1", "title": "t", "expectedVersion": bad}]})
+        assert e.value.status == 400 and "必须是整数" in str(e.value)
+    with pytest.raises(ApiException) as e1:  # type: ignore[arg-type]
+        services.cases.sync_upsert(None, {"reqId": req_id, "items": 123})
+    assert e1.value.status == 400 and "必须是数组" in str(e1.value)
+    with pytest.raises(ApiException) as e2:
+        services.cases.sync_upsert(None, {"reqId": req_id, "items": [
+            {"id": "TC-1", "title": "a"}, {"id": "TC-1", "title": "b"}]})
+    assert e2.value.status == 400 and "用例编号重复：TC-1" in str(e2.value)
+    assert repos.test_case.count_by_req(req_id) == 0  # 整批零写入
+
+
+def test_sync_input_binding_artifacts_items(env: tuple[Repos, Services]) -> None:
+    """POST /artifacts 的 items 非数组 → 400（原 len(int)/逐字符迭代）。"""
+    repos, services = env
+    req_id = make_req(repos, services)
+    payload = {"digest": {"md": "# d"}, "audit": {"md": "# a"}, "items": 123}
+    with pytest.raises(ApiException) as e:
+        services.requirements.push_artifacts(req_id, payload)  # type: ignore[arg-type]
+    assert e.value.status == 400 and "必须是数组" in str(e.value)
+
+
+def test_form_update_expected_version_binding(env: tuple[Repos, Services]) -> None:
+    """表单编辑 expectedVersion：垃圾值 400（原 500）；数字串宽松接受。"""
+    repos, services = env
+    req_id = make_req(repos, services)
+    services.cases.form_create(req_id, {"title": "表单用例", "owner": "qa", "steps": "s", "expect": "e"})
+    case_id = repos.test_case.list_by_req(req_id)[0].id
+    with pytest.raises(ApiException) as e:
+        services.cases.form_update(req_id, case_id, {"title": "改", "expectedVersion": "xyz"})
+    assert e.value.status == 400 and "必须是整数" in str(e.value)
+    out = services.cases.form_update(req_id, case_id, {"title": "改", "expectedVersion": "1"})
+    assert out["title"] == "改"
+
+
+def test_put_draft_task_id_validation(env: tuple[Repos, Services]) -> None:
+    """taskId 非整数 → 400（原 TEXT 落库毒化草稿读取为持续 500）；合法值回读为 int。"""
+    repos, services = env
+    req_id = make_req(repos, services)
+    with pytest.raises(ApiException) as e:
+        services.tasks.put_draft(req_id, "standard", {"md": "# x" * 100, "taskId": "abc"})
+    assert e.value.status == 400 and "必须是整数" in str(e.value)
+    services.tasks.put_draft(req_id, "standard", {"md": "# y" * 100, "taskId": 5})
+    d = services.tasks.get_draft(req_id, "standard")
+    assert d.task_id == 5
+
+
+def test_set_target_repos_type_guard(env: tuple[Repos, Services]) -> None:
+    """repos 非数组 → 400（原 len(int) TypeError 500）。"""
+    repos, services = env
+    req_id = make_req(repos, services)
+    with pytest.raises(ApiException) as e:
+        services.designs.set_target_repos(req_id, {"repos": 123})
+    assert e.value.status == 400 and "必须是数组" in str(e.value)
+
+
+def test_jint_or_400_matrix() -> None:
+    """宽松整型绑定穷举：缺失/None→default；int 原值；整值 float 取整；数字串转 int；bool/非整值/垃圾→400。"""
+    from platform_sdlc.common import jint_or_400
+
+    assert jint_or_400({}, "k", -1) == -1
+    assert jint_or_400({"k": None}, "k", 7) == 7
+    assert jint_or_400({"k": 5}, "k") == 5
+    assert jint_or_400({"k": 5.0}, "k") == 5
+    assert jint_or_400({"k": "42"}, "k") == 42
+    assert jint_or_400({"k": " +7 "}, "k") == 7
+    for bad in (True, 5.5, "abc", [1], {"x": 1}):
+        with pytest.raises(ApiException) as e:
+            jint_or_400({"k": bad}, "k")
+        assert e.value.status == 400 and "必须是整数" in str(e.value)

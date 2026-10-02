@@ -108,6 +108,8 @@ class RequirementService:
             items = body.get("items") or _EMPTY_LIST
             if not isinstance(digest, dict) or not isinstance(audit, dict):
                 raise ApiException(400, "缺少 digest 或 audit")
+            if not isinstance(items, list):
+                raise ApiException(400, "items 必须是数组")
             if not items:
                 raise ApiException(400, "澄清清单 items 不能为空")
 
