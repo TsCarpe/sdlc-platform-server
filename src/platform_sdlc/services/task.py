@@ -30,9 +30,13 @@ D_GATE_ISSUES = "gate_issues"
 _TASK_TYPES = {T_QUALITY, T_STANDARD, T_CASES, T_DESIGN, T_DESIGN_REV, T_GATE}
 
 
+# 发布后合法的任务类型（终态锁/发布收尾的统一豁免面，D36）：用例/设计/修订/门禁评审
+_POST_PUBLISH_TYPES = frozenset({T_CASES, T_DESIGN, T_DESIGN_REV, T_GATE})
+
+
 def _post_publish_task(type_: str) -> bool:
     """发布后合法的任务类型（终态锁豁免面，D36）：用例/设计/修订/门禁评审都是发布后流程。"""
-    return type_ in (T_CASES, T_DESIGN, T_DESIGN_REV, T_GATE)
+    return type_ in _POST_PUBLISH_TYPES
 
 
 class TaskService:
@@ -57,8 +61,11 @@ class TaskService:
         return self.create_guarded(req_id, type_, note, created_by)
 
     def any_task_of_type(self, req_id: str, type_: str) -> bool:
-        """该需求是否曾建过某类型任务（不限状态）——L2 钩子「只自动一次」判断。"""
-        return any(t.type == type_ for t in self.repos.task.list(req_id, None))
+        """该需求是否曾建过某类型任务（不限状态）——L2 钩子「只自动一次」判断。
+
+        走 EXISTS 直查而非 list()：task.list 带 LIMIT 100，任务行溢出窗口后最早记录滑出，
+        已取消的自动任务会被 L2 误判为「从未建过」而复活（红线：人取消即终局）。"""
+        return self.repos.task.exists_by_type(req_id, type_)
 
     def create_guarded(self, req_id: str, type_: str, note: str, created_by: str) -> Task:
         with self.db.tx():
@@ -78,6 +85,9 @@ class TaskService:
                     self.designs.assert_gen_allowed(r)
                 elif self.repos.artifact.find(req_id, "design") is None:
                     raise ApiException(400, "无已定稿设计可修订（design_rev 用于 GR-4 落改闭环）")
+            if type_ == T_GATE and r.status != "published":
+                # 门禁 lane 前置（与 gate.open 同口径）：排队与开闸同一守卫面，堵「排队即被发布误作废」的口径缝隙
+                raise ApiException(409, f"门禁属发布后流程：先完成澄清并发布（当前：{r.status}）")
             if type_ == T_STANDARD:
                 if r.status != "clarifying":
                     raise ApiException(409, f"仅待澄清状态可生成标准文档（当前：{r.status}）")
@@ -116,10 +126,11 @@ class TaskService:
 
     def settle_terminal(self, req_id: str) -> int:
         """发布终态收尾（评测 P0-2b）：取消同需求 queued 的质检/标准文档任务（发布后物理上不可能成功）。
-        不动 case_gen：用例生成是发布后的正常动作。tx 持锁整个方法，堵住查与取消之间被领取的窗口。"""
+        豁免面与 _post_publish_task 统一（D36）：case_gen/design_gen/design_rev/gate_review 都是发布后流程，
+        排队中的不误作废。tx 持锁整个方法，堵住查与取消之间被领取的窗口。"""
         with self.db.tx():
             return self.repos.task.cancel_queued_by_req(
-                req_id, T_CASES,
+                req_id, _POST_PUBLISH_TYPES,
                 _json(_fail_map({}, error="需求已发布（终态锁定），任务自动作废", reason="superseded-by-publish",
                                 hint="标准文档已由人工定稿；如需重新质检请新开一轮需求")),
                 Times.now())

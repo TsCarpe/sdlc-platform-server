@@ -82,7 +82,7 @@ class RequirementRepo:
                     status=str(row["status"]),
                     submitted_by=str(row["submitted_by"]),
                     created_at=str(row["created_at"]),
-                    synced_at=str(row["synced_at"]),
+                    synced_at=None if row["synced_at"] is None else str(row["synced_at"]),
                     risk_tier="" if row["risk_tier"] is None else str(row["risk_tier"]),
                     total_q=int(row["total_q"]),
                     answered_q=int(row["answered_q"]),

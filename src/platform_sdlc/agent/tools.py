@@ -29,14 +29,15 @@ def _err(msg: str) -> str:
 
 def _resolve_in_workspace(ctx: TaskRunContext, rel: str) -> Path:
     p = (ctx.workspace / rel).resolve()
-    if not str(p).startswith(str(ctx.workspace)):
+    # is_relative_to 逐组件比较（基准先 resolve：workspace 由调用方拼出，skills_repo 仅 expanduser）
+    if not p.is_relative_to(ctx.workspace.resolve()):
         raise ValueError(f"路径越界：{rel}")
     return p
 
 
 def _resolve(ctx: TaskRunContext, rel: str) -> Path:
-    a = (ctx.skills_repo / rel).resolve()
-    if str(a).startswith(str(ctx.skills_repo)) and a.exists():
+    a = (ctx.skills_repo.resolve() / rel).resolve()
+    if a.is_relative_to(ctx.skills_repo.resolve()) and a.exists():
         return a
     return _resolve_in_workspace(ctx, rel)
 

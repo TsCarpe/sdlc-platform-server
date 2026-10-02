@@ -85,7 +85,7 @@ class RequirementListRow:
     status: str
     submitted_by: str
     created_at: str
-    synced_at: str
+    synced_at: str | None  # 未推送过为 None（出参 null，与详情侧 _sn 口径一致）
     risk_tier: str
     total_q: int
     answered_q: int

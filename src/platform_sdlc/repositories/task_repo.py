@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Collection
+
 from platform_sdlc.db import Database
 from platform_sdlc.models import Task
 
@@ -84,14 +86,19 @@ class TaskRepo:
             == 1
         )
 
-    def cancel_queued_by_req(self, req_id: str, exclude_type: str, result_json: str, at: str) -> int:
-        """批量取消同需求 queued 任务（单条 UPDATE；exclude_type 非空则排除该类型）。"""
+    def cancel_queued_by_req(self, req_id: str, exclude_types: Collection[str] | None, result_json: str, at: str) -> int:
+        """批量取消同需求 queued 任务（单条 UPDATE；exclude_types 非空则排除这些类型，None = 全量取消）。"""
         sql = "UPDATE task SET status='failed', result=?, updated_at=? WHERE req_id=? AND status='queued'"
         args: list[object] = [result_json, at, req_id]
-        if exclude_type:
-            sql += " AND type != ?"
-            args.append(exclude_type)
+        if exclude_types:
+            sql += f" AND type NOT IN ({','.join('?' * len(exclude_types))})"
+            args.extend(sorted(exclude_types))
         return self.db.execute(sql, tuple(args))
+
+    def exists_by_type(self, req_id: str, type_: str) -> bool:
+        """该需求是否建过某类型任务（不限状态）——无 LIMIT 的存在性直查（L2 只自动一次的判断依据）。"""
+        return bool(self.db.query_scalar(
+            "SELECT EXISTS(SELECT 1 FROM task WHERE req_id=? AND type=?)", (req_id, type_)))
 
     def expire_stale_running(self, cutoff: str, fail_result: str, at: str) -> int:
         """Runner 启动恢复：把超时仍 running 的任务置 failed（执行器崩溃遗留）。"""

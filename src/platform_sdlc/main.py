@@ -131,6 +131,16 @@ def _install_middleware(app: FastAPI, settings: Settings) -> None:
 # ---------- 静态托管五行为（对应 WebStaticConfig） ----------
 
 
+def _safe_static_file(static_root: Path, path: str) -> Path | None:
+    """静态根内且带扩展名的文件（is_relative_to 逐组件比较，防兄弟目录前缀绕过）；否则 None。"""
+    if "." not in path:
+        return None
+    candidate = (static_root / path).resolve()
+    if candidate.is_relative_to(static_root.resolve()) and candidate.is_file():
+        return candidate
+    return None
+
+
 def _mount_static(app: FastAPI, settings: Settings) -> None:
     static_root = Path(settings.static_dir)
     if not static_root.is_dir():
@@ -173,7 +183,7 @@ def _mount_static(app: FastAPI, settings: Settings) -> None:
                     raise StarletteHTTPException(status_code=405)
             raise StarletteHTTPException(status_code=404)
         # 根级静态文件（favicon.svg 等带扩展名）；SPA 回退（无扩展名路径 forward index.html）
-        candidate = (static_root / path).resolve()
-        if "." in path and str(candidate).startswith(str(static_root.resolve())) and candidate.is_file():
+        candidate = _safe_static_file(static_root, path)
+        if candidate is not None:
             return FileResponse(candidate)
         return spa_index()

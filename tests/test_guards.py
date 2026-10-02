@@ -482,3 +482,96 @@ def test_publish_tx_all_or_nothing(env: tuple[Repos, Services]) -> None:
     assert out["ok"] is True
     assert repos.requirement.find(req_id).status == "published"  # type: ignore[union-attr]
     assert repos.draft.find(req_id, "standard") is None  # 发布终态清草稿
+
+
+# ---------- 读面与口径（批次4：syncedAt null / 路径越界 / 发布豁免口径 / L2 存在性窗口） ----------
+
+
+def test_list_synced_at_null_before_push(env: tuple[Repos, Services]) -> None:
+    """未推送过的需求：列表 syncedAt 输出 null（原为字符串 "None"，前端真值误判已同步）。"""
+    repos, services = env
+    r = services.requirements.create({"name": "从未推送", "sourceType": "text", "sourceText": "#", "submittedBy": "t"})
+    req_id = r.id
+    row = next(x for x in repos.requirement.list_all(None, None) if x.id == req_id)
+    assert row.synced_at is None  # 建卡落 SQL NULL（原 str(None) 出 "None" 字符串）
+    services.requirements.push_artifacts(req_id, {
+        "digest": {"md": "# d", "risk_tier": "B", "fr_points": []},
+        "audit": {"md": "# a", "red": 0, "yellow": 0, "blue": 0, "items": []},
+        "items": [{"seq": "P01", "level": "yellow", "theme": "t", "question": "q?", "answer": "a"}]})
+    row2 = next(r for r in repos.requirement.list_all(None, None) if r.id == req_id)
+    assert isinstance(row2.synced_at, str) and row2.synced_at  # 推送后为时间串
+
+
+def test_workspace_escape_blocked(tmp_path: object) -> None:
+    """工作区越界：兄弟前缀目录（../ws-evil）必须被拦（原 startswith 前缀比较漏判）。"""
+    from types import SimpleNamespace
+
+    from platform_sdlc.agent.tools import _resolve_in_workspace
+
+    root = tmp_path / "ws"  # type: ignore[operator]
+    root.mkdir()
+    (tmp_path / "ws-evil").mkdir()  # 共享前缀的兄弟目录
+    (tmp_path / "ws-evil" / "f.txt").write_text("x")
+    ctx = SimpleNamespace(workspace=root)  # type: ignore[arg-type]
+    assert _resolve_in_workspace(ctx, "a/b.txt").is_relative_to(root.resolve())  # 正常相对路径
+    for bad in ("../ws-evil/f.txt", "../../etc/passwd"):
+        with pytest.raises(ValueError, match="路径越界"):
+            _resolve_in_workspace(ctx, bad)  # type: ignore[arg-type]
+
+
+def test_safe_static_file_sibling_prefix(tmp_path: object) -> None:
+    """静态兜底路由：兄弟前缀目录文件不得命中（原 startswith 漏判）。"""
+    from platform_sdlc.main import _safe_static_file
+
+    root = tmp_path / "static"  # type: ignore[operator]
+    (root / "assets").mkdir(parents=True)
+    (root / "favicon.svg").write_text("<svg/>")
+    (tmp_path / "static-backup").mkdir()
+    (tmp_path / "static-backup" / "secret.db").write_text("s")
+    assert _safe_static_file(root, "favicon.svg") is not None
+    assert _safe_static_file(root, "../static-backup/secret.db") is None
+    assert _safe_static_file(root, "spa/route") is None  # 无扩展名走 SPA 回退
+
+
+def test_settle_terminal_exempts_post_publish_types(env: tuple[Repos, Services]) -> None:
+    """发布收尾豁免面与 D36 统一：质检/标准文档取消，case/design/gate 排队任务存活。"""
+    repos, services = env
+    req_id = make_req(repos, services, status="clarifying")
+    services.requirements.push_artifacts(req_id, {
+        "digest": {"md": "# d", "risk_tier": "B", "fr_points": []},
+        "audit": {"md": "# a", "red": 0, "yellow": 0, "blue": 0, "items": []},
+        "items": [{"seq": "P01", "level": "yellow", "theme": "t", "question": "q?", "answer": "a"}]})
+    services.requirements.set_answer(req_id, "P01", {"answer": "已答"})
+    services.tasks.create(req_id, {"type": "quality_check"})
+    services.tasks.create(req_id, {"type": "standard_doc"})
+    services.requirements.publish(req_id, {"standardMd": "# 终版"})
+    services.orchestration.on_published(req_id)  # 发布入口后的 L2 编排（settle + 自动排 case_gen）
+    services.tasks.create(req_id, {"type": "gate_review"})  # 手动建门禁（design_gen 需配仓不在本例）
+    statuses = {t.type: t.status for t in repos.task.list(req_id, None)}
+    assert statuses["quality_check"] == "failed" and statuses["standard_doc"] == "failed"
+    assert statuses["case_gen"] == "queued" and statuses["gate_review"] == "queued"  # 豁免面内存活
+
+
+def test_gate_review_requires_published(env: tuple[Repos, Services]) -> None:
+    """门禁属发布后流程：未发布建 gate_review → 409（与 gate.open 同口径，堵排队即作废的口径缝隙）。"""
+    repos, services = env
+    req_id = make_req(repos, services, status="clarifying")
+    with pytest.raises(ApiException) as e:
+        services.tasks.create(req_id, {"type": "gate_review"})
+    assert e.value.status == 409 and "门禁属发布后流程" in str(e.value)
+
+
+def test_any_task_of_type_beyond_limit_100(env: tuple[Repos, Services]) -> None:
+    """L2「只自动一次」不受 LIMIT 100 窗口影响（原 list() 溢出后误判从未建过 → 已取消任务复活）。"""
+    from platform_sdlc.models import Task
+
+    repos, services = env
+    req_id = make_req(repos, services)
+    repos.task.insert(Task(id=0, req_id=req_id, type="standard_doc", status="failed",
+                           payload="", result="", runner="", created_by="auto",
+                           created_at=NOW))  # 最老一行，先于后续 101 条
+    for _ in range(101):
+        repos.task.insert(Task(id=0, req_id=req_id, type="quality_check", status="done",
+                               payload="", result="", runner="", created_by="",
+                               created_at=NOW))
+    assert services.tasks.any_task_of_type(req_id, "standard_doc") is True
