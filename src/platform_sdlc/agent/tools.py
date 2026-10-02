@@ -79,7 +79,7 @@ async def list_clarify_items(wrapper: RunContextWrapper[TaskRunContext]) -> str:
         c = wrapper.context
         from platform_sdlc.schemas import wire
 
-        return json.dumps([wire(x) for x in c.services.repos.clarify_item.list_by_req(c.req_id)], ensure_ascii=False)
+        return json.dumps([wire(x) for x in c.repos.clarify_item.list_by_req(c.req_id)], ensure_ascii=False)
 
     return await asyncio.to_thread(impl)
 
@@ -90,11 +90,11 @@ async def get_digest_bundle(wrapper: RunContextWrapper[TaskRunContext]) -> str:
     def impl() -> str:
         c = wrapper.context
         m: dict[str, str] = {}
-        a = c.services.repos.artifact.find(c.req_id, "digest")
+        a = c.repos.artifact.find(c.req_id, "digest")
         if a is not None:
             m["digestMd"] = a.markdown
             m["digestJson"] = a.content_json
-        audit = c.services.repos.artifact.find(c.req_id, "audit")
+        audit = c.repos.artifact.find(c.req_id, "audit")
         if audit is not None:
             m["auditMd"] = audit.markdown
             m["auditJson"] = audit.content_json
@@ -114,12 +114,12 @@ async def get_design_doc(wrapper: RunContextWrapper[TaskRunContext]) -> str:
     def impl() -> str:
         c = wrapper.context
         r = c.services.requirements.require(c.req_id)
-        a = c.services.repos.artifact.find(c.req_id, "design")
+        a = c.repos.artifact.find(c.req_id, "design")
         if a is None:
             raise ValueError("该需求尚无已定稿设计（design_rev 修订前提）")
         return json.dumps({
             "riskTier": r.risk_tier,
-            "targetRepo": c.services.repos.requirement.get_target_repo(c.req_id),
+            "targetRepo": c.repos.requirement.get_target_repo(c.req_id),
             "md": a.markdown, "version": a.version,
         }, ensure_ascii=False)
 
@@ -257,6 +257,7 @@ async def run_command(wrapper: RunContextWrapper[TaskRunContext], command: str, 
     def impl() -> str:
         import subprocess
 
+        c = wrapper.context
         cmd = (command or "").strip()
         if not cmd:
             raise ValueError("命令为空")
@@ -275,7 +276,7 @@ async def run_command(wrapper: RunContextWrapper[TaskRunContext], command: str, 
             if first not in _CMD_ALLOW:
                 raise ValueError(f"段首命令不在白名单（lark-cli/python3/node/mkdir/cat/ls）：{first}")
         try:
-            proc = subprocess.run(["sh", "-c", cmd], cwd=ctx.workspace, capture_output=True,
+            proc = subprocess.run(["sh", "-c", cmd], cwd=c.workspace, capture_output=True,
                                   text=True, timeout=timeout_seconds if timeout_seconds > 0 else 300)
         except subprocess.TimeoutExpired as e:
             raise ValueError(f"命令超时：{cmd}") from e
@@ -284,7 +285,6 @@ async def run_command(wrapper: RunContextWrapper[TaskRunContext], command: str, 
         return json.dumps({"exit": proc.returncode, "output": out if len(out) <= lim else out[:lim]},
                           ensure_ascii=False)
 
-    c = wrapper.context
     try:
         return await asyncio.to_thread(impl)
     except ValueError as e:

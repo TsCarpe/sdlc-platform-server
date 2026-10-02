@@ -80,7 +80,8 @@ class AgentExecutor:
                 model=self.settings.agent_model,
             )
             ctx = TaskRunContext(req_id=task.req_id, task_id=task.id, task_type=task.type,
-                                 workspace=workspace, skills_repo=skills_repo, services=self.services)
+                                 workspace=workspace, skills_repo=skills_repo, services=self.services,
+                                 repos=self.repos)
             goal = prompts.goal_prompt(task.type) + prompts.resume_hint(workspace)
             if task.type == "design_rev":
                 goal += "\n本次落改工作项（任务备注）：\n" + prompts.payload_note(task.payload)

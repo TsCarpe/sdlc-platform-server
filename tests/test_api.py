@@ -14,7 +14,7 @@ from platform_sdlc.main import create_app
 
 @pytest.fixture()
 def client(tmp_path: Path) -> Iterator[TestClient]:
-    settings = Settings(db_path=str(tmp_path / "data" / "platform.db"), media_dir=str(tmp_path / "data" / "media"))
+    settings = Settings(_env_file=None, db_path=str(tmp_path / "data" / "platform.db"), media_dir=str(tmp_path / "data" / "media"))
     with TestClient(create_app(settings, cwd=tmp_path)) as c:
         yield c
 

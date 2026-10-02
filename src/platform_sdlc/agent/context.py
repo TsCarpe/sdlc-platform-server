@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from platform_sdlc.repositories import Repos
 from platform_sdlc.services import Services
 
 
@@ -21,3 +22,4 @@ class TaskRunContext:
     workspace: Path
     skills_repo: Path
     services: Services
+    repos: Repos

@@ -18,6 +18,7 @@ from agents import Agent, RunContextWrapper, function_tool, set_default_openai_a
 from openai import AsyncOpenAI
 
 from platform_sdlc.config import Settings
+from platform_sdlc.repositories import Repos
 from platform_sdlc.services import Services
 
 _INSTRUCTIONS = """你是 SDLC 产物协作平台的查询助理，面向 PM/测试/开发答疑。平台数据以只读工具提供。
@@ -32,6 +33,7 @@ _INSTRUCTIONS = """你是 SDLC 产物协作平台的查询助理，面向 PM/测
 @dataclass
 class AssistantContext:
     services: Services
+    repos: Repos
 
 
 # ---------- 只读工具面（跨需求；正式写入通道不存在） ----------
@@ -68,6 +70,21 @@ async def search_requirements(wrapper: RunContextWrapper[AssistantContext], q: s
     return await _read(impl)
 
 
+def _requirement_summary(services: Services, repos: Repos, req_id: str) -> str:
+    """需求概要组装（模块级以便直测；计数走 repos，服务层无对应读面）。"""
+    r = services.requirements.require(req_id)
+    counts = repos.clarify_item.counts(req_id)
+    design = services.designs.view(req_id)
+    gate = services.gate.view(req_id)
+    return json.dumps({
+        "id": r.id, "name": r.name, "status": r.status, "riskTier": r.risk_tier,
+        "clarify": f"{counts['answered']}/{counts['total']}",
+        "frCount": len(repos.fr_point.list_by_req(req_id)),
+        "caseCount": repos.test_case.count_by_req(req_id),
+        "designPhase": design.get("phase"), "gatePhase": gate.get("phase"),
+    }, ensure_ascii=False)
+
+
 @function_tool
 async def get_requirement_summary(wrapper: RunContextWrapper[AssistantContext], req_id: str) -> str:
     """读取单个需求的概要：状态、风险分级、澄清处置进度、需求点数、用例数、质检星级、是否已发布/设计/门禁阶段。
@@ -76,18 +93,8 @@ async def get_requirement_summary(wrapper: RunContextWrapper[AssistantContext], 
         req_id: 需求编号，如 REQ-2026-001
     """
     def impl() -> str:
-        s = wrapper.context.services
-        r = s.requirements.require(req_id)
-        counts = s.repos.clarify_item.counts(req_id)
-        design = s.designs.view(req_id)
-        gate = s.gate.view(req_id)
-        return json.dumps({
-            "id": r.id, "name": r.name, "status": r.status, "riskTier": r.risk_tier,
-            "clarify": f"{counts['answered']}/{counts['total']}",
-            "frCount": len(s.repos.fr_point.list_by_req(req_id)),
-            "caseCount": s.repos.test_case.count_by_req(req_id),
-            "designPhase": design.get("phase"), "gatePhase": gate.get("phase"),
-        }, ensure_ascii=False)
+        c = wrapper.context
+        return _requirement_summary(c.services, c.repos, req_id)
 
     try:
         return await _read(impl)
