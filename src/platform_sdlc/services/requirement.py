@@ -257,20 +257,22 @@ class RequirementService:
             raise ApiException(404, f"澄清问题不存在：{seq}")
 
     def publish(self, req_id: str, body: dict[str, Any]) -> dict[str, Any]:
-        r = self.require(req_id)
-        if r.status != "clarifying":
-            raise ApiException(409, f"仅待澄清状态可发布（当前：{r.status}）")
-        counts = self.repos.clarify_item.counts(req_id)
-        total, answered = counts["total"], counts["answered"]
-        if total == 0 or answered < total:
-            raise ApiException(400, f"存在未处置问题（{answered}/{total}），全部问题答复/驳回/挂起后才可发布（DESIGN-v2.2 D21）")
-        md = jrequired(body, "standardMd")
-        at = Times.now()
-        self.repos.artifact.upsert(req_id, "standard", md, "", at)
-        self.repos.requirement.set_standard(req_id, md, at)
-        # 发布终态即清除标准文档草稿（草稿使命完成，避免已发布卡上残留「待发布」块）
-        self.repos.draft.delete(req_id, "standard")
-        return {"ok": True, "publishedAt": at}
+        with self.db.tx():
+            # 发布原子性：状态检查、artifact 写、置 published、清草稿同事务（原三语句间可交错出半发布态）
+            r = self.require(req_id)
+            if r.status != "clarifying":
+                raise ApiException(409, f"仅待澄清状态可发布（当前：{r.status}）")
+            counts = self.repos.clarify_item.counts(req_id)
+            total, answered = counts["total"], counts["answered"]
+            if total == 0 or answered < total:
+                raise ApiException(400, f"存在未处置问题（{answered}/{total}），全部问题答复/驳回/挂起后才可发布（DESIGN-v2.2 D21）")
+            md = jrequired(body, "standardMd")
+            at = Times.now()
+            self.repos.artifact.upsert(req_id, "standard", md, "", at)
+            self.repos.requirement.set_standard(req_id, md, at)
+            # 发布终态即清除标准文档草稿（草稿使命完成，避免已发布卡上残留「待发布」块）
+            self.repos.draft.delete(req_id, "standard")
+            return {"ok": True, "publishedAt": at}
 
     def set_status(self, req_id: str, body: dict[str, Any]) -> None:
         target = jrequired(body, "status")

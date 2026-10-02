@@ -166,25 +166,27 @@ class TaskService:
     # ---------- 草稿 ----------
 
     def put_draft(self, req_id: str, type_: str, body: dict[str, Any]) -> DraftArtifact:
-        if self.repos.requirement.find(req_id) is None:
-            raise ApiException(404, f"需求不存在：{req_id}")
         if type_ not in (D_DIGEST, D_STANDARD, D_CASES, D_DESIGN, D_GATE_ISSUES):
             raise ApiException(400, f"非法草稿类型：{type_}")
-        r = self.repos.requirement.find(req_id)
-        post_publish = type_ in (D_CASES, D_DESIGN, D_GATE_ISSUES)
-        if r is not None and r.status == "published" and not post_publish:
-            # 终态锁不约束用例/设计草稿：两者都是发布后的正常动作（与 create 的豁免口径一致）
-            raise ApiException(409, "该需求已发布（终态锁定），不能写草稿")
-        d = DraftArtifact(
-            req_id=req_id, type=type_, md=jtext(body, "md", ""), content_json=jtext(body, "contentJson", ""),
-            task_id=jint_or_400(body, "taskId"), updated_at=Times.now(),
-        )
-        if type_ == D_DIGEST and not d.content_json.strip():
-            raise ApiException(400, "digest_bundle 草稿必须携带 contentJson（完整推送 payload）")
-        self.repos.draft.upsert(d, d.updated_at or "")
-        out = self.repos.draft.find(req_id, type_)
-        assert out is not None
-        return out
+        with self.db.tx():
+            # 终态检查与写同事务：堵「检查后发布、发布后落草稿」的拒草稿终态锁 TOCTOU 窗口
+            r = self.repos.requirement.find(req_id)
+            if r is None:
+                raise ApiException(404, f"需求不存在：{req_id}")
+            post_publish = type_ in (D_CASES, D_DESIGN, D_GATE_ISSUES)
+            if r.status == "published" and not post_publish:
+                # 终态锁不约束用例/设计草稿：两者都是发布后的正常动作（与 create 的豁免口径一致）
+                raise ApiException(409, "该需求已发布（终态锁定），不能写草稿")
+            d = DraftArtifact(
+                req_id=req_id, type=type_, md=jtext(body, "md", ""), content_json=jtext(body, "contentJson", ""),
+                task_id=jint_or_400(body, "taskId"), updated_at=Times.now(),
+            )
+            if type_ == D_DIGEST and not d.content_json.strip():
+                raise ApiException(400, "digest_bundle 草稿必须携带 contentJson（完整推送 payload）")
+            self.repos.draft.upsert(d, d.updated_at or "")
+            out = self.repos.draft.find(req_id, type_)
+            assert out is not None
+            return out
 
     def list_drafts(self, req_id: str) -> list[DraftArtifact]:
         if self.repos.requirement.find(req_id) is None:
@@ -209,19 +211,21 @@ class TaskService:
         """草稿采纳（人审关口放行）：digest_bundle → push_artifacts（全守卫继承）；cases → sync_upsert；
         design → 定稿（D34：artifact design version+1 + design_final_json 留痕）。
         standard 无 approve——发布是终态动作，走现有 POST /publish。"""
-        d = self.get_draft(req_id, type_)
-        if type_ == D_DIGEST:
-            # 草稿 contentJson → 推送请求（与 HTTP 通道同一绑定口径：宽松 dict + 服务层校验）
-            out = self.requirements.push_artifacts(req_id, _parse_object(d.content_json, "推送产物"))
-        elif type_ == D_CASES:
-            out = self.cases.sync_upsert(req_id, _parse_object(d.content_json, "cases 推送"))
-        elif type_ == D_DESIGN:
-            out = {"finalizedVersion": self.designs.finalize(req_id, d, by)}
-        else:
-            raise ApiException(400, "标准文档草稿无采纳动作，请在预览后直接发布（终态）")
-        self.repos.draft.delete(req_id, type_)
-        out["draftApproved"] = True
-        return out
+        with self.db.tx():
+            # 采纳原子性：副作用（内层 tx 可重入加入外层）与草稿删除同事务，异常整体回滚（草稿保留可重试）
+            d = self.get_draft(req_id, type_)
+            if type_ == D_DIGEST:
+                # 草稿 contentJson → 推送请求（与 HTTP 通道同一绑定口径：宽松 dict + 服务层校验）
+                out = self.requirements.push_artifacts(req_id, _parse_object(d.content_json, "推送产物"))
+            elif type_ == D_CASES:
+                out = self.cases.sync_upsert(req_id, _parse_object(d.content_json, "cases 推送"))
+            elif type_ == D_DESIGN:
+                out = {"finalizedVersion": self.designs.finalize(req_id, d, by)}
+            else:
+                raise ApiException(400, "标准文档草稿无采纳动作，请在预览后直接发布（终态）")
+            self.repos.draft.delete(req_id, type_)
+            out["draftApproved"] = True
+            return out
 
 
 def _parse_object(content_json: str, label: str) -> dict[str, Any]:

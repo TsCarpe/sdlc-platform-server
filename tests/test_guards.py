@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from platform_sdlc.common import ApiException, ConflictException
@@ -392,3 +394,91 @@ def test_jint_or_400_matrix() -> None:
         with pytest.raises(ApiException) as e:
             jint_or_400({"k": bad}, "k")
         assert e.value.status == 400 and "必须是整数" in str(e.value)
+
+
+# ---------- 事务与乐观锁缺口（批次3：检查移入 tx + version 谓词 + approve/publish 原子性） ----------
+
+
+def test_sync_upsert_predicate_guards_concurrent_bump(env: tuple[Repos, Services]) -> None:
+    """锁内检查后、UPDATE 前版本被并发推进 → 谓词拦下（0 行）转 409 conflicts，不盲写。
+
+    用实例属性 hook 模拟 TOCTOU 窗口内的并发写（hook 与服务调用同线程，RLock 可重入不死锁）。"""
+    repos, services = env
+    req_id = make_req(repos, services)
+    services.cases.sync_upsert(None, {"reqId": req_id, "items": [{"id": "TC-1", "title": "初版", "owner": "s"}]})
+    assert repos.test_case.find(req_id, "TC-1").version == 1  # type: ignore[union-attr]
+
+    orig = repos.test_case.update_from_sync
+
+    def hooked(t: object, expected_version: int) -> int:
+        repos.test_case.db.execute(
+            "UPDATE test_case SET version=version+1, title='并发改' WHERE req_id=? AND id=?", (t.req_id, t.id))  # type: ignore[attr-defined]
+        return orig(t, expected_version)  # type: ignore[arg-type]
+
+    repos.test_case.update_from_sync = hooked  # type: ignore[method-assign]
+    try:
+        with pytest.raises(ConflictException) as e:
+            services.cases.sync_upsert(None, {"reqId": req_id, "items": [{"id": "TC-1", "title": "盲写版"}]})
+        assert e.value.conflicts[0]["id"] == "TC-1"
+        assert e.value.conflicts[0]["currentVersion"] == 2  # hook 推进后的现值
+    finally:
+        del repos.test_case.update_from_sync  # 还原实例属性，回落类定义
+    after = repos.test_case.find(req_id, "TC-1")
+    # hook 推进发生在同一事务内，随 ROLLBACK 一并回滚（真实独立事务的推进不会被回滚，谓词已由上面 conflicts 断言证明）
+    assert after is not None and after.version == 1 and after.title == "初版"  # 盲写未发生、批次零应用
+
+
+def test_approve_atomic_and_exactly_once(env: tuple[Repos, Services]) -> None:
+    """并发采纳同一草稿：恰 1 次成功（副作用只落一次），其余 404；失败路径草稿保留可重试。"""
+    import concurrent.futures
+
+    repos, services = env
+    req_id = make_req(repos, services)
+    services.tasks.put_draft(req_id, "digest_bundle", {
+        "contentJson": '{"digest":{"md":"# d","risk_tier":"B","fr_points":[{"id":"需求.FR-01","name":"p"}]},'
+                       '"audit":{"md":"# a","red":0,"yellow":0,"blue":0,"items":[]},'
+                       '"items":[{"seq":"P01","level":"yellow","theme":"t","question":"q?","answer":"a"}]}'})
+    def try_approve(_: int) -> dict[str, object]:
+        try:
+            return services.tasks.approve(req_id, "digest_bundle", "pm")  # type: ignore[return-value]
+        except ApiException as e:  # 并发败者：草稿已被首个采纳删除 → 404 是预期终局
+            assert e.status == 404
+            return {}
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+        results = list(pool.map(try_approve, range(8)))
+    ok = sum(1 for r in results if r.get("draftApproved"))
+    assert ok == 1
+    assert repos.clarify_item.counts(req_id)["total"] == 1  # push_artifacts 副作用只落一次
+    assert repos.draft.find(req_id, "digest_bundle") is None
+
+    # 失败路径回滚：库内 TC-1(v1)，cases 草稿带过期版本 99 → sync_upsert 冲突回滚，草稿保留
+    services.cases.sync_upsert(None, {"reqId": req_id, "items": [{"id": "TC-1", "title": "存量", "owner": "s"}]})
+    stale_cases = json.dumps({"reqId": req_id, "items": [{"id": "TC-1", "title": "x", "expectedVersion": 99}]})
+    services.tasks.put_draft(req_id, "cases", {"contentJson": stale_cases})
+    with pytest.raises(ConflictException):
+        services.tasks.approve(req_id, "cases", "pm")
+    assert repos.draft.find(req_id, "cases") is not None  # 采纳失败草稿未被删（可重试）
+
+
+def test_publish_tx_all_or_nothing(env: tuple[Repos, Services]) -> None:
+    """发布失败（存在未处置问题）→ 状态与草稿原样；成功 → published + standard 草稿清除。"""
+    repos, services = env
+    req_id = make_req(repos, services)
+    services.tasks.put_draft(req_id, "standard", {"md": "# 草稿" * 60})
+    with pytest.raises(ApiException) as e:
+        services.requirements.publish(req_id, {"standardMd": "# 最终版"})
+    assert e.value.status == 400 and "未处置" in str(e.value)
+    assert repos.requirement.find(req_id).status == "clarifying"  # type: ignore[union-attr]
+    assert repos.draft.find(req_id, "standard") is not None  # 失败不清草稿
+
+    # 上面 400 源于 total=0（无澄清项也拒发布）——补一条再走
+    services.requirements.push_artifacts(req_id, {
+        "digest": {"md": "# d", "risk_tier": "B", "fr_points": []},
+        "audit": {"md": "# a", "red": 0, "yellow": 0, "blue": 0, "items": []},
+        "items": [{"seq": "P01", "level": "yellow", "theme": "t", "question": "q?", "answer": "a"}]})
+    services.requirements.set_answer(req_id, "P01", {"answer": "已答"})
+    out = services.requirements.publish(req_id, {"standardMd": "# 最终版"})
+    assert out["ok"] is True
+    assert repos.requirement.find(req_id).status == "published"  # type: ignore[union-attr]
+    assert repos.draft.find(req_id, "standard") is None  # 发布终态清草稿

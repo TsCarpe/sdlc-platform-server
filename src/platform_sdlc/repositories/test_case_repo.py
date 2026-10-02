@@ -56,11 +56,12 @@ class TestCaseRepo:
         row = self.db.query_one("SELECT * FROM test_case WHERE req_id=? AND id=?", (req_id, case_id))
         return TestCase.from_row(row) if row else None
 
-    def update_from_sync(self, t: TestCase) -> None:
-        """同步更新：version+1，来源字段（tool/owner/status/verify_refs/defect_refs）以推送为准。"""
-        self.db.execute(
+    def update_from_sync(self, t: TestCase, expected_version: int) -> int:
+        """同步更新：version+1，来源字段（tool/owner/status/verify_refs/defect_refs）以推送为准。
+        带版本谓词（纵深防御）：expected_version 为调用时锁内读到的版本，不符 → 0 行由服务层转 409。"""
+        return self.db.execute(
             "UPDATE test_case SET title=?,points=?,priority=?,pre=?,steps=?,expect=?,owner=?,tool=?,status=?,"
-            "verify_refs=?,defect_refs=?,version=version+1,updated_at=? WHERE req_id=? AND id=?",
+            "verify_refs=?,defect_refs=?,version=version+1,updated_at=? WHERE req_id=? AND id=? AND version=?",
             (
                 t.title,
                 t.points,
@@ -76,17 +77,19 @@ class TestCaseRepo:
                 t.updated_at,
                 t.req_id,
                 t.id,
+                expected_version,
             ),
         )
 
     def update_form(
-        self, req_id: str, case_id: str, title: str, points: str, priority: str, pre: str, steps: str, expect: str, at: str
+        self, req_id: str, case_id: str, title: str, points: str, priority: str, pre: str, steps: str, expect: str,
+        expected_version: int, at: str
     ) -> int:
-        """表单编辑：不改 tool/owner/status。"""
+        """表单编辑：不改 tool/owner/status；带版本谓词，不符 → 0 行由服务层转 409。"""
         return self.db.execute(
             "UPDATE test_case SET title=?,points=?,priority=?,pre=?,steps=?,expect=?,version=version+1,updated_at=? "
-            "WHERE req_id=? AND id=?",
-            (title, points, priority, pre, steps, expect, at, req_id, case_id),
+            "WHERE req_id=? AND id=? AND version=?",
+            (title, points, priority, pre, steps, expect, at, req_id, case_id, expected_version),
         )
 
     def list(self, iter_name: str | None, req_id: str | None, status: str | None, tool: str | None, q: str | None) -> list[CaseListRow]:

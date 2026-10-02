@@ -60,23 +60,26 @@ class CaseService:
             parsed.append(t)
             expected.append(jint_or_400(n, "expectedVersion", -1))
 
-        conflicts: list[dict[str, Any]] = []
-        is_insert: list[bool] = []
-        for t, ev in zip(parsed, expected, strict=True):
-            cur = self.repos.test_case.find(req_id, t.id)
-            is_insert.append(cur is None)
-            if cur is not None and ev >= 0 and cur.version != ev:
-                conflicts.append({"id": t.id, "currentVersion": cur.version, "expectedVersion": ev})
-        if conflicts:
-            raise ConflictException("版本冲突，批次未应用", conflicts)
-
         with self.db.tx():
+            # 乐观锁检查与写同事务（DESIGN-v3 §3「syncUpsert 全程持锁」）：检查读与 UPDATE 之间无锁窗口
+            conflicts: list[dict[str, Any]] = []
+            is_insert: list[bool] = []
+            found_versions: list[int] = []
+            for t, ev in zip(parsed, expected, strict=True):
+                cur = self.repos.test_case.find(req_id, t.id)
+                is_insert.append(cur is None)
+                found_versions.append(-1 if cur is None else cur.version)
+                if cur is not None and ev >= 0 and cur.version != ev:
+                    conflicts.append({"id": t.id, "currentVersion": cur.version, "expectedVersion": ev})
+            if conflicts:
+                raise ConflictException("版本冲突，批次未应用", conflicts)
+
             at = Times.now()
             # 全局序号一次性批量分配（循环内不查库），插入时内存自增
             next_no = self.repos.test_case.allocate_case_nos(sum(is_insert))
             inserted = 0
             updated = 0
-            for t, ins in zip(parsed, is_insert, strict=True):
+            for i, (t, ins) in enumerate(zip(parsed, is_insert, strict=True)):
                 t.created_at = at
                 t.updated_at = at
                 if ins:
@@ -85,7 +88,12 @@ class CaseService:
                     self.repos.test_case.insert(t)
                     inserted += 1
                 else:
-                    self.repos.test_case.update_from_sync(t)
+                    # 谓词 = 锁内读到的版本（非调用方 ev：-1 是「不带版本强制覆写」哨兵，作谓词会假冲突）
+                    if self.repos.test_case.update_from_sync(t, found_versions[i]) == 0:
+                        cur2 = self.repos.test_case.find(req_id, t.id)
+                        raise ConflictException("版本冲突，批次未应用", [{
+                            "id": t.id, "currentVersion": -1 if cur2 is None else cur2.version,
+                            "expectedVersion": found_versions[i]}])
                     updated += 1
 
             # 全量替换补齐（A1）：skill 来源、不在 payload 的用例 = 本地已删除 → 平台同步删除，评论级联清理
@@ -157,10 +165,14 @@ class CaseService:
         priority = self._form_priority(body["priority"], cur.priority) if body.get("priority") is not None else cur.priority
         steps = jrequired_non_blank(body, "steps") if body.get("steps") is not None else cur.steps
         expect = jrequired_non_blank(body, "expect") if body.get("expect") is not None else cur.expect
-        self.repos.test_case.update_form(
-            req_id, case_id, title,
-            _strings_json(body.get("points")) if body.get("points") is not None else cur.points,
-            priority, jtext(body, "pre", cur.pre), steps, expect, Times.now())
+        with self.db.tx():
+            # 检查读与 UPDATE 同事务；版本谓词不符（0 行）→ 与前置检查同文案 409
+            if self.repos.test_case.update_form(
+                    req_id, case_id, title,
+                    _strings_json(body.get("points")) if body.get("points") is not None else cur.points,
+                    priority, jtext(body, "pre", cur.pre), steps, expect, ev, Times.now()) == 0:
+                now_v = self.repos.test_case.find(req_id, case_id)
+                raise ApiException(409, f"版本已变化（当前 v{now_v.version if now_v else -1}，提交基于 v{ev}），请刷新后重试")
         return self.detail(req_id, case_id)
 
     def add_comment(self, req_id: str, case_id: str, body: dict[str, Any]) -> dict[str, Any]:
