@@ -1,0 +1,312 @@
+"""P2 验收：业务红线守卫单测（逐条对照 CLAUDE.md「业务红线」）。
+
+覆盖：重推保留答复 / P 编号漂移防护 / 发布终态锁 / 状态机守卫 / 澄清处置语义 /
+用例乐观锁 conflicts / 全量替换保留表单用例 / 编辑权守卫 / L2 编排只自动一次 / 门禁放行互认。
+"""
+
+from __future__ import annotations
+
+import pytest
+
+from platform_sdlc.common import ApiException, ConflictException
+from platform_sdlc.db import Database
+from platform_sdlc.migrations import run_migrations
+from platform_sdlc.models import ClarifyItem, DraftArtifact, FrPoint, Requirement, Task
+from platform_sdlc.repositories import Repos
+from platform_sdlc.services import Services
+
+NOW = "2026-10-01 10:00:00"
+
+
+@pytest.fixture()
+def env(tmp_path: object) -> tuple[Repos, Services]:
+    db = Database(tmp_path / "platform.db")  # type: ignore[arg-type]
+    run_migrations(db)
+    repos = Repos.create(db)
+    services = Services.create(db, repos, tmp_path / "media")  # type: ignore[arg-type]
+    return repos, services
+
+
+def make_req(repos: Repos, services: Services, status: str = "clarifying", tier: str = "B") -> str:
+    r = Requirement(id="", name="测试需求", iter="", source_type="text", source_text="# 原文",
+                    status="submitted", submitted_by="t", standard_doc="",
+                    created_at=NOW, synced_at=NOW, risk_tier=tier)
+    r.id = repos.requirement.next_id("2026")  # 走正规取号（用例域入口校验 REQ 编号格式）
+    repos.requirement.insert(r)
+    if status != "submitted":
+        repos.requirement.set_status(r.id, "reviewing")
+        repos.requirement.set_status(r.id, status)
+    return r.id
+
+
+# ---------- 需求域红线 ----------
+
+
+def test_push_artifacts_keeps_answers(env: tuple[Repos, Services]) -> None:
+    """红线：重推产物按 seq+问题文本保留平台已答内容；问题文本已变（P 编号漂移）不携带。"""
+    repos, services = env
+    req_id = make_req(repos, services)
+    payload = {"digest": {"md": "# d", "risk_tier": "B", "fr_points": [
+        {"id": "需求.FR-01", "name": "登录"}]},
+        "audit": {"md": "# a", "red": 0, "yellow": 1, "blue": 0, "items": []},
+        "items": [
+            {"seq": "P01", "level": "red", "theme": "登录", "question": "密码规则？"},
+            {"seq": "P02", "level": "yellow", "theme": "登录", "question": "验证码？"},
+        ]}
+    out1 = services.requirements.push_artifacts(req_id, payload)
+    assert out1["items"] == 2 and out1["carriedAnswers"] == 0
+
+    services.requirements.set_answer(req_id, "P01", {"answer": "至少 8 位"})
+    services.requirements.set_answer(req_id, "P02", {"answer": "6 位"})
+    # 重推：P01 同文保留答复；P02 已处置且问题文本已变 → 漂移不携带（pending 纯净行不参与漂移检测）
+    payload2 = {**payload, "items": [
+        {"seq": "P01", "level": "red", "theme": "登录", "question": "密码规则？"},
+        {"seq": "P02", "level": "yellow", "theme": "登录", "question": "验证码改成多少位？"},
+    ]}
+    out2 = services.requirements.push_artifacts(req_id, payload2)
+    assert out2["carriedAnswers"] == 1 and out2["changedQuestions"] == 1
+    answers = {a["seq"]: a for a in services.requirements.answers(req_id)}
+    assert answers["P01"]["answer"] == "至少 8 位" and answers["P01"]["status"] == "answered"
+    assert answers["P02"]["answer"] == "" and answers["P02"]["status"] == "pending"
+
+
+def test_published_terminal_lock(env: tuple[Repos, Services]) -> None:
+    """红线：发布后锁定——拒推产物、拒写质检草稿、拒建质检任务、拒作答。"""
+    repos, services = env
+    req_id = make_req(repos, services)
+    repos.clarify_item.insert(ClarifyItem(
+        id=0, req_id=req_id, seq="P01", level="red", theme="t", question="q", answer="a", status="answered"))
+    services.requirements.publish(req_id, {"standardMd": "# 标准文档"})
+
+    push_again = {"digest": {"md": "x"}, "audit": {"md": "y"},
+                  "items": [{"seq": "P01", "level": "red", "theme": "t", "question": "q"}]}
+    with pytest.raises(ApiException) as e1:
+        services.requirements.push_artifacts(req_id, push_again)
+    assert e1.value.status == 409
+    with pytest.raises(ApiException) as e2:
+        services.tasks.put_draft(req_id, "digest_bundle", {"contentJson": "{}"})
+    assert e2.value.status == 409
+    with pytest.raises(ApiException) as e3:
+        services.tasks.create(req_id, {"type": "quality_check"})
+    assert e3.value.status == 409
+    with pytest.raises(ApiException) as e4:
+        services.requirements.set_answer(req_id, "P01", {"answer": "再答"})
+    assert e4.value.status == 409
+    # 发布后合法：case_gen 任务与 cases 草稿不受终态锁约束（D36）
+    assert services.tasks.create(req_id, {"type": "case_gen"}).status == "queued"
+
+
+def test_status_machine_guard(env: tuple[Repos, Services]) -> None:
+    """红线：状态机由 skill 同步写入——仅允许 submitted→reviewing→clarifying。"""
+    repos, services = env
+    req_id = make_req(repos, services, status="submitted")
+    with pytest.raises(ApiException) as e:
+        services.requirements.set_status(req_id, {"status": "clarifying"})  # 跳级
+    assert e.value.status == 409
+    services.requirements.set_status(req_id, {"status": "reviewing"})
+    services.requirements.set_status(req_id, {"status": "clarifying"})
+    with pytest.raises(ApiException) as e2:
+        services.requirements.set_status(req_id, {"status": "reviewing"})  # 不可逆
+    assert e2.value.status == 409
+
+
+def test_set_answer_disposition_semantics(env: tuple[Repos, Services]) -> None:
+    """红线：rejected 必带 note；rejected/deferred 保留半截答复；显式重开回 pending。"""
+    repos, services = env
+    req_id = make_req(repos, services)
+    services.requirements.push_artifacts(req_id, {
+        "digest": {"md": "# d"}, "audit": {"md": "# a"},
+        "items": [{"seq": "P01", "level": "red", "theme": "t", "question": "q", "answer": "半截答复"}]})
+    with pytest.raises(ApiException) as e1:
+        services.requirements.set_answer(req_id, "P01", {"status": "rejected"})
+    assert "驳回必须填写理由" in str(e1.value)
+    services.requirements.set_answer(req_id, "P01", {"status": "rejected", "note": "误报"})
+    a = services.requirements.answers(req_id)[0]
+    assert a["status"] == "rejected" and a["answer"] == "半截答复"  # 半截答复不清洗（D26）
+    services.requirements.set_answer(req_id, "P01", {"status": "pending"})
+    assert services.requirements.answers(req_id)[0]["status"] == "pending"
+    services.requirements.set_answer(req_id, "P01", {"answer": "正式答复"})
+    assert services.requirements.answers(req_id)[0]["status"] == "answered"
+
+
+def test_publish_requires_all_disposed(env: tuple[Repos, Services]) -> None:
+    repos, services = env
+    req_id = make_req(repos, services)
+    services.requirements.push_artifacts(req_id, {
+        "digest": {"md": "# d"}, "audit": {"md": "# a"},
+        "items": [{"seq": "P01", "level": "red", "theme": "t", "question": "q"}]})
+    with pytest.raises(ApiException) as e:
+        services.requirements.publish(req_id, {"standardMd": "# s"})
+    assert "存在未处置问题（0/1）" in str(e.value)
+    services.requirements.set_answer(req_id, "P01", {"status": "deferred", "note": "挂起"})
+    out = services.requirements.publish(req_id, {"standardMd": "# s"})
+    assert out["ok"] is True
+    assert repos.requirement.find(req_id).status == "published"  # type: ignore[union-attr]
+
+
+# ---------- 用例域红线 ----------
+
+
+def _sync_body(req_id: str, items: list[dict]) -> dict:
+    return {"reqId": req_id, "items": items}
+
+
+def test_case_optimistic_lock_conflicts(env: tuple[Repos, Services]) -> None:
+    """红线：用例 upsert 乐观锁——expectedVersion 不符整批拒绝 409 + conflicts 明细。"""
+    repos, services = env
+    req_id = make_req(repos, services)
+    out = services.cases.sync_upsert(None, _sync_body(req_id, [
+        {"id": "TC-1", "title": "用例一", "expectedVersion": -1}]))
+    assert out["inserted"] == 1
+    services.cases.sync_upsert(None, _sync_body(req_id, [  # 合法更新一轮 → 服务端 v2
+        {"id": "TC-1", "title": "用例一改", "expectedVersion": 1}]))
+    with pytest.raises(ConflictException) as e:
+        services.cases.sync_upsert(None, _sync_body(req_id, [
+            {"id": "TC-1", "title": "再改", "expectedVersion": 1}]))
+    assert e.value.conflicts == [{"id": "TC-1", "currentVersion": 2, "expectedVersion": 1}]
+
+
+def test_case_full_replace_keeps_form_cases(env: tuple[Repos, Services]) -> None:
+    """红线：全量替换只删 skill 来源用例；表单来源一律保留。"""
+    repos, services = env
+    req_id = make_req(repos, services)
+    services.cases.sync_upsert(None, _sync_body(req_id, [
+        {"id": "TC-1", "title": "skill 用例"}, {"id": "TC-2", "title": "skill 用例二"}]))
+    services.cases.form_create(None, {"reqId": req_id, "title": "表单用例", "steps": "s", "expect": "e", "owner": "pm"})
+    out = services.cases.sync_upsert(None, _sync_body(req_id, [{"id": "TC-1", "title": "skill 用例"}]))
+    assert out["removed"] == 1 and out["removedIds"] == ["TC-2"]
+    ids = [c["id"] for c in services.cases.list(None, req_id, None, None, None)]
+    assert ids == ["TC-1", "WEB-001"]  # skill 用例保留 + 表单用例保留
+
+
+def test_case_readonly_and_version_guard(env: tuple[Repos, Services]) -> None:
+    """红线：tool='sdlc-test' 用例对平台只读+评论；表单编辑版本冲突 409。"""
+    repos, services = env
+    req_id = make_req(repos, services)
+    services.cases.sync_upsert(None, _sync_body(req_id, [{"id": "TC-1", "title": "t", "owner": "robot"}]))
+    with pytest.raises(ApiException) as e1:
+        services.cases.form_update(req_id, "TC-1", {"title": "改"})
+    assert "平台只读" in str(e1.value)
+    services.cases.add_comment(req_id, "TC-1", {"by": "pm", "text": "评论可以"})  # 评论通道畅通
+
+    web = services.cases.form_create(None, {"reqId": req_id, "title": "t2", "steps": "s", "expect": "e", "owner": "pm"})
+    with pytest.raises(ApiException) as e2:
+        services.cases.form_update(req_id, "WEB-001", {"title": "改", "expectedVersion": 99})
+    assert "版本已变化" in str(e2.value)
+    detail = services.cases.form_update(req_id, "WEB-001", {"title": "改", "expectedVersion": web["version"]})
+    assert detail["title"] == "改" and detail["version"] == 2
+
+
+def test_priority_strict_form_lenient_skill(env: tuple[Repos, Services]) -> None:
+    """红线：表单通道非法 priority 400；skill 通道宽容归一 P2 并计数。"""
+    repos, services = env
+    req_id = make_req(repos, services)
+    with pytest.raises(ApiException):
+        services.cases.form_create(None, {"reqId": req_id, "title": "t", "steps": "s", "expect": "e",
+                                          "owner": "pm", "priority": "P5"})
+    out = services.cases.sync_upsert(None, _sync_body(req_id, [{"id": "TC-1", "title": "t", "priority": "P5"}]))
+    assert out["normalizedPriority"] == 1
+
+
+# ---------- 任务域与 L2 编排 ----------
+
+
+def test_l2_only_once_and_settle(env: tuple[Repos, Services]) -> None:
+    """红线：L2 只自动一次（人取消即终局）；发布收尾取消 queued 残留、不复活。"""
+    repos, services = env
+    req_id = make_req(repos, services)
+    services.requirements.push_artifacts(req_id, {
+        "digest": {"md": "# d"}, "audit": {"md": "# a"},
+        "items": [{"seq": "P01", "level": "red", "theme": "t", "question": "q"}]})
+    services.requirements.set_answer(req_id, "P01", {"answer": "a"})  # 全部答完 → 边界跃迁
+
+    services.orchestration.on_answered(req_id)
+    auto_task = [t for t in repos.task.list(req_id, None) if t.type == "standard_doc"]
+    assert len(auto_task) == 1 and auto_task[0].created_by == "auto:clarify-complete"
+    repos.task.cancel_queued(auto_task[0].id, "{}", NOW)  # 人取消 = 终局
+    services.orchestration.on_answered(req_id)  # 不复活
+    assert [t for t in repos.task.list(req_id, None) if t.type == "standard_doc" and t.status == "queued"] == []
+
+    services.requirements.publish(req_id, {"standardMd": "# s"})
+    services.orchestration.on_published(req_id)
+    # 质检/合成残留被收尾取消（本例无），case_gen 自动排队
+    case_tasks = [t for t in repos.task.list(req_id, None) if t.type == "case_gen"]
+    assert len(case_tasks) == 1 and case_tasks[0].created_by == "auto:published"
+    services.orchestration.on_published(req_id)  # 只自动一次
+    assert len([t for t in repos.task.list(req_id, None) if t.type == "case_gen"]) == 1
+
+
+def test_settle_terminal_cancels_queued(env: tuple[Repos, Services]) -> None:
+    """发布收尾：queued 的质检任务作废（superseded-by-publish），running 不动。"""
+    repos, services = env
+    req_id = make_req(repos, services)
+    t1 = repos.task.insert(Task(id=0, req_id=req_id, type="quality_check", created_at=NOW, updated_at=NOW))
+    t2 = repos.task.insert(Task(id=0, req_id=req_id, type="standard_doc", created_at=NOW, updated_at=NOW))
+    repos.task.claim("runner-x", NOW)  # t1 → running（先入队先领）
+    cancelled = services.tasks.settle_terminal(req_id)
+    assert cancelled == 1  # 只有 queued 的 t2 被取消
+    assert repos.task.find(t2).status == "failed"
+    assert repos.task.find(t1).status == "running"
+
+
+# ---------- 门禁域红线 ----------
+
+
+def _published_with_design(repos: Repos, services: Services, tier: str = "B") -> str:
+    req_id = make_req(repos, services, tier=tier)
+    services.requirements.push_artifacts(req_id, {
+        "digest": {"md": "# d", "risk_tier": tier, "fr_points": [{"id": "需求.FR-01", "name": "n"}]},
+        "audit": {"md": "# a"},
+        "items": [{"seq": "P01", "level": "red", "theme": "t", "question": "q"}]})
+    services.requirements.set_answer(req_id, "P01", {"answer": "a"})
+    services.requirements.publish(req_id, {"standardMd": "# s"})
+    repos.fr_point.replace_all(req_id, [FrPoint(req_id=req_id, id="需求.FR-01", name="n")])
+    repos.requirement.set_target_repos(req_id, '[{"role":"","kind":"local","ref":"/tmp/repo","branch":""}]')
+    return req_id
+
+
+def test_gate_open_requires_published_and_green(env: tuple[Repos, Services]) -> None:
+    repos, services = env
+    req_id = make_req(repos, services)  # 未发布
+    with pytest.raises(ApiException) as e:
+        services.gate.open(req_id, None)
+    assert "发布后流程" in str(e.value)
+
+    req_id = _published_with_design(repos, services)  # 已发布但设计未定稿、无用例
+    with pytest.raises(ApiException) as e2:
+        services.gate.open(req_id, None)
+    assert "开闸三条件未满足" in str(e2.value)
+
+
+def test_gate_release_and_case_mutual_recognition(env: tuple[Repos, Services]) -> None:
+    """红线：GR-4 放行 = 全部裁决 ∧ 落改闭环 ∧ 机械校验全绿；放行视同用例关卡1 通过（互认）。"""
+    repos, services = env
+    req_id = _published_with_design(repos, services)
+    # 备齐三条件：设计定稿 + 用例齐且全部定稿 + FR 全覆盖
+    services.designs.finalize(req_id, DraftArtifact(req_id=req_id, type="design", md="§0 design"), "tester")
+    services.cases.sync_upsert(None, _sync_body(req_id, [
+        {"id": "TC-1", "title": "t", "points": ["需求.FR-01"], "status": "reviewed"}]))
+    services.gate.open(req_id, {"by": "qa"})
+
+    round_row = repos.gate.list_rounds(req_id)[0]
+    repos.draft.upsert(DraftArtifact(
+        req_id=req_id, type="gate_issues", md="issues: A-01 场景", task_id=1, updated_at=NOW), NOW)
+    d = repos.draft.find(req_id, "gate_issues")
+    assert d is not None
+    d.content_json = '{"issues":[{"code":"A-01","sev":"mid","scene":"白话场景"}]}'
+    repos.draft.upsert(d, NOW)
+    services.gate.ingest(req_id, round_row.id, None)
+    # 裁决落改：先缺落点应 400
+    with pytest.raises(ApiException):
+        services.gate.verdict(repos.gate.list_issues(round_row.id)[0].id, {"verdict": "落改"})
+    issue = repos.gate.list_issues(round_row.id)[0]
+    services.gate.verdict(issue.id, {"verdict": "落改", "revLocation": "a.py:L1"})
+    # 落改未执行 → 放行拒绝
+    with pytest.raises(ApiException) as e:
+        services.gate.release(round_row.id, {"by": "qa"})
+    assert "落改未闭环" in str(e.value)
+    services.gate.revision(issue.id, "a.py:L1", "已执行")
+    out = services.gate.release(round_row.id, {"by": "qa"})
+    # 用例在放行前已全部定稿 → 互认转换 0 条（互认是防御性兜底：draft sdlc-test 用例自动置 reviewed）
+    assert out["ok"] is True and out["casesConfirmed"] == 0
+    assert repos.test_case.find(req_id, "TC-1").status == "reviewed"  # type: ignore[union-attr]

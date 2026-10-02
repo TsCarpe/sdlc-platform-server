@@ -1,0 +1,63 @@
+"""出参序列化（对应 Jackson 对 Java 实体的 camelCase 序列化）。
+
+- `wire(entity)`：实体 → camelCase dict，键序 = Java 字段声明序（既有契约）；
+  null 键照常输出（Jackson 默认），与 Java NON_NULL 子集 DTO 的差异由服务层组装视图时表达。
+- 服务层组装的复杂视图直接以 camelCase dict 返回（对应 Java 的 XxxView DTO 组装），键序在组装处对齐。
+- 入参不建 Pydantic 模型：路由直接收解析后的 JSON 值（dict），校验在服务层逐字移植
+  Json.required 文案——复刻 Java「宽松绑定 + 服务层校验」通道（评审 P0-2）。
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from platform_sdlc.models import (
+    Artifact,
+    CaseComment,
+    ClarifyItem,
+    DraftArtifact,
+    FrPoint,
+    GateIssue,
+    GateRound,
+    Iteration,
+    MediaFile,
+    Requirement,
+    Task,
+    TestCase,
+)
+
+# 键序 = Java 实体字段声明序（既有契约，勿重排）
+_WIRE: dict[type[Any], tuple[str, ...]] = {
+    Requirement: ("id", "name", "iter", "source_type", "source_url", "source_text", "status",
+                  "submitted_by", "standard_doc", "created_at", "synced_at", "risk_tier"),
+    ClarifyItem: ("id", "req_id", "seq", "level", "theme", "question", "ctx", "answer",
+                  "answered_at", "quote", "anchor", "status", "note"),
+    Artifact: ("req_id", "type", "markdown", "content_json", "version", "pushed_at"),
+    FrPoint: ("req_id", "id", "name", "source", "group", "module", "anchor"),
+    MediaFile: ("req_id", "media_id", "sha256", "name", "mime", "bytes", "created_at"),
+    TestCase: ("req_id", "id", "title", "points", "priority", "pre", "steps", "expect", "owner", "tool",
+               "status", "version", "created_at", "updated_at", "verify_refs", "defect_refs", "case_no"),
+    CaseComment: ("id", "req_id", "case_id", "by", "text", "created_at"),
+    Task: ("id", "req_id", "type", "status", "payload", "result", "runner", "created_by", "created_at", "updated_at"),
+    DraftArtifact: ("req_id", "type", "md", "content_json", "task_id", "updated_at"),
+    Iteration: ("name", "note", "created_by", "created_at"),
+    GateRound: ("id", "req_id", "round_no", "status", "checks_json", "baseline_json",
+                "released_at", "released_by", "created_by", "opened_at"),
+    GateIssue: ("id", "round_id", "code", "sev", "theme", "role", "scene", "quote", "loc", "basis",
+                "div_flag", "tradeoff", "merged_unit", "filed", "verdict", "verdict_note",
+                "verdict_by", "verdict_at", "rev_location", "rev_status"),
+}
+
+
+def to_camel(snake: str) -> str:
+    head, *rest = snake.split("_")
+    return head + "".join(w.capitalize() for w in rest)
+
+
+def wire(entity: Any) -> dict[str, Any]:
+    keys = _WIRE[type(entity)]
+    return {to_camel(k): getattr(entity, k) for k in keys}
+
+
+def wire_list(entities: list[Any]) -> list[dict[str, Any]]:
+    return [wire(e) for e in entities]

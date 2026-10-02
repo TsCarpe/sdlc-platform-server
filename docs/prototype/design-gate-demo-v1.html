@@ -1,0 +1,2137 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>设计+门禁线上化 · 交互原型 v1</title>
+<style>
+/* ============ 平台设计语言子集（对齐 frontend/src/style.css） ============ */
+:root{
+  --canvas:#ffffff; --bg:#f6f7f9; --bg-soft:#fafbfc; --bg-active:#eef0f4;
+  --line:#e4e7ec; --line-soft:#eef0f3; --line-strong:#cfd4dd;
+  --ink-deep:#0f1320; --text:#191c24; --charcoal:#344054;
+  --slate:#475467; --muted:#5d6b81; --stone:#667085; --faint:#8a94a6;
+  --primary:#4f46e5; --primary-pressed:#4338ca;
+  --blue:#4f46e5; --blue-light:#eef2ff; --blue-border:#d9ddfc;
+  --yellow:#ffd02f; --yellow-light:#fff6d1; --yellow-dark:#7a5c00;
+  --green:#067647; --green-vivid:#12b76a; --green-soft:#e5f4ee;
+  --red:#d92d20; --red-deep:#b42318; --red-soft:#fdecea;
+  --amber:#d97706; --amber-deep:#b54708; --amber-soft:#fcf1df;
+  --lv-red:#f04438; --lv-yellow:#eaaa08; --lv-blue:#2e90fa;
+  --teal:#0e9384; --teal-light:#e0f5f2;
+  --shadow-card:rgba(16,24,40,.05) 0 1px 2px 0;
+  --shadow-pop:rgba(16,24,40,.1) 0 4px 14px -2px;
+  --shadow-modal:rgba(16,24,40,.18) 0 16px 44px -8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica Neue",Arial,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font-family:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:4px}
+
+/* ============ demo 控制条（原型专属，非平台 UI） ============ */
+.demo-bar{position:sticky;top:0;z-index:80;background:#171a26;color:#d5d9e4;padding:8px 16px;
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;box-shadow:0 2px 10px rgba(0,0,0,.25)}
+.demo-bar .d-logo{font-weight:700;font-size:13px;color:#fff;display:flex;align-items:center;gap:7px;flex:none}
+.demo-bar .d-logo i{width:10px;height:10px;border-radius:3px;background:var(--yellow);display:inline-block}
+.demo-bar .d-tag{font-size:11px;background:#2a2f42;border-radius:9999px;padding:1px 9px;color:#9aa3bd}
+.d-reset{border:1px solid #333a52;background:none;color:#9aa3bd;font-size:12px;padding:3px 10px;border-radius:7px}
+.d-reset:hover{color:#fff;border-color:#58628a}
+.demo-bar select{background:#222739;border:1px solid #333a52;border-radius:7px;color:#fff;padding:3px 9px;font-size:12px;min-width:200px}
+.d-op{display:flex;align-items:center;gap:6px;font-size:12px;color:#9aa3bd;flex:none}
+.d-op input{background:#222739;border:1px solid #333a52;border-radius:7px;color:#fff;padding:3px 9px;font-size:12px;width:90px}
+.d-reset{border:1px solid #333a52;background:none;color:#9aa3bd;font-size:12px;padding:3px 10px;border-radius:7px}
+.d-reset:hover{color:#fff;border-color:#58628a}
+
+/* ============ 布局 ============ */
+.topbar{background:var(--canvas);border-bottom:1px solid var(--line-soft);padding:0 36px 0 16px;height:54px;
+  display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:40}
+.topbar h1{font-size:14.5px;font-weight:600;letter-spacing:-.1px}
+.topbar h1 .crumb{color:var(--faint);font-weight:500;margin:0 2px}
+.topbar .sync-info{margin-left:auto;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green-vivid);display:inline-block}
+.content{padding:22px 36px 64px;max-width:1280px;margin:0 auto}
+
+/* ============ 通用元件 ============ */
+.card{background:var(--canvas);border:1px solid var(--line-soft);border-radius:12px;padding:16px 20px;margin-bottom:14px;box-shadow:var(--shadow-card)}
+.card h3{font-size:13.5px;font-weight:600;margin-bottom:10px;letter-spacing:-.1px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.badge{font-size:11.5px;font-weight:600;padding:2px 9px 2px 7px;border-radius:9999px;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;line-height:1.6}
+.badge::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor;flex:none}
+.b-gray{background:#f2f4f7;color:var(--slate)}
+.b-blue{background:var(--blue-light);color:var(--blue)}
+.b-amber{background:var(--amber-soft);color:var(--amber-deep)}
+.b-green{background:var(--green-soft);color:var(--green)}
+.b-red{background:var(--red-soft);color:var(--red-deep)}
+.b-teal{background:var(--teal-light);color:var(--teal)}
+.chip{font-size:11.5px;background:var(--canvas);border:1px solid var(--line);color:var(--slate);padding:1px 9px;border-radius:9999px;margin-right:5px;display:inline-block;line-height:1.7;white-space:nowrap}
+.chip.real{color:var(--blue);border-color:transparent;background:var(--blue-light)}
+.chip.warn{background:var(--red-soft);border-color:transparent;color:var(--red-deep)}
+.chip.ok{background:var(--green-soft);border-color:transparent;color:var(--green)}
+.chip.lock{background:var(--yellow-light);border-color:#f5e3a0;color:var(--yellow-dark);cursor:pointer}
+.btn{border:1px solid var(--line-strong);background:var(--canvas);color:var(--text);border-radius:8px;padding:6px 14px;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:all .13s}
+.btn:hover{border-color:var(--faint);background:var(--bg-soft)}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn.primary:hover{background:var(--primary-pressed)}
+.btn.primary:disabled{background:var(--line);border-color:var(--line);color:#fff;cursor:not-allowed}
+.btn:disabled{cursor:not-allowed;opacity:.55}
+.btn.small{padding:3px 10px;font-size:12px}
+.btn.link{border:none;background:none;color:var(--blue);padding:3px 6px;font-weight:500;border-radius:6px}
+.btn.link:hover{background:var(--blue-light)}
+.btn.danger{color:var(--red);border-color:#f2b8b3;background:var(--canvas)}
+.btn.danger:hover{background:var(--red-soft);border-color:var(--red)}
+.spin{width:12px;height:12px;border:2px solid var(--line);border-top-color:var(--blue);border-radius:50%;display:inline-block;animation:tpspin .9s linear infinite;flex:none}
+@keyframes tpspin{to{transform:rotate(360deg)}}
+.sub{font-size:12px;color:var(--muted)}
+.err-t{color:var(--red)}
+
+/* ============ 详情头 ============ */
+.detail-h{display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap}
+.detail-h h2{font-size:19px;font-weight:650;letter-spacing:-.2px;color:var(--ink-deep)}
+.meta{font-size:12.5px;color:var(--muted);margin-bottom:4px;display:flex;gap:18px;flex-wrap:wrap}
+.meta span{display:inline-flex;align-items:center;gap:5px}
+
+/* ============ Tabs ============ */
+.tabs{display:flex;gap:2px;margin:14px 0 18px;border-bottom:1px solid var(--line);overflow-x:auto;position:sticky;top:54px;z-index:30;background:var(--bg);padding-top:6px}
+.tab{padding:8px 14px 9px;background:none;border:none;color:var(--muted);font-size:13.5px;font-weight:500;position:relative;white-space:nowrap;transition:color .13s}
+.tab:hover{color:var(--text)}
+.tab.on{color:var(--text);font-weight:600}
+.tab.on::after{content:"";position:absolute;left:8px;right:8px;bottom:-1px;height:2px;background:var(--blue);border-radius:2px}
+.tab .n{font-size:11px;background:var(--bg-active);border-radius:9999px;padding:0 7px;margin-left:6px;color:var(--slate);font-weight:600;display:inline-block;line-height:1.7}
+.tab.on .n{background:var(--blue-light);color:var(--blue)}
+
+/* ============ TaskPanel v2（阶段点 3→5 + nextAction 唯一主按钮） ============ */
+.taskpanel{margin:14px 0;border-left:3px solid var(--blue)}
+.tp-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.tp-title{font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:6px}
+.tp-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.tp-summary{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.tp-stages{display:flex;gap:12px;flex-wrap:wrap;font-size:12.5px;color:var(--slate)}
+.tp-stage{display:inline-flex;align-items:center;gap:5px}
+.st-dot{width:7px;height:7px;border-radius:50%;background:var(--line-strong);flex:none}
+.st-dot.done{background:var(--green-vivid)}
+.st-dot.failed{background:var(--red)}
+.st-dot.doing{background:var(--blue)}
+.st-dot.skip{background:var(--faint)}
+.tp-lane{display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--slate);flex-wrap:wrap;margin-top:8px}
+.tp-task{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;flex-wrap:wrap}
+.tp-task .sub{max-width:55%}
+.tp-task .sub.ell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tp-fail-body{flex-basis:100%;margin:6px 0 2px;padding:8px 10px;background:var(--bg-soft);border:1px solid var(--line);border-radius:6px}
+.tp-fail-body .hint{font-size:12.5px;color:var(--red-deep);margin-bottom:4px}
+.tp-fail-body .diag{font-size:11.5px;color:var(--slate);white-space:pre-wrap;word-break:break-all;max-height:160px;overflow:auto;margin:0}
+.tp-draft{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--bg-soft)}
+.tp-draft-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px}
+.tp-btns{display:flex;gap:8px;margin-top:10px}
+.tp-preview{max-height:420px;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:8px;padding:12px 16px;margin-top:8px}
+.tp-modes{display:flex;gap:6px;align-items:center;margin:8px 0 0}
+.tp-modes .tp-on{background:var(--blue-light);border-color:var(--blue)}
+.tp-editor{width:100%;min-height:280px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.6;padding:10px 12px;border:1px solid var(--line);border-radius:8px;margin-top:8px;resize:vertical;background:#fff}
+
+/* ============ banner ============ */
+.banner{background:var(--bg-soft);border:1px solid var(--line-soft);color:var(--slate);border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:14px;display:flex;gap:10px;align-items:flex-start;line-height:1.65}
+.banner.blue{background:var(--blue-light);border-color:var(--blue-border);color:#3f3ac0}
+.banner.amber{background:var(--amber-soft);border-color:#f3ddb5;color:var(--amber-deep)}
+.banner.red{background:var(--red-soft);border-color:#f2b8b3;color:var(--red-deep)}
+.banner.green{background:var(--green-soft);border-color:#bfe3d2;color:var(--green)}
+.banner b{font-weight:600}
+.banner .sub{color:inherit;opacity:.75;font-size:12px}
+.banner .b-act{margin-left:auto;flex:none;display:flex;gap:8px;align-items:center}
+
+/* ============ 双 lane / 检查卡 / 角色卡 ============ */
+.lanes{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:860px){.lanes{grid-template-columns:1fr}}
+.lane{border:1px solid var(--line-soft);border-radius:10px;padding:13px 16px;background:var(--bg-soft)}
+.lane h4{font-size:13px;font-weight:600;display:flex;align-items:center;gap:7px;margin-bottom:6px}
+.lane p{font-size:12.5px;color:var(--muted);line-height:1.65}
+.gate-check{display:flex;flex-direction:column;gap:8px}
+.gate-check .gc-item{display:flex;align-items:flex-start;gap:9px;padding:10px 13px;border:1px solid var(--line-soft);border-radius:9px;background:var(--canvas);font-size:13px}
+.gc-ico{width:20px;height:20px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin-top:1px}
+.gc-ok .gc-ico{background:var(--green-soft);color:var(--green)}
+.gc-no .gc-ico{background:var(--red-soft);color:var(--red)}
+.gc-item .gc-t{font-weight:600}
+.gc-item .gc-d{font-size:12px;color:var(--muted);margin-top:1px}
+.roles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.role-card{border:1px solid var(--line-soft);border-radius:10px;padding:12px 14px;background:var(--canvas)}
+.role-card b{font-size:13px;display:flex;align-items:center;gap:7px}
+.role-card p{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.6}
+.recon{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12.5px}
+.recon .arr{color:var(--faint)}
+.recon .box{border:1px solid var(--line);border-radius:9px;padding:7px 12px;background:var(--canvas)}
+.recon .box b{display:block;font-size:15px;letter-spacing:-.3px}
+.recon .box span{font-size:11px;color:var(--muted)}
+.recon .box.noise{opacity:.6;border-style:dashed}
+
+/* ============ issue 卡 ============ */
+.issue{border:1px solid var(--line-soft);border-left-width:3px;border-radius:10px;padding:12px 16px;margin-bottom:10px;background:var(--canvas);box-shadow:var(--shadow-card)}
+.issue.sev-red{border-left-color:var(--lv-red)}
+.issue.sev-yellow{border-left-color:var(--lv-yellow)}
+.issue.sev-blue{border-left-color:var(--lv-blue)}
+.issue.decided{background:var(--bg-soft)}
+.i-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.i-head .grow{flex:1}
+.lvl-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
+.lvl-dot.red{background:var(--lv-red)}.lvl-dot.yellow{background:var(--lv-yellow)}.lvl-dot.blue{background:var(--lv-blue)}
+.issue .scene{font-weight:600;margin:7px 0 3px;font-size:13.5px;line-height:1.65}
+.issue .loc{font-size:12px;color:var(--muted)}
+.quote{background:var(--bg-soft);border-left:3px solid var(--line-strong);border-radius:8px;padding:8px 12px;margin-top:8px;font-size:12.5px;color:var(--slate);white-space:pre-wrap;line-height:1.7}
+.quote .qlb{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--stone);margin-bottom:4px;font-weight:600}
+.reflink{color:var(--blue);cursor:pointer;border-bottom:1px dashed rgba(79,70,229,.4)}
+.reflink:hover{background:var(--blue-light)}
+.i-ops{display:flex;gap:6px;margin-top:10px;align-items:center;flex-wrap:wrap}
+.i-verdict{display:flex;align-items:center;gap:8px;margin-top:10px;background:var(--bg-soft);border:1px solid var(--line-soft);border-radius:8px;padding:7px 11px;font-size:12.5px;flex-wrap:wrap}
+.grp-t{display:flex;align-items:center;gap:8px;padding:7px 0 8px;border-bottom:1px solid var(--line);margin:14px 0 10px;font-weight:600;font-size:13px;cursor:pointer;user-select:none}
+.grp-t:first-child{margin-top:0}
+.grp-t .cnt{font-size:11.5px;color:var(--stone);font-weight:400;margin-left:auto}
+.rev-card{border:1px solid var(--blue-border);background:var(--blue-light);border-radius:10px;padding:11px 14px;margin-bottom:10px}
+.rev-card.done{border-color:#bfe3d2;background:var(--green-soft)}
+.rev-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px}
+.rev-diff{background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 11px;font-size:12px;margin-top:8px;font-family:ui-monospace,Menlo,monospace;white-space:pre-wrap;line-height:1.7}
+.rev-diff .del{color:var(--red-deep);background:var(--red-soft);display:block;border-radius:4px;padding:0 4px}
+.rev-diff .ins{color:var(--green);background:var(--green-soft);display:block;border-radius:4px;padding:0 4px}
+.filters{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.filters select,.filters input{border:1px solid var(--line-strong);border-radius:8px;padding:6px 12px;font-size:13px;background:var(--canvas)}
+.filters .spacer{flex:1}
+.prog-row{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--muted)}
+.bar{height:5px;background:var(--bg-active);border-radius:9999px;overflow:hidden;flex:1;min-width:40px}
+.bar-fill{height:100%;background:var(--green-vivid);border-radius:9999px;transition:width .3s}
+
+/* ============ 文档视图 + 右栏目录 ============ */
+.doc-layout{display:flex;gap:20px;align-items:flex-start}
+.doc-layout>.card{flex:1;min-width:0}
+.toc-side{flex:none;width:216px;position:sticky;top:120px;max-height:calc(100vh - 140px);display:flex;flex-direction:column;padding:10px 2px 10px 12px;border-left:1px solid var(--line-soft)}
+.toc-side-t{font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.02em}
+.toc-side-list{overflow-y:auto;scrollbar-width:thin;display:flex;flex-direction:column;gap:1px}
+.toc-side-item{font-size:12px;line-height:1.5;color:var(--stone);cursor:pointer;padding:3px 8px;border-left:2px solid transparent;border-radius:0 6px 6px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.toc-side-item:hover{color:var(--text)}
+.toc-side-item.lv1{font-weight:500;color:var(--charcoal)}
+.doc{font-size:13.5px}
+.doc h2{font-size:16px;font-weight:650;margin:20px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--line-soft)}
+.doc h3{font-size:14px;font-weight:600;margin:15px 0 6px}
+.doc p{margin:7px 0;line-height:1.75;color:var(--charcoal);max-width:76ch}
+.doc ul{margin:7px 0 7px 20px;line-height:1.75}
+.doc table{width:100%;border-collapse:collapse;margin:9px 0;font-size:12.5px}
+.doc table th{background:var(--bg-soft);border:1px solid var(--line-soft);padding:6px 10px;text-align:left;font-size:12px;font-weight:600;color:var(--muted)}
+.doc table td{border:1px solid var(--line-soft);padding:6px 10px;line-height:1.65}
+tr.locked-row td{background:var(--yellow-light)}
+tr.locked-ok td{background:var(--green-soft)}
+code{background:var(--bg-active);padding:1px 6px;border-radius:5px;font-size:12px;font-family:ui-monospace,Menlo,Consolas,monospace}
+.anchor-card{border:1px solid var(--line-soft);border-radius:10px;background:var(--bg-soft);padding:10px 14px;font-size:12.5px;color:var(--slate);margin-bottom:14px;display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+
+/* ============ 用例 mini 表 ============ */
+.table{width:100%;border-collapse:separate;border-spacing:0;background:var(--canvas);border:1px solid var(--line-soft);border-radius:12px;box-shadow:var(--shadow-card)}
+.table th{background:var(--bg-soft);text-align:left;font-size:12px;color:var(--muted);font-weight:600;padding:9px 14px;border-bottom:1px solid var(--line-soft);white-space:nowrap}
+.table td{padding:11px 14px;border-bottom:1px solid var(--line-soft);font-size:13px}
+.table tbody tr:last-child td{border-bottom:none}
+
+/* ============ 弹窗 / 确认框 / toast ============ */
+@keyframes fadein{from{opacity:0}}
+@keyframes pop{from{opacity:0;transform:translateY(10px) scale(.985)}}
+.modal-mask{position:fixed;inset:0;background:rgba(15,18,30,.48);z-index:90;display:flex;align-items:flex-start;justify-content:center;padding:56px 20px;animation:fadein .18s ease}
+.modal{background:var(--canvas);border-radius:14px;width:680px;max-width:100%;max-height:82vh;display:flex;flex-direction:column;box-shadow:var(--shadow-modal);animation:pop .2s cubic-bezier(.21,1.02,.73,1)}
+.modal.narrow{width:480px}
+.modal-h{padding:13px 20px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;font-weight:600;font-size:14px;gap:8px}
+.modal-h .x{margin-left:auto;border:none;background:none;color:var(--muted);width:28px;height:28px;border-radius:7px}
+.modal-h .x:hover{background:var(--bg-active)}
+.modal-b{padding:18px 20px;overflow-y:auto;font-size:13px;color:var(--slate);line-height:1.7;white-space:pre-wrap;word-break:break-word}
+.modal-f{padding:12px 20px;border-top:1px solid var(--line-soft);display:flex;gap:10px;justify-content:flex-end;background:var(--bg-soft);border-radius:0 0 14px 14px}
+.field{margin-bottom:13px}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:500}
+.field label em{color:var(--red);font-style:normal;margin-right:2px}
+.field input,.field select,.field textarea{width:100%;border:1px solid var(--line-strong);border-radius:8px;padding:8px 11px;font-size:13px;background:var(--canvas)}
+.field textarea{min-height:70px;resize:vertical}
+/* 渠道选择卡片（提交需求弹窗，对齐真实平台 .seg） */
+.seg{display:flex;gap:8px}
+.seg-opt{flex:1;display:flex;gap:9px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;transition:border-color .13s, background .13s}
+.seg-opt:hover{border-color:var(--line-strong)}
+.seg-opt.on{border-color:var(--blue);background:var(--blue-light)}
+.seg-opt input{width:auto;margin-top:3px;accent-color:var(--blue)}
+.seg-t{font-size:13px;font-weight:600;color:var(--text)}
+.seg-d{font-size:11.5px;color:var(--muted);line-height:1.5;margin-top:1px}
+/* 迭代聚合条（线上流水线·迭代级） */
+.agg-strip{display:flex;gap:10px;flex-wrap:wrap}
+.agg{flex:1;min-width:120px;border:1px solid var(--line-soft);border-radius:10px;background:var(--bg-soft);padding:9px 13px;cursor:pointer;transition:all .13s}
+.agg:hover{border-color:var(--blue-border);box-shadow:var(--shadow-pop)}
+.agg b{font-size:15px;letter-spacing:-.3px;font-variant-numeric:tabular-nums}
+.agg span{font-size:11.5px;color:var(--muted);margin-left:5px}
+.agg .adot{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--green);font-weight:600}
+.agg .adot.doing{color:var(--blue)}
+.checks{display:flex;flex-direction:column;gap:8px;margin:10px 0}
+.checks label{display:flex;gap:9px;align-items:flex-start;font-size:13px;color:var(--text);cursor:pointer;border:1px solid var(--line-soft);border-radius:8px;padding:8px 11px}
+.checks input{width:auto;margin-top:3px;accent-color:var(--blue)}
+@keyframes toastin{from{opacity:0;transform:translate(-50%,-10px)}}
+.toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--canvas);color:var(--text);border:1px solid var(--line);border-left:3px solid var(--green-vivid);padding:9px 16px 9px 12px;border-radius:10px;font-size:13px;z-index:99;box-shadow:var(--shadow-modal);display:flex;align-items:center;gap:8px;max-width:520px;animation:toastin .22s}
+.toast.err{border-left-color:var(--red)}
+@keyframes flashbg{0%{background:var(--yellow-light)}100%{background:transparent}}
+.flash{animation:flashbg 2.2s ease-out}
+@keyframes flash-in{from{opacity:0;transform:translateY(6px)}}
+.anim{animation:flash-in .25s ease}
+
+/* ============ 审计留痕 ============ */
+.logline{display:flex;gap:12px;font-size:12.5px;padding:5px 0;border-bottom:1px dashed var(--line-soft);flex-wrap:wrap}
+.logline:last-child{border-bottom:none}
+.logline .lt{color:var(--faint);font-variant-numeric:tabular-nums;flex:none;width:132px}
+.logline .lb2{font-weight:600;color:var(--charcoal);flex:none}
+.empty{text-align:center;color:var(--muted);padding:34px 20px;border:1px dashed var(--line-strong);border-radius:12px;background:var(--bg-soft);font-size:13px}
+.kv{display:flex;gap:8px;flex-wrap:wrap;font-size:12.5px}
+.kv .chip{margin:0}
+
+/* ============ 迭代总览页 ============ */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px}
+.stat{background:var(--canvas);border:1px solid var(--line-soft);border-radius:12px;padding:12px 16px;box-shadow:var(--shadow-card);display:flex;align-items:center;gap:12px}
+.stat .n{font-size:22px;font-weight:650;letter-spacing:-.4px;font-variant-numeric:tabular-nums;line-height:1.2}
+.stat .l{font-size:12px;color:var(--muted);font-weight:500;white-space:nowrap}
+.stat-ico{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex:none}
+.ti-gray{background:#f2f4f7;color:var(--slate)}
+.ti-blue{background:var(--blue-light);color:var(--blue)}
+.ti-amber{background:var(--amber-soft);color:var(--amber)}
+.ti-green{background:var(--green-soft);color:var(--green)}
+.ti-red{background:var(--red-soft);color:var(--red)}
+.iter-row{display:flex;align-items:center;gap:14px;padding:12px 16px;border:1px solid var(--line-soft);border-radius:10px;background:var(--canvas);margin-bottom:8px;cursor:pointer;transition:all .13s;flex-wrap:wrap}
+.iter-row:hover{border-color:var(--blue-border);box-shadow:var(--shadow-pop)}
+.iter-row.live{border-left:3px solid var(--blue)}
+.iter-row .ir-name{width:240px;flex:none;min-width:0}
+.iter-row .ir-name b{font-size:13px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.iter-row .ir-name .sub{font-size:11px}
+.node-strip{display:flex;align-items:center;flex:1;min-width:430px}
+.nd{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--faint);white-space:nowrap}
+.nd i{width:9px;height:9px;border-radius:50%;background:var(--line-strong);flex:none}
+.nd.done{color:var(--slate)}
+.nd.done i{background:var(--green-vivid)}
+.nd.doing{color:var(--blue);font-weight:600}
+.nd.doing i{background:var(--blue);box-shadow:0 0 0 3px var(--blue-light)}
+.nd.failed{color:var(--red);font-weight:600}
+.nd.failed i{background:var(--red)}
+.nd.skip{color:var(--faint)}
+.nd.skip i{background:transparent;border:1.5px dashed var(--line-strong)}
+.nd-sep{width:14px;height:1.5px;background:var(--line);margin:0 7px;flex:none}
+.nd-sep.done{background:var(--green-vivid)}
+.ir-act{margin-left:auto;display:flex;gap:8px;align-items:center;flex:none}
+.todo-item{display:flex;gap:10px;align-items:center;padding:9px 12px;border:1px solid var(--line-soft);border-radius:9px;background:var(--canvas);margin-bottom:7px;font-size:13px;cursor:pointer;transition:all .13s;flex-wrap:wrap}
+.todo-item:hover{border-color:var(--blue-border);box-shadow:var(--shadow-pop)}
+.todo-item .grow{flex:1;min-width:200px}
+/* 设计生成步骤 */
+.dstep{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px dashed var(--line-soft);font-size:13px}
+.dstep:last-child{border-bottom:none}
+.dstep .sdot{width:18px;height:18px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:11px;margin-top:2px}
+.sd-done{background:var(--green-soft);color:var(--green)}
+.sd-run{background:var(--blue-light);color:var(--blue)}
+.sd-todo{background:var(--bg-active);color:var(--faint)}
+</style>
+</head>
+<body>
+
+<!-- ===== demo 控制条（原型评审专用，非平台 UI） ===== -->
+<div class="demo-bar">
+  <span class="d-logo"><i></i>交互原型<span class="d-tag">评审控制 · 非平台 UI</span></span>
+  <span class="d-op">评审场景
+    <select id="d-scen-select"></select>
+  </span>
+  <button class="d-reset" data-act="reset-scen">重置场景</button>
+  <span class="d-op" style="margin-left:auto">操作人 <input id="d-operator" value="李工" title="所有定稿/裁决/放行动作将以此留名（无登录体系的归因方案）"></span>
+</div>
+
+<div class="topbar">
+  <h1 style="cursor:pointer" data-act="view" data-arg="iter" title="迭代详情（默认首页，统一上下文=迭代）">迭代管理<span class="crumb">/</span><span id="tb-crumb">迭代详情 · v3.7.2</span></h1>
+  <span class="sync-info" style="margin-left:0">
+    <button class="btn small" data-act="view" data-arg="iter">迭代详情</button>
+    <button class="btn small primary" data-act="submit-open">+ 提交需求</button>
+  </span>
+  <span class="sync-info"><span class="dot"></span>原型演示数据</span>
+</div>
+
+<div class="content" id="app"></div>
+<div id="modal-root"></div>
+<div id="toast-root"></div>
+
+<script>
+'use strict';
+/* ============================================================
+   状态模型（原型演示用；字段命名对齐未来后端设计讨论稿）
+   design.phase: none|running|failed|draft|final|skipped
+   gate.phase:   none|blocked|running|summary|deciding|released
+   GR 规则（demo 注释引用）：
+   GR-1 输入冻结   published 终态锁保证设计输入不漂移
+   GR-2 开闸三条件 设计已定稿∨轻量跳过 ∧ 用例≥1且全部定稿 ∧ FR 覆盖
+   GR-3 变更重审   仅「定稿后未开审 / 已放行后」两窗口；内容 hash 判定；人确认才开新轮
+   GR-4 放行       = 全部裁决 ∧ 落改闭环(有修订事实) ∧ 机械校验全绿；平台口径唯一
+   GR-5 引用可跳可溯源  点击任意引用 → 一跳定位定义源 + 溯源卡（出处/覆盖/状态）；不可达引用显式报错
+   ============================================================ */
+
+const op = () => document.getElementById('d-operator').value.trim() || '（未署名）';
+const now = () => { const d = new Date(); const p = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+
+const BASE_CASES = [
+  {id:'TC-03', caseNo:3,  title:'五步向导逐级校验', pts:'需求.FR-01', st:'draft', pri:'P0', owner:'测试 · 赵四', tool:'sdlc-test', pre:'已创建比赛', steps:'1. 进入创建向导\n2. 留空必填项点下一步', expect:'拦截并提示必填', verifyRefs:[], defectRefs:[], comments:[]},
+  {id:'TC-07', caseNo:7,  title:'保存作品冲突返回 409', pts:'需求.FR-03', st:'draft', pri:'P0', owner:'测试 · 赵四', tool:'sdlc-test', pre:'两个会话编辑同一作品', steps:'1. 会话 A 保存\n2. 会话 B 保存', expect:'后保存方收到冲突提示', verifyRefs:['体检.P04'], defectRefs:['BUG-02（R1·已修复）'], comments:[{by:'测试 · 赵四', at:'2026-09-29 16:02', text:'与设计 §2 冲突码口径存在分歧（gate X-01），待裁决后对齐'}]},
+  {id:'TC-09', caseNo:9,  title:'报名截止自动顺延 72h', pts:'需求.FR-05', st:'draft', pri:'P1', owner:'测试 · 赵四', tool:'sdlc-test', pre:'比赛处于报名中', steps:'1. 到达截止时间\n2. 等待定时任务扫描', expect:'状态自动流转为比赛中', verifyRefs:['体检.P11'], defectRefs:[], comments:[]},
+  {id:'TC-12', caseNo:12, title:'已发布列表按发布时间筛选', pts:'需求.FR-08', st:'draft', pri:'P2', owner:'测试 · 赵四', tool:'sdlc-test', pre:'存在多条已发布比赛', steps:'1. 打开已发布列表\n2. 按发布时间筛选', expect:'结果按时间倒序且不随数据量明显劣化', verifyRefs:[], defectRefs:[], comments:[]},
+  {id:'TC-13', caseNo:13, title:'成绩复核申请提交与撤回', pts:'需求.FR-13', st:'draft', pri:'P1', owner:'测试 · 赵四', tool:'sdlc-test', pre:'成绩已发布', steps:'1. 提交复核申请\n2. 撤回', expect:'状态正确流转', verifyRefs:[], defectRefs:[], comments:[]},
+  {id:'TC-18', caseNo:18, title:'重复提交不产生多条记录', pts:'需求.FR-15', st:'draft', pri:'P0', owner:'测试 · 赵四', tool:'sdlc-test', pre:'同一作品快速双击保存', steps:'1. 连续点击保存', expect:'仅一条记录（D1 幂等）', verifyRefs:['体检.P04'], defectRefs:[], comments:[]},
+];
+
+/* 澄清清单（与体检同源 P 编号；published 场景为只读回放，原型允许试演处置交互） */
+const CLARIFY = [
+  {seq:'P04', level:'red', theme:'状态机与流转', question:'报名截止是否允许人工手动截止？（与自动顺延答复冲突）', ctx:'详述6.3',
+   quote:'「报名截止：管理员可手动点击截止按钮」——与 PM 答复（截止由系统自动顺延）冲突', status:'rejected',
+   note:'已认定不是问题：PM 答复明确自动顺延，不开放人工截止'},
+  {seq:'P11', level:'red', theme:'状态机与流转', question:'报名截止后顺延多久进入比赛中？（原文留白）', ctx:'详述6.3',
+   quote:'「报名截止后____（原文留白）自动进入比赛中」', status:'deferred',
+   note:'顺延时长待下期原型确认——转遗留假设（对应 确认.Q-03）'},
+  {seq:'P19', level:'yellow', theme:'成绩与通知', question:'成绩发布后通知哪些人？失败重发策略？', ctx:'详述7.2',
+   quote:'「成绩发布后系统发送短信通知」', status:'answered', answer:'通知参赛教师本人；失败重发 3 次后转人工名单'},
+  {seq:'P23', level:'blue', theme:'作品管理', question:'作品附件格式是否限制？', ctx:'详述6.4',
+   quote:'「上传作品附件」', status:'pending'},
+  {seq:'P27', level:'yellow', theme:'报名与截止', question:'报名信息提交后能否修改？', ctx:'详述6.3',
+   quote:'「教师报名，提交后不可撤回」', status:'pending'},
+];
+
+/* 原始需求快照（飞书块结构 · 质检与澄清的依据版本；条款行锚点 src-N-N 供 出处 引用跳转） */
+const ORIGIN_SECS = [
+  {h:'6.1 比赛管理（列表）', rows:[['6.1','列表支持按状态、时间筛选与分页；已发布比赛按发布时间倒序展示，统计区展示报名数 / 作品数 / 发布数。']]},
+  {h:'6.2 创建比赛（五步向导）', rows:[['6.2','创建分五步：基本信息 → 规则 → 奖项 → 公示 → 确认，步骤固定不可跳步。'],
+      ['6.2.1','逐级校验：每步必填项校验通过方可进入下一步；确认页可返回任意前序步骤修改。']]},
+  {h:'6.3 报名与截止', rows:[['6.3','教师报名，提交后不可撤回；报名截止后____（原文留白）自动进入比赛中。管理员可在列表查看报名进度。']]},
+  {h:'6.4 作品保存', rows:[['6.4','作品支持附件上传；重复提交以最后一次为准，不产生多条记录（6.4.2）。']]},
+  {h:'7.2 成绩发布与通知', rows:[['7.2','成绩发布后系统向参赛教师发送短信通知；通知内容含成绩与复核入口。']]},
+];
+
+/* 引用定义源（GR-5 溯源数据）：FR 注册表来自 digest §7，体检条目来自 audit */
+const FR_POINTS = [
+  {id:'FR-01', name:'五步向导逐级校验', src:'详述6.2.1', grp:'创建比赛（五步向导）', mod:'比赛管理'},
+  {id:'FR-03', name:'保存冲突处理', src:'详述6.4', grp:'作品管理', mod:'比赛管理'},
+  {id:'FR-05', name:'报名截止自动顺延', src:'详述6.3', grp:'报名与截止', mod:'报名管理'},
+  {id:'FR-08', name:'已发布列表按时间筛选', src:'详述6.1', grp:'列表与筛选', mod:'比赛管理'},
+  {id:'FR-12', name:'成绩发布短信通知', src:'详述7.2', grp:'成绩与通知', mod:'成绩管理'},
+  {id:'FR-13', name:'成绩复核申请与撤回', src:'详述7.3', grp:'成绩与通知', mod:'成绩管理'},
+  {id:'FR-15', name:'重复提交防护', src:'详述6.4.2', grp:'作品管理', mod:'比赛管理'},
+];
+const AUDIT_ITEMS = [
+  {id:'P04', sev:'red', src:'详述6.3', related:['TC-09','TC-18'], title:'报名截止允许人工操作，与「自动顺延」答复冲突',
+   quote:'「报名截止：管理员可手动点击截止按钮」——与 PM 答复（截止由系统自动顺延，不开放人工截止）冲突',
+   go:'已承接 → 功能.F05（设计 §2 契约行）'},
+  {id:'P11', sev:'red', src:'详述6.3', related:[], title:'顺延时长原文缺失（❓ 断点）',
+   quote:'「报名截止后____（原文留白）自动进入比赛中」',
+   go:'转 Q 表 → 确认.Q-03（阻塞 F05，不阻塞全局）'},
+  {id:'P15', sev:'yellow', src:'详述6.4', related:['TC-18'], title:'作品修改窗口未定义',
+   quote:'「作品提交后可修改」未说明截止时点',
+   go:'本期不做 → 修改窗口归下期（设计 §8）'},
+];
+const D_ROWS = {1:'C 约束 · 重复提交不得产生多条记录', 2:'C 约束 · 软删主表必须过滤子表对账',
+  3:'C 约束 · 顺延只允许单向推进，禁止回拨', 4:'C 约束 · 截止顺延由定时任务驱动（幂等）', 5:'H 假设 · 列表统计本地缓存 5min'};
+
+const BASE_ISSUES = [
+  {code:'X-01', sev:'red', theme:'接口契约', role:'交叉审查者', div:true,
+   scene:'TC-07 期望保存冲突返回 409，但设计 §2 契约行写的是「200 + 业务错误码 4409」——用例和设计对同一接口的口径对不上，联调必炸。',
+   quote:'设计 §2：POST /contest/works/save → 200 {code:4409}\ncases TC-07：expect 状态码 409 Conflict',
+   loc:'§2 接口契约 · F03 行 ↔ 用例 TC-07', basis:'hard', dec:null},
+  {code:'X-02', sev:'red', theme:'需求覆盖', role:'交叉审查者', div:true,
+   scene:'需求点 FR-12「成绩发布短信通知」在用例双向追踪表没有覆盖行，设计里也没有落点——这条需求可能整条被漏掉。',
+   quote:'digest §7：需求.FR-12 成绩发布通知（详述 7.2）\ncases 双向追踪表：FR-12 无行',
+   loc:'digest §7 ↔ cases 双向追踪表', basis:'hard', dec:null},
+  {code:'S-01', sev:'red', theme:'数据模型', role:'数据审查',
+   scene:'works 表新增 publish_at，但「已发布列表」要按它排序筛选——没建索引，数据量上来后这个列表页会明显变慢。',
+   quote:'ALTER TABLE works ADD COLUMN publish_at datetime\n——§1 未声明 idx_publish_at',
+   loc:'§1 数据模型', basis:'hard', dec:null},
+  {code:'S-02', sev:'yellow', theme:'数据模型', role:'数据审查',
+   scene:'works 有软删（deleted_at），但子表 works_log 的对账查询没排除已软删主表记录，统计数会对不上。',
+   quote:'子表对账：SUM(works_log.score) GROUP BY works_id\n——未 JOIN works.deleted_at IS NULL',
+   loc:'§6 D 表 · D2 行', basis:'hard', dec:null},
+  {code:'A-01', sev:'yellow', theme:'状态机', role:'架构审查', lockedQ:'确认.Q-03',
+   scene:'「报名截止→顺延」在原文是断点（❓），设计按假设补了流转边，但契约行还没标「锁定待拍板」——拍板前按定案实现会有返工风险。',
+   quote:'报名中 →(报名截止)→ 比赛中\n（Q-03 假设：自动顺延 72 小时）',
+   loc:'§2 接口契约 · F05 行', basis:'hard', dec:null},
+  {code:'A-02', sev:'blue', theme:'公共资产', role:'架构审查',
+   scene:'枚举 WorksStatusEnum 的扩展值被 C2、C3 两个切片同时消费，但骨架切片清单里没先交付它，两个切片会各自定义一遍。',
+   quote:'§3 ① 枚举与码表：WorksStatusEnum +2 值（消费切片 C2、C3）\n§7.1 切分表：C1 骨架交付物未含该枚举',
+   loc:'§3 公共资产 · ① ↔ §7.1', basis:'soft', dec:null},
+  {code:'T-01', sev:'yellow', theme:'可测性', role:'可测性审查',
+   scene:'D5 统计口径是 H 假设（列表缓存 5 分钟），但没写接受条件——压测到什么程度必须调整没有判据，测试没法验收。',
+   quote:'D5 | H 假设 | 列表统计本地缓存 5min\n——说明列缺「接受条件」',
+   loc:'§6 D 表 · D5 行', basis:'hard', dec:null},
+  {code:'T-02', sev:'blue', theme:'可测性', role:'可测性审查',
+   scene:'「报名截止自动顺延」依赖定时任务，用例没有时钟可控的验证入口，这条只能靠等真实时间触发，回归成本高。',
+   quote:'TC-14：报名截止后状态自动流转\n——无时间旅行/触发器注入手段',
+   loc:'用例 TC-14 ↔ §6 D4', basis:'soft', dec:null},
+  {code:'W-01', sev:'blue', theme:'接口契约', role:'数据审查',权衡:true,
+   scene:'批量导入单次上限 500 条是性能与体验的有效权衡，建议接受风险即可，不强制改设计。',
+   quote:'§2 F08：批量导入 ≤500 条/次',
+   loc:'§2 接口契约 · F08 行', basis:'soft', dec:null, suggest:'驳回'},
+  {code:'W-02', sev:'blue', theme:'命名空间', role:'架构审查',权衡:true,
+   scene:'错误文案模板收口到公共常量属于骨架切片职责，与设计 §3 一致，无需动作。',
+   quote:'§3 ② 常量与 key 空间：错误消息文案模板统一收口',
+   loc:'§3 公共资产 · ②', basis:'soft', dec:null, suggest:'驳回'},
+  {code:'W-03', sev:'blue', theme:'数据模型', role:'数据审查',权衡:true,
+   scene:'审计字段（created_by/updated_at）沿用项目通用规范，设计未重复声明是正确做法。',
+   quote:'——不重复项目通用规范约定（设计纪律第 3 条）',
+   loc:'§1 数据模型', basis:'soft', dec:null, suggest:'驳回'},
+];
+
+const DOC_TOC = [
+  ['d-h','头部字段（去向表/Q 表）',1],['d-s0','§0 方案总览与备选',1],['d-s1','§1 数据模型落地',1],
+  ['d-s2','§2 接口契约',1],['d-s3','§3 公共资产清单',1],['d-s4','§4 分层文件规划',1],
+  ['d-s5','§5 公共组件清单',1],['d-s6','§6 关键实现决策 D 表',1],
+  ['d-s7','§7 实施切分约束',1],['d-s8','§8 风险与边界',1]];
+
+const dstep = (stt, t, d) => `<div class="dstep">
+  <span class="sdot ${stt==='done'?'sd-done':stt==='run'?'sd-run':'sd-todo'}">${stt==='done'?'✓':stt==='run'?'●':'○'}</span>
+  <div style="flex:1;min-width:0"><b style="font-size:13px">${t}</b>${d?`<div class="sub" style="margin-top:2px;line-height:1.7">${d}</div>`:''}</div></div>`;
+
+function designDocHtml(st){
+  const q3ok = st.design.locked['确认.Q-03'];
+  const tier = st.req.riskTier;
+  return lk(`
+  <h2 id="d-h">${esc(st.req.name)} 技术设计（design.md）</h2>
+  <p class="sub">风险分级：${tier}（${tier==='A'?'全量骨架':tier==='B'?'mini 骨架':'轻量路径'}） ｜ 设计日期：2026-09-29 ｜ 输入锚点：digest-20260929 / audit-20260929 / pm-checklist-20260929</p>
+  <p class="sub">偏差回写规则：实现中仅<strong>影响 ER / 接口契约 / 公共组件 / 公共资产</strong>的偏差回写本文档，且仅重审受影响切片；组件接口调整不算偏差（脚手架不是合同）。</p>
+  <p style="margin-top:10px"><b>体检问题去向</b>（audit 🔴🟡 逐条有落点，无行即设计不自洽）</p>
+  <table><tr><th>体检编号</th><th>级</th><th>去向</th><th>落点</th><th>说明</th></tr>
+  <tr><td>体检.P04</td><td>🔴</td><td>已承接</td><td>功能.F05</td><td>PM 答复：报名截止由系统自动顺延，不开放人工截止</td></tr>
+  <tr><td>体检.P11</td><td>🔴</td><td>转 Q 表</td><td>确认.Q-03</td><td>顺延时长口径原文断点（❓），待 PM 拍板</td></tr>
+  <tr><td>体检.P15</td><td>🟡</td><td>本期不做</td><td>—</td><td>理由：作品修改窗口归下期</td></tr></table>
+  <p style="margin-top:10px"><b>Q 表</b>（来源：pm-checklist 未答复项 + digest §假设清单「假设」类条目；只锁对应功能点，不阻塞全局）</p>
+  <table><tr><th>编号</th><th>问题</th><th>当前假设</th><th>阻塞范围</th></tr>
+  <tr id="d-q03"><td>确认.Q-03</td><td>报名截止后是否自动顺延、顺延多久</td><td>自动顺延 72 小时</td><td>阻塞 F05</td></tr></table>
+  <h3 id="d-s0">§0 方案总览与备选</h3>
+  <table><tr><th>#</th><th>决策点</th><th>选择</th><th>弃选</th><th>trade-off</th><th>依据功能点</th></tr>
+  <tr><td>1</td><td>报名截止处理</td><td>定时任务扫描顺延</td><td>请求时惰性判定</td><td>状态即时可见、对账简单 vs 引入时钟依赖与调度运维</td><td>F05</td></tr>
+  <tr><td>2</td><td>保存冲突返回</td><td>200 + 业务错误码 4409</td><td>HTTP 409 Conflict</td><td>前端统一按 code 分支，不依赖 HTTP 层 vs 语义化 REST（用例侧推导按 409 —— 产生分歧 X-01）</td><td>F03</td></tr>
+  <tr><td>3</td><td>列表统计口径</td><td>本地缓存 5min</td><td>实时 COUNT</td><td>列表页 P99 达标 vs 数据延迟（H 假设，见 D5）</td><td>F01</td></tr></table>
+  <h3 id="d-s1">§1 数据模型落地</h3>
+  <table><tr><th>表</th><th>变更</th><th>DDL 约束要点</th></tr>
+  <tr><td>works</td><td>新增 <code>publish_at datetime</code></td><td><code>uk(works_id, period)</code> 防重复报名；${st.gate.revs?.some(r=>r.id==='R-2'&&r.status==='已执行')?'<span class=\"chip ok\">idx_publish_at 已补（gate 落改 R-2）</span>':'列表按发布时间筛选 —— 索引策略未声明（gate S-01 在审）'}</td></tr>
+  <tr><td>works_log</td><td>无变更</td><td>对账查询须 JOIN 主表 <code>deleted_at IS NULL</code>（D2）</td></tr>
+  <tr><td>signup</td><td>新增 <code>close_at datetime</code></td><td>顺延由定时任务回写，幂等键 <code>uk(signup_id, round)</code></td></tr></table>
+  <h3 id="d-s2">§2 接口契约</h3>
+  <p style="margin:4px 0"><b>写接口</b>（字段级：字段/口径来源/校验归属）</p>
+  <table><tr><th>F 点</th><th>URL</th><th>字段/口径</th><th>口径来源</th><th>备注</th></tr>
+  <tr id="d-f03"><td>F03</td><td><code>/contest/works/save</code></td><td>重复提交返回 200 {code:4409}</td><td>规则§4</td><td>与用例 TC-07 存在分歧（gate X-01）</td></tr>
+  <tr id="d-f05" class="${q3ok===undefined?'locked-row':(q3ok?'locked-ok':'locked-row')}"><td>F05</td><td><code>/contest/signup/close</code></td><td>自动顺延 72h</td><td>Q-03 假设</td><td>${q3ok===undefined?`<span class="chip lock" data-act="open-q">锁定待拍板（确认.Q-03）</span> <button class="btn small" data-act="open-q">去拍板</button>`:(q3ok?'<span class="chip ok">已拍板：顺延 72h（'+esc(op())+'）</span>':'')}</td></tr>
+  <tr id="d-f08"><td>F08</td><td><code>/contest/import</code></td><td>批量导入 ≤500 条/次</td><td>规则§6</td><td>有效权衡（gate W-01 建议接受）</td></tr></table>
+  <p style="margin:4px 0"><b>读接口</b>（出参字段清单 + 口径来源；展示细节留切片）</p>
+  <table><tr><th>F 点</th><th>URL</th><th>出参字段清单</th><th>口径来源</th></tr>
+  <tr><td>F01</td><td><code>/contest/works/get_list</code></td><td>分页列表行 + 统计区（报名数/作品数/发布数）</td><td><span id="d-f01">D5 缓存口径</span></td></tr>
+  <tr><td>F12</td><td><code>/contest/works/detail</code></td><td>作品详情 + 关联日志摘要</td><td><span id="d-f12">D2 软删过滤</span></td></tr></table>
+  <h3 id="d-s3">§3 公共资产清单</h3>
+  <table><tr><th>类别</th><th>资产</th><th>内容要点</th><th>消费切片</th><th>交付切片</th></tr>
+  <tr><td>① 枚举与码表</td><td>WorksStatusEnum +2 值</td><td>code/label 对齐 ER 与实体注释</td><td>C2、C3</td><td>骨架切片</td></tr>
+  <tr><td>② 常量与 key</td><td>锁 key / 定时任务 taskId / 错误文案模板</td><td>统一收口，禁止切片内散落</td><td>全部</td><td>骨架切片</td></tr>
+  <tr><td>③ 命名空间</td><td>URL 前缀 /contest、包路径 contest.*</td><td>方法名避让存量</td><td>全部</td><td>骨架切片</td></tr>
+  <tr><td>④ 公共 DTO</td><td>列表行公共字段 / 文件信息体</td><td>多切片同构结构只定一版</td><td>C2、C3</td><td>骨架切片</td></tr>
+  <tr><td>⑤ 存量扩展影响</td><td>WorksStatusEnum 被 3 个存量模块消费</td><td>影响面声明（升级提案证据）</td><td>—</td><td>—</td></tr>
+  <tr><td>⑥ DDL 脚本</td><td>V372__works_publish.sql</td><td>uk/idx 策略见 §1</td><td>全部</td><td>骨架切片</td></tr></table>
+  <h3 id="d-s4">§4 分层文件规划</h3>
+  <table><tr><th>层</th><th>新增</th></tr>
+  <tr><td>api / controller</td><td>ContestWorksController、ContestSignupController（+close 端点）</td></tr>
+  <tr><td>service</td><td>WorksService、SignupCloseScheduler</td></tr>
+  <tr><td>dao / repository</td><td>WorksRepo（+publish_at 查询）、WorksLogRepo（对账）</td></tr></table>
+  <h3 id="d-s5">§5 公共组件清单</h3>
+  <table><tr><th>组件</th><th>职责</th><th>依据功能点</th><th>复用/新建</th></tr>
+  <tr><td>幂等注解 @Idem</td><td>重复提交拦截（D1）</td><td>F03</td><td>复用存量</td></tr>
+  <tr><td>SignupCloseScheduler</td><td>截止扫描顺延（D4）</td><td>F05</td><td>新建</td></tr>
+  <tr><td>PageResult / 现有分页</td><td>列表分页</td><td>F01</td><td>复用存量</td></tr></table>
+  <h3 id="d-s6">§6 关键实现决策 D 表</h3>
+  <table><tr><th>#</th><th>类型</th><th>决策</th><th>说明</th></tr>
+  <tr id="d-d1"><td>D1</td><td>C 约束</td><td>重复提交不得产生多条记录</td><td>@Idem 拦截 + uk 双保险</td></tr>
+  <tr id="d-d2"><td>D2</td><td>C 约束</td><td>软删主表必须过滤子表对账</td><td>违反即是错（gate S-02 误报回流）</td></tr>
+  <tr id="d-d3"><td>D3</td><td>C 约束</td><td>顺延只允许单向推进，禁止回拨</td><td>状态机单向红线</td></tr>
+  <tr id="d-d4"><td>D4</td><td>C 约束</td><td>截止顺延由定时任务驱动</td><td>幂等守卫：重复扫描不重复顺延</td></tr>
+  <tr id="d-d5"><td>D5</td><td>H 假设</td><td>列表统计本地缓存 5min</td><td>${st.design.d5ok?'接受条件：压测 P99&gt;500ms 则调整（gate 落改已补）':'<span class=\"chip warn\">缺接受条件（gate T-01 在审）</span>'}</td></tr></table>
+  <h3 id="d-s7">§7 实施切分约束</h3>
+  <p style="margin:4px 0"><b>7.1 切分建议表</b>（公共资产非空：第一个切片必须是骨架切片）</p>
+  <table><tr><th>顺序</th><th>切片</th><th>覆盖功能点</th><th>依赖</th><th>共享物归属</th></tr>
+  <tr><td>C1</td><td>骨架</td><td>—</td><td>无</td><td>创建：枚举/常量/DDL/包目录/公共 DTO</td></tr>
+  <tr><td>C2</td><td>报名域</td><td>F05/F08</td><td>C1</td><td>复用：C1 枚举/常量</td></tr>
+  <tr><td>C3</td><td>比赛域</td><td>F01/F03/F12</td><td>C1</td><td>复用：C1 分页/DTO</td></tr></table>
+  <p style="margin:4px 0"><b>7.2 横切功能点核验矩阵</b>（横切点不单独建切片，随宿主切片交付）</p>
+  <table><tr><th>横切功能点</th><th>预期联动</th><th>落点宿主切片</th><th>核验结论</th></tr>
+  <tr><td>F05 状态流转</td><td>save 注册 / close 顺延 / 终止移除 / 处理器幂等</td><td>C2、C3</td><td>（宿主完成后补记）</td></tr></table>
+  <h3 id="d-s8">§8 风险与边界</h3>
+  <ul><li>定时任务时钟依赖（D4）：调度延迟窗口内状态短暂滞后，前端以 close_at 为准兜底展示</li>
+  <li>外部短信网关（FR-12，若承接）：降级为异步重试队列，失败可查</li>
+  <li>本期不做：作品修改窗口（体检.P15）、人工截止入口</li></ul>`);
+}
+
+/* ---------------- 场景定义 ---------------- */
+const SCENARIOS = [
+  {id:'s1',  name:'① 发布后初始（A级）'},
+  {id:'s2',  name:'② C 级轻量路径'},
+  {id:'s3',  name:'③ 设计生成中/失败'},
+  {id:'s4',  name:'④ 草稿待定稿'},
+  {id:'s5',  name:'⑤ 定稿+开闸检查'},
+  {id:'s6',  name:'⑥ 评审中'},
+  {id:'s7',  name:'⑦ 汇总待裁决'},
+  {id:'s8',  name:'⑧ 裁决进行中'},
+  {id:'s9',  name:'⑨ 放行确认'},
+  {id:'s10', name:'⑩ 放行后重开 r2'},
+];
+
+function freshState(sid){
+  const st = {
+    scen: sid,
+    req:{ id:'REQ-2026-042', name:'鸿儒 v3.7.2 · 考务规则重构', iter:'v3.7.2', riskTier:'A', status:'published',
+          targetRepo:'/Users/hljy/IdeaProjects/hongru', publishedAt:'2026-09-29 10:12' },
+    tab:'design', tpOpen:true,
+    design:{ phase:'none', task:null, locked:{}, d5ok:false, final:null, skipDeclared:false },
+    cases: BASE_CASES.map(c=>({...c, verifyRefs:[...c.verifyRefs], defectRefs:[...c.defectRefs], comments:c.comments.map(x=>({...x}))})),
+    clarify: CLARIFY.map(c=>({...c})),
+    openGrps:{}, clfFilter:'all', caseFilter:'all', caseQ:'', caseSortKey:'', caseSortDir:'desc',
+    gate:{ phase:'none', round:1, roles:[], reconcile:null, issues:[], revs:[], released:null, archived:[], change:null, tierProposal:null },
+    log:[ {t:'2026-09-29 10:12', by:'产品 · 王敏', act:'发布标准需求文档（终态）'} ],
+    note:'',
+  };
+  const G = st.gate, D = st.design;
+  switch(sid){
+    case 's1':
+      st.req.targetRepo = '';
+      st.note = '发布后进入设计/用例双 lane。要点：未配置目标代码仓时「生成技术设计」被守卫引导（GR：按需求配置勘察仓）；nextAction 唯一主按钮指向「配置目标代码仓→生成技术设计」。';
+      break;
+    case 's2':
+      st.req.riskTier = 'C';
+      st.tab = 'design';
+      st.cases.forEach(c=>c.st='reviewed');
+      st.note = 'C 级按方法论「免设计文档、不免门禁」：设计 lane 以「声明轻量跳过」终态化（留痕），门禁走自查档（单 agent 自查五问，无扇出）照常产 issues→裁决→放行。';
+      break;
+    case 's3':
+      st.req.riskTier = 'B';
+      D.phase = 'running';
+      D.task = {type:'design_gen', status:'running', runner:'agentscope-inproc', startedMin:6, auto:true};
+      G.tierProposal = {from:'B', to:'A', evidence:'勘察发现 WorksStatusEnum 被 3 个存量模块消费 + works 表被报表系统直读（影响面超出「≤2 层且 ≤3 文件」）', by:'agent · design_gen'};
+      st.note = '生成中的任务卡 + 结构化失败可切换演示（重试继承）。同时演示 GR-风险升级：勘察发现影响面证据 → 升级提案 → 人确认后只升不降（B→A），在途产物按新档全量产出。';
+      break;
+    case 's4':
+      D.phase = 'draft';
+      D.task = {type:'design_gen', status:'done', result:'9 节全量 · 契约 6 行 · D 表 5 项 · Q 表 1 锁定'};
+      st.cases.forEach(c=>c.st='reviewed');
+      st.note = '设计 lane 全貌：完整九节 design.md（体检问题去向表 + Q 表 + §0 备选 3 项 + §1 数据模型 + §2 读写契约 + §3 公共资产六类 + §4/§5 文件与组件 + §6 D 表 + §7 切分/横切矩阵 + §8 风险）。要点：①「锁定待拍板（确认.Q-03）」行高亮，去拍板后解锁；②定稿确认弹窗 = 操作人必填 + 齐套自检六项全勾 + 「定稿≠放行」明示（GR-4）；③支持编辑/渲染双模式；④定稿后可展开查看全量文档。';
+      break;
+    case 's5':
+      D.phase = 'final';
+      D.final = {by:'李工', at:'2026-09-29 14:02', ver:1};
+      st.tab = 'gate';
+      G.phase = 'blocked';
+      st.cases.forEach((c,i)=>{ if(i<5) c.st='reviewed'; });
+      st.note = '开闸三条件逐项亮灯（GR-2）：① 设计已定稿 ✓ ② 用例 5/6 未全定稿 ✗（可一键定稿演示）③ FR 覆盖 26/26 ✓。三条件全绿前「开评审」禁用并提示原因。';
+      break;
+    case 's6':
+      D.phase = 'final';
+      D.final = {by:'李工', at:'2026-09-29 14:02', ver:1};
+      st.tab = 'gate';
+      G.phase = 'running';
+      G.roles = [
+        {name:'架构一致性', desc:'分层/公共资产/切分约束 vs 存量架构', st:'running', min:4},
+        {name:'数据模型与 SQL', desc:'DDL/索引/软删对账/统计口径', st:'running', min:7},
+        {name:'测试可测性', desc:'H 假设接受条件/验证入口/时钟依赖', st:'running', min:5},
+        {name:'交叉审查者', desc:'唯一同时读设计×用例，只产分歧清单', st:'queued', min:0}];
+      st.note = 'A 级 = 4 个独立子代理真扇出（fresh-context 对抗，非单进程角色扮演）。B 级 = 数据+交叉 2 个；C 级 = 主会话自查无扇出。评审中产物冻结：变更走落改通道或人工「作废重审」（GR-3 窗口限定）。';
+      break;
+    case 's7':
+      D.phase = 'final';
+      D.final = {by:'李工', at:'2026-09-29 14:02', ver:1};
+      st.tab = 'gate';
+      G.phase = 'summary';
+      G.reconcile = {raw:83, mis:14, tradeoff:9, noise:3, valid:57, merged:41};
+      st.note = 'RECONCILE 汇总运行（独立上下文）：四分类过滤 + 同根因合并 + 场景白话补写 → 先过机械校验（引用可达/计数同源/场景非空）全绿才置「待裁决」。噪音不直达裁决人。';
+      break;
+    case 's8': {
+      D.phase = 'final';
+      D.final = {by:'李工', at:'2026-09-29 14:02', ver:1};
+      st.tab = 'gate';
+      G.phase = 'deciding';
+      G.reconcile = {raw:83, mis:14, tradeoff:9, noise:3, valid:57, merged:41};
+      G.issues = BASE_ISSUES.map(i=>({...i}));
+      // 预置：屏外 29 条已裁决 + 可见若干已裁决，构成 41 总量进度
+      const iss = Object.fromEntries(G.issues.map(i=>[i.code,i]));
+      iss['S-01'].dec = '落改'; iss['S-01'].by='李工'; iss['S-01'].note='补 idx_publish_at 索引';
+      iss['S-02'].dec = '驳回'; iss['S-02'].by='李工'; iss['S-02'].note='对账查询已在上期报表任务排除软删，此处误报（已回流误报模式库）';
+      iss['A-01'].dec = '存疑'; iss['A-01'].by='李工'; iss['A-01'].note='去向：转澄清——Q-03 口径需 PM 拍板';
+      G.revs = [
+        {id:'R-1', target:'设计 §2 · F03 契约行', change:'200 {code:4409} → 409 Conflict', status:'已执行', by:'李工'},
+        {id:'R-2', target:'设计 §1 · 补 idx_publish_at', change:'ADD INDEX idx_publish_at(publish_at)', status:'已执行', by:'李工'},
+        {id:'R-3', target:'用例 TC-07 · expect 改回与契约一致', change:'expect 409 → 200 {code:4409}', status:'待采纳', by:'—'},
+      ];
+      st.note = '裁决交互对齐澄清处置：即时逐条保存（n/m 实时）、可改判。落改 = 生成绑定产物与版本的修订工作项（AI 修订→草稿→人采纳→自动「已执行」），无修订事实不能放行（GR-4）。驳回必填理由（语义=不采纳/接受风险，≠澄清驳回）并回流误报模式库。GR-5：issue 的场景/摘引/落点里所有 需求.FR-xx / TC-xx / F03 / D5 / 体检.Pxx 引用均可点击——一跳定位定义源 + 溯源卡，证明来源有效。';
+      break;
+    }
+    case 's9':
+      D.phase = 'final';
+      D.final = {by:'李工', at:'2026-09-29 14:02', ver:1};
+      st.tab = 'gate';
+      G.phase = 'deciding';
+      G.reconcile = {raw:83, mis:14, tradeoff:9, noise:3, valid:57, merged:41};
+      G.issues = BASE_ISSUES.map(i=>({...i, dec:'驳回', by:'李工', note:'（预置已裁决）'}));
+      G.issues[0].dec='落改'; G.issues[1].dec='落改';
+      G.revs = [
+        {id:'R-1', target:'设计 §2 · F03 契约行', change:'200 {code:4409} → 409 Conflict', status:'已执行', by:'李工'},
+        {id:'R-2', target:'用例补 FR-12 覆盖', change:'新增 TC-21 短信通知触达', status:'待采纳', by:'—'},
+      ];
+      st.relVariant = 'blocked';   // blocked | ready
+      st.note = '放行 = 终态动作（danger 确认，对齐「发布」仪式感）：弹窗内实时校验清单（全部裁决/落改闭环/引用可达/计数同源/FR 覆盖/场景非空），未满足项红列并禁用确认。当前 R-2 修订未落盘——先「AI 修订→采纳修订」补齐落改闭环，再「校验并放行」体验两态。放行联动：用例自动置已定稿（标注来源「门禁 r1 放行 · 操作人」）。';
+      break;
+    case 's10':
+      D.phase = 'final';
+      D.final = {by:'李工', at:'2026-09-29 14:02', ver:1};
+      st.tab = 'gate';
+      G.phase = 'released';
+      G.released = {round:1, by:'评审组 · 李工', at:'2026-09-29 17:40'};
+      st.cases.forEach(c=>{c.st='reviewed'; c.src='门禁 r1 放行 · 李工';});
+      G.change = {what:'用例 TC-09 steps 内容变更（触发器注入验证手段调整）', by:'测试 · 赵四', at:'2 小时前'};
+      G.archived = [{round:1, issues:41, released:'2026-09-29 17:40', by:'评审组 · 李工'}];
+      st.note = '已放行后产物实质变更（GR-3：hash 判定，仅此窗口触发）→ 常驻 amber banner + 人工确认才开新一轮 r2（不自动烧 token）。旧轮归档只读，轮次切换器可回看。';
+      break;
+  }
+  return st;
+}
+
+let S = freshState('s1');
+S.view = 'iter';   // 默认首页 = 迭代详情（统一上下文=迭代；需求详情只能从行点击进入）
+
+/* ---------------- 工具 ---------------- */
+const esc = s => String(s??'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function log(st, act){ st.log.unshift({t:now(), by:op(), act}); }
+function toast(msg, isErr){
+  const r = document.getElementById('toast-root');
+  r.innerHTML = `<div class="toast${isErr?' err':''}">${isErr?'✕':'✓'} ${esc(msg)}</div>`;
+  clearTimeout(r._t); r._t = setTimeout(()=>r.innerHTML='', 3200);
+}
+function phaseBadge(phase){
+  const m = {none:['b-gray','未开始'],running:['b-blue','生成中'],failed:['b-red','失败'],draft:['b-amber','待定稿'],
+    final:['b-green','已定稿'],skipped:['b-gray','轻量跳过'],blocked:['b-gray','未开闸'],summary:['b-blue','汇总完成'],
+    deciding:['b-amber','裁决中'],released:['b-green','已放行']};
+  const [c,t] = m[phase]||['b-gray',phase]; return `<span class="badge ${c}">${t}</span>`;
+}
+function decisionSummary(st){
+  const G = st.gate;
+  if(!G.issues.length) return null;
+  const offscreen = G.reconcile ? G.reconcile.merged - G.issues.length : 0;
+  const done = G.issues.filter(i=>i.dec).length + (st._offDone ?? (G.phase==='deciding'||G.phase==='released' ? Math.max(0, offscreen) : 0));
+  return {done, total: G.reconcile ? G.reconcile.merged : G.issues.length};
+}
+
+/* ============================================================
+   GR-5 引用引擎：识别 → 解析 → 跳转定义源 → 溯源卡；不可达显式报错
+   ============================================================ */
+const REF_RE = /(详述\d+(?:\.\d+)*|需求\.FR-\d+|体检\.P\d+|用例\.TC-\d+|确认\.Q-\d+|FR-\d+|TC-\d+|Q-\d+|\bF\d{2}\b|\bD\d\b|\b[XSWATW]-\d{2}\b)/g;
+function lk(t){
+  return String(t ?? '').replace(REF_RE, m=>{
+    const ref = m.replace(/^(需求\.|体检\.|用例\.|确认\.)/, '');
+    return `<span class="reflink" data-ref="${ref}" title="点击跳转定义源并溯源">${m}</span>`;
+  });
+}
+function coveredBy(frId){ return S.cases.filter(c=>(c.pts||'').includes(frId)).map(c=>c.id); }
+function resolveRef(ref){
+  let m;
+  if(m = ref.match(/^详述(\d+(?:\.\d+)*)$/))
+    return {tab:'origin', anchor:'src-'+m[1].replace(/\./g,'-'), ref:'原文 '+ref,
+      kv:[['定义源','原始需求快照（飞书块结构 · GR-1 冻结）'],['条款','详述'+m[1]],
+          ['用途','质检 / 设计 / 澄清口径的定义源——引用此处即证明口径有出处']]};
+  if(m = ref.match(/^FR-(\d+)$/)){
+    const fr = FR_POINTS.find(x=>x.id===ref);
+    if(!fr) return null;
+    const cov = coveredBy(ref);
+    return {tab:'digest', anchor:'fr-'+ref, ref:'需求.'+ref,
+      kv:[['定义源','digest-20260929.md §7 需求点注册表（快照 v7 · GR-1 已冻结）'],['出处',fr.src],
+          ['分组 / 模块',fr.grp+' / '+fr.mod],
+          ['反向覆盖（RTM）', cov.length ? cov.map(c=>lk(c.id)).join('、') : '⚠ 0 条用例（dangling——正是 gate X-02 的分歧依据）']]};
+  }
+  if(m = ref.match(/^P(\d+)$/)){
+    const au = AUDIT_ITEMS.find(x=>x.id===ref);
+    if(!au) return null;
+    return {tab:'audit', anchor:'audit-'+au.id, ref:'体检.'+au.id,
+      kv:[['定义源','audit-20260929.md（26 项 · 已冻结）'],['严重度',au.sev==='red'?'🔴 阻断':au.sev==='yellow'?'🟡 严重':'🔵 建议'],
+          ['问题',au.title],['去向',au.go]]};
+  }
+  if(m = ref.match(/^TC-(\d+)$/)){
+    const c = S.cases.find(x=>x.id===ref);
+    if(!c) return null;
+    return {tab:'cases', anchor:'case-'+ref, ref:'用例.'+ref,
+      kv:[['定义源','test_case（cases 注册表 · 全量替换语义）'],['标题',c.title],
+          ['状态',c.st==='reviewed'?'已定稿':'待审核'],['覆盖需求点',c.pts||'—']]};
+  }
+  if(m = ref.match(/^Q-(\d+)$/)){
+    const key = '确认.'+ref;
+    return {tab:'design', anchor:'d-q'+m[1], ref: key,
+      kv:[['定义源','design.md 头部 Q 表'],['当前假设','自动顺延 72 小时'],['阻塞范围','F05（不锁全局）'],
+          ['拍板状态', S.design.locked[key] ? '已拍板' : '待拍板（锁定契约行）']]};
+  }
+  if(m = ref.match(/^F(\d{2})$/))
+    return {tab:'design', anchor:'d-f'+m[1], ref:'功能.'+ref,
+      kv:[['定义源','design.md §2 接口契约（挂 F 编号 + 口径来源）'],['可见性','契约行见跳转处']]};
+  if(m = ref.match(/^D(\d)$/))
+    return {tab:'design', anchor:'d-d'+m[1], ref:'设计.D'+m[1],
+      kv:[['定义源','design.md §6 关键实现决策 D 表'],['决策',D_ROWS[m[1]]||'—'],
+          ['接受条件', m[1]==='5' ? (S.design.d5ok?'压测 P99>500ms 则调整（gate 落改已补）':'未写（gate T-01 在审）') : '—']]};
+  if(m = ref.match(/^([XSWATW])-(\d{2})$/)){
+    const iss = (S.gate.issues||[]).find(i=>i.code===ref);
+    if(!iss) return null;
+    return {tab:'gate', anchor:'iss-'+ref, ref:'评审.'+ref,
+      kv:[['定义源',`门禁 r${S.gate.round} issues（RECONCILE 汇总后裁决单元）`],['角色',iss.role],['主题',iss.theme],
+          ['裁决状态', iss.dec ? iss.dec+'（'+(iss.by||'')+'）' : '待裁决']]};
+  }
+  return null;
+}
+function openRef(ref){
+  const t = resolveRef(ref);
+  if(!t){ toast(`引用不可达：${ref}（定义源未注册或产物未生成）`, true); return; }
+  if(t.tab==='design' && S.design.phase==='final') S.design.showDoc = true;
+  // 跳转协议（对齐真实平台 revealGrpFor）：目标在折叠组内时先展开，折叠不吞定位
+  if(t.tab==='digest' && t.anchor.startsWith('fr-')){
+    const f = FR_POINTS.find(x=>x.id===t.anchor.slice(3)); if(f) S.openGrps['fr:'+f.grp] = true;
+  }
+  if(t.tab==='audit'){ const pid = t.anchor.slice(6); S.openGrps['audit:'+(AUDIT_THEME[pid]||'')] = true; }
+  if(t.tab==='clarify'){ const c = S.clarify.find(x=>x.seq===t.anchor.slice(4)); if(c) S.openGrps['chk:'+c.theme] = true; }
+  S.refTrace = t; S.view = 'detail'; S.tab = t.tab;
+  render();
+  setTimeout(()=>{
+    const n = document.getElementById(t.anchor);
+    if(n){ n.scrollIntoView({behavior:'smooth',block:'center'}); n.classList.remove('flash'); void n.offsetWidth; n.classList.add('flash'); }
+    else toast('定义处当前视图未渲染（产物未生成/已收起）——溯源卡见页首', true);
+  }, 120);
+}
+function refTraceHtml(){
+  const t = S.refTrace;
+  if(!t) return '';
+  return `<div class="banner blue anim"><b>🔗 引用溯源</b>
+    <span style="flex:1;line-height:2"><b>${esc(t.ref)}</b> ｜ ${t.kv.map(([k,v])=>`<span class="sub"><b>${esc(k)}：</b>${v}</span>`).join(' ｜ ')}</span>
+    <span class="b-act"><button class="btn small" data-act="ref-close">收起</button></span></div>`;
+}
+/* ---------------- 渲染 ---------------- */
+function render(){
+  document.getElementById('d-scen-select').innerHTML = SCENARIOS.map(s=>
+    `<option value="${s.id}" ${s.id===S.scen?'selected':''}>${s.name}</option>`).join('');
+  document.getElementById('tb-crumb').textContent =
+    S.view==='detail' ? `迭代详情 / ${S.req.id}` : '迭代详情 · v3.7.2';
+  document.getElementById('app').innerHTML =
+    S.view==='detail'
+      ? (backHtml() + noteHtml(S.note) + refTraceHtml() + headerHtml() + taskPanelHtml() + tabsHtml() + tabBodyHtml() + logHtml())
+      : iterHtml();
+  renderModal();
+}
+
+function backHtml(){
+  return `<button class="btn link" data-act="view" data-arg="iter" style="margin-bottom:4px"><span style="font-size:12px">←</span> 返回迭代详情</button>`;
+}
+
+function noteHtml(t){
+  if(!t) return '';
+  return `<details class="banner amber" style="display:block;margin-bottom:14px">
+    <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:7px"><b>本场景演示要点</b><span class="sub">（点击展开/收起）</span></summary>
+    <div class="sub" style="margin-top:6px;line-height:1.8">${esc(t)}</div></details>`;
+}
+
+/* ============================================================
+   迭代总览（任务节点页）：迭代是一个整体的载体。
+   一行 = 一条需求的完整链路（质检→澄清→发布→设计→用例→门禁→放行），
+   节点状态由各阶段状态派生读时聚合；点击行进入需求详情。
+   ============================================================ */
+const ITER_MOCKS = [
+  {id:'REQ-2026-037', name:'题库批量导入', tier:'B',
+   nodes:[['质检','done'],['澄清','done'],['发布','done'],['设计','done'],['用例','done'],['门禁','done'],['放行','done']],
+   act:'已放行 r1 · 09-26', actCls:'b-green', role:'已闭环',
+   ls:{st:'已发布', clf:'5/5', dsg:['已定稿','b-green'], gate:['已放行 r1','b-green'], cases:'12', upd:'09-26 17:40'}},
+  {id:'REQ-2026-038', name:'阅卷规则引擎', tier:'A',
+   nodes:[['质检','done'],['澄清','done'],['发布','done'],['设计','done'],['用例','done'],['门禁','doing'],['放行','todo']],
+   act:'裁决 28/52 · 已滞留 2 天', actCls:'b-amber', role:'裁决人',
+   ls:{st:'已发布', clf:'4/4', dsg:['已定稿','b-green'], gate:['裁决中 28/52','b-amber'], cases:'18', upd:'09-29 15:12'}},
+  {id:'REQ-2026-043', name:'证书打印模板', tier:'A',
+   nodes:[['质检','done'],['澄清','done'],['发布','done'],['设计','doing'],['用例','done'],['门禁','todo'],['放行','todo']],
+   act:'设计草稿待定稿 · 锁定待拍板 1 行', actCls:'b-amber', role:'设计定稿人',
+   ls:{st:'已发布', clf:'3/3', dsg:['待定稿','b-amber'], gate:['未开始','b-gray'], cases:'9', upd:'09-29 11:20'}},
+  {id:'REQ-2026-041', name:'成绩单导出', tier:'B',
+   nodes:[['质检','done'],['澄清','done'],['发布','done'],['设计','doing'],['用例','todo'],['门禁','todo'],['放行','todo']],
+   act:'design_gen 执行中 · 6 分钟', actCls:'b-blue', role:'—',
+   ls:{st:'已发布', clf:'2/2', dsg:['生成中','b-blue'], gate:['未开始','b-gray'], cases:'0', upd:'09-29 14:05'}},
+  {id:'REQ-2026-044', name:'考场座位分配', tier:'B',
+   nodes:[['质检','done'],['澄清','done'],['发布','done'],['设计','todo'],['用例','todo'],['门禁','todo'],['放行','todo']],
+   act:'未配置目标代码仓 · 无法生成设计', actCls:'b-red', role:'管理员',
+   ls:{st:'已发布', clf:'1/1', dsg:['未开始','b-gray'], gate:['未开始','b-gray'], cases:'0', upd:'09-28 18:33'}},
+  {id:'REQ-2026-040', name:'监考安排排期', tier:'C',
+   nodes:[['质检','done'],['澄清','done'],['发布','done'],['设计','skip'],['用例','done'],['门禁','doing'],['放行','todo']],
+   act:'自查档评审中（C 级轻量）', actCls:'b-blue', role:'—',
+   ls:{st:'已发布', clf:'4/4', dsg:['轻量跳过','b-gray'], gate:['评审中（自查档）','b-blue'], cases:'6', upd:'09-29 10:02'}},
+  {id:'REQ-2026-039', name:'考生报名小程序', tier:'B',
+   nodes:[['质检','done'],['澄清','doing'],['发布','todo'],['设计','todo'],['用例','todo'],['门禁','todo'],['放行','todo']],
+   act:'澄清 2/5 · 3 问未答复', actCls:'b-amber', role:'PM',
+   ls:{st:'待澄清', clf:'2/5', dsg:['未开始','b-gray'], gate:['未开始','b-gray'], cases:'0', upd:'09-29 09:15'}},
+];
+
+const DSG_BADGE = {none:['未开始','b-gray'],running:['生成中','b-blue'],failed:['失败','b-red'],draft:['待定稿','b-amber'],final:['已定稿','b-green'],skipped:['轻量跳过','b-gray']};
+const GATE_BADGE = {none:['未开始','b-gray'],blocked:['待开闸','b-amber'],running:['评审中','b-blue'],summary:['汇总待裁决','b-blue'],deciding:['裁决中','b-amber'],released:['已放行','b-green']};
+function liveListRow(){
+  const reviewed = S.cases.filter(c=>c.st==='reviewed').length;
+  return {id:S.req.id, name:S.req.name, tier:S.req.riskTier, live:true, nodes:liveNodes(),
+    act:S.gate.phase==='released'?`已放行 r${S.gate.released.round}`:'（当前场景实时联动）', actCls:'b-blue', role:'本原型可交互',
+    ls:{st:'已发布', clf:'6/6',
+        dsg:DSG_BADGE[S.design.phase]||DSG_BADGE.none,
+        gate:GATE_BADGE[S.gate.phase]||GATE_BADGE.none,
+        cases:`${reviewed}/${S.cases.length}`, upd:'09-29 16:40'}};
+}
+
+/* 迭代详情（统一上下文 = 迭代）：统计卡 → 线上流水线（聚合条） → 任务管道 → 待办队列 → 迭代内需求 */
+const EXTRA_REQS = [];   // 「提交需求」新登记（原型内存生效）
+function iterRows(){ return [liveListRow(), ...ITER_MOCKS, ...EXTRA_REQS]; }
+function iterHtml(){
+  const rows = iterRows();
+  const published = rows.filter(r=>r.ls.st==='已发布').length;
+  const pending = rows.filter(r=>r.ls.st!=='已发布').length;
+  const dsgDone = rows.filter(r=>['已定稿','轻量跳过'].includes(r.ls.dsg[0])).length;
+  const gateBusy = rows.filter(r=>['评审中','评审中（自查档）','裁决中','汇总待裁决','待开闸'].includes(r.ls.gate[0])).length;
+  const released = rows.filter(r=>r.ls.gate[0]==='已放行').length;
+  const blocked = rows.filter(r=>r.actCls==='b-red').length;
+  const STAGES=['质检','澄清','发布','设计','用例','门禁','放行'];
+  const agg = STAGES.map((t,i)=>({
+    t,
+    done: rows.filter(r=>r.nodes[i][1]==='done').length,
+    doing: rows.filter(r=>r.nodes[i][1]==='doing').length,
+    skip: rows.filter(r=>r.nodes[i][1]==='skip').length,
+  }));
+  const na = nextAction();
+  const todos = [];
+  if(na) todos.push({req:S.req.id, name:S.req.name, role:'你（当前场景）', act:na.label+(na.disabled?'（被守卫拦截）':''), live:true});
+  todos.push({req:'REQ-2026-038', name:'阅卷规则引擎', role:'裁决人', act:'门禁 r1 裁决 28/52，已滞留 2 天——继续裁决'});
+  todos.push({req:'REQ-2026-043', name:'证书打印模板', role:'设计定稿人', act:'设计草稿待定稿（齐套自检 + 锁定待拍板 1 行）'});
+  todos.push({req:'REQ-2026-039', name:'考生报名小程序', role:'PM', act:'澄清 2/5 · 3 问未答复'});
+  todos.push({req:'REQ-2026-044', name:'考场座位分配', role:'管理员', act:'未配置目标代码仓——配置后才能生成设计'});
+  return `
+  <div class="detail-h"><h2>迭代详情 · v3.7.2</h2><span class="badge b-blue">鸿儒</span><span class="badge b-gray">${rows.length} 条需求</span>
+    <span style="flex:1"></span><button class="btn primary" data-act="submit-open">+ 提交需求</button></div>
+  <div class="meta"><span>统一上下文 = 迭代：飞书提交的是<strong>需求</strong>（摘要与澄清在需求上）；质检 / 设计 / 测试 / 门禁是<strong>迭代管道</strong>的阶段。本页全部读时派生，无双源。</span></div>
+  ${noteHtml('本页 = 默认首页「迭代详情」。结构：统计卡 → 线上流水线（迭代聚合条，点阶段滚动到任务管道）→ 任务管道（需求×阶段节点条，行尾徽标 = 当前卡点与责任角色）→ 待办队列（按角色署名，折叠）→ 迭代内需求表格（含提交需求）。需求详情只能从行点击进入（drill-down），顶栏无平级入口。')}
+  <div class="stats">
+    <div class="stat"><span class="stat-ico ti-gray">📦</span><div><div class="n">${rows.length}</div><div class="l">需求总数</div></div></div>
+    <div class="stat"><span class="stat-ico ti-blue">✅</span><div><div class="n">${published}</div><div class="l">已发布定稿</div></div></div>
+    <div class="stat"><span class="stat-ico ti-amber">💬</span><div><div class="n">${pending}</div><div class="l">未到发布（澄清/质检中）</div></div></div>
+    <div class="stat"><span class="stat-ico ti-blue">📐</span><div><div class="n">${dsgDone}</div><div class="l">设计定稿/跳过</div></div></div>
+    <div class="stat"><span class="stat-ico ti-amber">⚖️</span><div><div class="n">${gateBusy}</div><div class="l">门禁进行中</div></div></div>
+    <div class="stat ${blocked?'clickable':''}"><span class="stat-ico ${blocked?'ti-red':'ti-green'}">${blocked?'⛔':'🔓'}</span><div><div class="n">${blocked?blocked:released}</div><div class="l">${blocked?'被守卫拦截':'已放行'}</div></div></div>
+  </div>
+  <div class="card"><h3>线上流水线（迭代聚合）<span class="sub" style="font-weight:400">各阶段完成 / 总数；点阶段滚动到任务管道</span></h3>
+    <div class="agg-strip">${agg.map(a=>`<div class="agg" data-act="agg-jump"><b>${a.done}/${rows.length}</b><span>${a.t}</span>${a.doing?`<span class="adot doing">● ${a.doing} 进行中</span>`:''}${a.skip?`<span class="adot">◌ ${a.skip} 轻量跳过</span>`:''}</div>`).join('')}</div>
+  </div>
+  <div class="card" id="pipe-section"><h3>任务管道（需求 × 阶段节点；点击行进入需求详情）</h3>
+    ${rows.map(r=>`<div class="iter-row ${r.live?'live':''}" data-act="row-open" data-arg="${r.id}">
+      <div class="ir-name"><b>${r.id} ${esc(r.name)}</b><span class="sub">${r.live?'← 当前场景状态实时联动':'静态演示'}</span></div>
+      <span class="badge b-blue">${r.tier}</span>
+      ${nodeStrip(r.nodes)}
+      <div class="ir-act"><span class="badge ${r.actCls}">${esc(r.act)}</span><span class="chip">${esc(r.role)}</span></div>
+    </div>`).join('')}
+    <div class="sub" style="margin-top:8px">图例：<span class="nd done"><i></i>完成</span> ｜ <span class="nd doing"><i></i>进行中</span> ｜ <span class="nd skip"><i></i>轻量跳过（C 级）</span> ｜ <span class="nd"><i></i>未开始</span>　设计与用例并行推导（独立性红线：用例不读设计）。</div>
+  </div>
+  <details class="card"><summary style="cursor:pointer;font-weight:600;font-size:13.5px">待办队列（按角色署名 · 全迭代聚合）— 点击展开</summary>
+    <div style="margin-top:10px">
+      ${todos.map(t=>`<div class="todo-item" data-act="row-open" data-arg="${t.req}">
+        <span class="chip real">${esc(t.role)}</span>
+        <span style="flex:none"><b>${t.req}</b> ${esc(t.name)}</span>
+        <span class="grow sub">${esc(t.act)}</span>
+        ${t.live?'<span class="badge b-blue">去处理 →</span>':'<span class="sub">静态演示</span>'}
+      </div>`).join('')}
+      <p class="sub" style="margin:6px 0 0">真实平台在此之上接飞书通知（裁决请求/定稿请求推给对应角色）——MVP 范围讨论项。</p>
+    </div></details>
+  <div class="card"><h3>迭代内需求</h3>
+    <div class="filters">
+      <select><option>状态：全部</option><option>待质检</option><option>待澄清</option><option>已发布</option></select>
+      <input placeholder="搜索编号 / 名称" style="width:200px">
+      <span class="spacer"></span>
+      <button class="btn small" data-act="submit-open">+ 提交需求</button>
+    </div>
+    <table class="table">
+      <thead><tr><th style="width:118px">编号</th><th>需求名称</th><th style="width:78px">状态</th><th style="width:78px">风险</th>
+        <th style="width:70px">澄清</th><th style="width:92px">设计</th><th style="width:118px">门禁</th>
+        <th style="width:70px">用例</th><th style="width:96px">更新时间</th></tr></thead>
+      <tbody>
+      ${rows.map(r=>`<tr data-act="row-open" data-arg="${r.id}">
+        <td><code>${r.id}</code></td>
+        <td><div style="font-weight:500">${esc(r.name)} ${r.live?'<span class="chip real">当前场景</span>':''}</div>
+            <div class="sub">${esc(r.act)}</div></td>
+        <td><span class="badge ${r.ls.st==='已发布'?'b-green':'b-amber'}">${r.ls.st}</span></td>
+        <td><span class="badge b-blue">${r.tier}</span></td>
+        <td class="sub">${r.ls.clf}</td>
+        <td><span class="badge ${r.ls.dsg[1]}">${r.ls.dsg[0]}</span></td>
+        <td><span class="badge ${r.ls.gate[1]}">${r.ls.gate[0]}</span></td>
+        <td class="sub">${r.ls.cases}</td>
+        <td class="sub">${r.ls.upd}</td>
+      </tr>`).join('')}
+      </tbody>
+    </table>
+    <p class="sub" style="margin-top:8px">设计 / 门禁两列为本次线上化新增（其余列同现有平台）；门禁徽标在放行前显示进行中状态与积压数（如「裁决中 28/52」），老化可见本身督促流转。</p>
+  </div>`;
+}
+
+function liveNodes(){
+  const D=S.design, G=S.gate;
+  const reviewed=S.cases.filter(c=>c.st==='reviewed').length;
+  const dsg = D.phase==='final'?'done':D.phase==='running'?'doing':D.phase==='failed'?'failed':(D.phase==='draft')?'doing':(D.phase==='skipped')?'skip':'todo';
+  const caseN = reviewed===S.cases.length?'done':reviewed>0?'doing':'todo';
+  const gate = G.phase==='released'?'done':(G.phase==='running'||G.phase==='summary'||G.phase==='deciding')?'doing':(G.phase==='blocked')?'doing':'todo';
+  return [['质检','done'],['澄清','done'],['发布','done'],['设计',dsg],['用例',caseN],['门禁',gate],['放行',G.phase==='released'?'done':'todo']];
+}
+function nodeStrip(nodes){
+  return `<div class="node-strip">${nodes.map(([t,stt],i)=>
+    `<span class="nd ${stt}"><i></i>${t}</span>${i<nodes.length-1?`<span class="nd-sep ${nodes[i][1]==='done'?'done':''}"></span>`:''}`).join('')}</div>`;
+}
+
+function overviewHtml(){
+  const live = liveNodes();
+  const na = S.view==='overview' ? nextAction() : null;
+  const rows = [];
+  rows.push({id:S.req.id, name:S.req.name, tier:S.req.riskTier, nodes:live, live:true,
+    act: S.gate.phase==='released'?`已放行 r${S.gate.released.round}`:(na?na.label:'进行中'),
+    actCls: S.gate.phase==='released'?'b-green':(na&&na.disabled?'b-red':'b-blue'), role:'本原型可交互'});
+  for(const m of ITER_MOCKS) rows.push(m);
+
+  const doneRel = rows.filter(r=>r.nodes[6][1]==='done').length;
+  const published = rows.filter(r=>r.nodes[2][1]==='done').length;
+  const dsgDone = rows.filter(r=>['done','skip'].includes(r.nodes[3][1])).length;
+  const inGate = rows.filter(r=>['doing'].includes(r.nodes[5][1])).length;
+  const blocked = rows.filter(r=>r.actCls==='b-red').length;
+
+  const todos = [];
+  if(na && !S.gate.phase.startsWith('released')) todos.push({req:S.req.id, name:S.req.name, role:'你（当前场景）', act:na.label+(na.disabled?'（被守卫拦截）':''), live:true});
+  todos.push({req:'REQ-2026-038', name:'阅卷规则引擎', role:'裁决人', act:'门禁 r1 裁决 28/52，已滞留 2 天——继续裁决'});
+  todos.push({req:'REQ-2026-043', name:'证书打印模板', role:'设计定稿人', act:'设计草稿待定稿（齐套自检 + 锁定待拍板 1 行）'});
+  todos.push({req:'REQ-2026-039', name:'考生报名小程序', role:'PM', act:'澄清 2/5 · 3 问未答复'});
+  todos.push({req:'REQ-2026-044', name:'考场座位分配', role:'管理员', act:'未配置目标代码仓——配置后才能生成设计'});
+  todos.push({req:'REQ-2026-040', name:'监考安排排期', role:'裁决人', act:'C 级自查档评审中，预计 10 分钟后进入裁决'});
+
+  return `
+  <div class="detail-h"><h2>迭代 v3.7.2 · 任务节点总览</h2>
+    <span class="badge b-blue">鸿儒</span><span class="badge b-gray">8 条需求</span></div>
+  <div class="meta"><span>迭代是一个整体：一行 = 一条需求的完整链路，节点状态由各阶段状态读时派生聚合（无独立存储、无双源）</span></div>
+  ${noteHtml('本页回应「迭代是一个整体」：不进单条需求也能回答三个问题——①迭代走到哪了（统计卡+节点条）②现在卡在哪（红/黄 act chip：未配置、滞留、被守卫拦截）③该谁动了（待办队列按角色署名）。节点条只在迭代层出现；需求详情页内不重复画轴（阶段点已够）。点击 REQ-2026-042 行进入可交互详情，其余行为静态演示。全链路引用均可点击跳转定义源（GR-5），不可达引用显式报错。')}
+  <div class="stats">
+    <div class="stat"><span class="stat-ico ti-gray">📦</span><div><div class="n">${rows.length}</div><div class="l">需求总数</div></div></div>
+    <div class="stat"><span class="stat-ico ti-blue">✅</span><div><div class="n">${published}</div><div class="l">已发布定稿</div></div></div>
+    <div class="stat"><span class="stat-ico ti-blue">📐</span><div><div class="n">${dsgDone}</div><div class="l">设计已定稿/跳过</div></div></div>
+    <div class="stat"><span class="stat-ico ti-amber">⚖️</span><div><div class="n">${inGate}</div><div class="l">门禁进行中</div></div></div>
+    <div class="stat"><span class="stat-ico ti-green">🔓</span><div><div class="n">${doneRel}</div><div class="l">已放行（可开发）</div></div></div>
+    <div class="stat"><span class="stat-ico ${blocked?'ti-red':'ti-gray'}">⛔</span><div><div class="n">${blocked}</div><div class="l">被守卫拦截</div></div></div>
+  </div>
+  <div class="card"><h3>需求流水线（点击行进入详情；当前场景的 REQ-2026-042 实时联动）</h3>
+    ${rows.map(r=>`<div class="iter-row ${r.live?'live':''}" data-act="row-open" data-arg="${r.id}">
+      <div class="ir-name"><b>${r.id} ${esc(r.name)}</b><span class="sub">${r.live?'← 当前场景状态实时联动':'静态演示'}</span></div>
+      <span class="badge b-blue">风险 ${r.tier}</span>
+      ${nodeStrip(r.nodes)}
+      <div class="ir-act"><span class="badge ${r.actCls}">${esc(r.act)}</span>
+        <span class="chip">${esc(r.role)}</span></div>
+    </div>`).join('')}
+    <div class="sub" style="margin-top:8px">图例：<span class="nd done"><i></i>完成</span> ｜ <span class="nd doing"><i></i>进行中</span> ｜ <span class="nd skip"><i></i>轻量跳过（C 级）</span> ｜ <span class="nd"><i></i>未开始</span>　设计与用例并行推导（独立性红线：用例不读设计）。</div>
+  </div>
+  <div class="card"><h3>待办队列（按角色署名 · 全迭代聚合）</h3>
+    ${todos.map(t=>`<div class="todo-item" data-act="row-open" data-arg="${t.req}">
+      <span class="chip real">${esc(t.role)}</span>
+      <span style="flex:none"><b>${t.req}</b> ${esc(t.name)}</span>
+      <span class="grow sub">${esc(t.act)}</span>
+      ${t.live?'<span class="badge b-blue">去处理 →</span>':'<span class="sub">静态演示</span>'}
+    </div>`).join('')}
+    <p class="sub" style="margin:6px 0 0">真实平台将在此之上接飞书通知（裁决请求/定稿请求推给对应角色）——通知属 MVP 范围讨论项。</p>
+  </div>`;
+}
+
+function headerHtml(){
+  const r = S.req;
+  return `
+  <div class="detail-h">
+    <h2>${esc(r.name)}</h2>
+    <span class="badge b-blue">风险分级 ${r.riskTier}</span>
+    <span class="badge b-green">已发布（终态）</span>
+    <span class="badge stars" title="需求文档质量分（口径：★★★★★=无阻断无严重 / ★★★★=无阻断且严重≤5 / ★★★=阻断≤2 / ★★=阻断≤5 / ★=其余）">★★★★☆</span>
+    ${S.design.phase==='final'?'<span class="badge b-green">设计已定稿</span>':''}
+    ${S.gate.phase==='released'?`<span class="badge b-green">门禁已放行 r${S.gate.released.round}</span>`:''}
+  </div>
+  <div class="meta">
+    <span>${r.id}</span><span>迭代 ${r.iter}</span><span>飞书源</span>
+    <span>发布于 ${r.publishedAt}</span>
+    <span>目标代码仓：${r.targetRepo?`<code>${esc(r.targetRepo)}</code>`:'<span class="err-t">未配置</span>'}
+      <button class="btn small link" data-act="config-repo">配置</button></span>
+  </div>`;
+}
+
+function nextAction(){
+  const D=S.design, G=S.gate, r=S.req;
+  const busyTask = D.phase==='running';
+  if(busyTask) return null;
+  if(D.phase==='none' && !r.targetRepo) return {label:'配置目标代码仓', act:'config-repo'};
+  if(D.phase==='none' && r.riskTier==='C') return {label:'声明轻量跳过（C 级）', act:'declare-skip'};
+  if(D.phase==='none') return {label:'生成技术设计', act:'gen-design'};
+  if(D.phase==='draft') return {label:'设计定稿（确认点②）', act:'finalize-design'};
+  if(D.phase==='skipped' || D.phase==='final'){
+    if(G.phase==='none'||G.phase==='blocked'){
+      const chk = gateChecks();
+      return chk.every(c=>c.ok) ? {label:'开评审（'+(r.riskTier==='C'?'自查档':(r.riskTier==='A'?'4 角色扇出':'2 角色扇出'))+'）', act:'open-gate'}
+                                : {label:'开评审', act:'open-gate', disabled:true, why:chk.filter(c=>!c.ok).map(c=>c.t).join('；')};
+    }
+    if(G.phase==='summary') return {label:'进入裁决', act:'to-deciding'};
+    if(G.phase==='deciding'){
+      const s = decisionSummary(S);
+      if(s && s.done>=s.total) return {label:'校验并放行', act:'open-release'};
+      return {label:`继续裁决 ${s.done}/${s.total}`, act:'goto-deciding'};
+    }
+  }
+  return null;
+}
+
+function taskPanelHtml(){
+  const D=S.design, G=S.gate;
+  const na = nextAction();
+  const stages = [
+    ['需求质检','done'], ['标准文档','done'],
+    ['用例', S.cases.some(c=>c.st==='reviewed')?'done':''],
+    ['设计', D.phase==='final'?'done':(D.phase==='running'?'doing':(D.phase==='failed'?'failed':(D.phase==='skipped'?'skip':'')))],
+    ['门禁', G.phase==='released'?'done':((G.phase==='deciding'||G.phase==='summary')?'doing':(G.phase==='running'?'doing':''))],
+  ];
+  let body = '';
+  if(S.tpOpen){
+    // 设计 lane 任务卡
+    if(D.phase==='running'){
+      body += `<div class="tp-task"><span class="spin"></span><b>技术设计生成</b><span class="chip">自动</span>执行中
+        <span class="sub ell">agentscope-inproc · 已 6 分钟 · 勘察目标仓 ${esc(S.req.targetRepo||'—')}</span></div>`;
+    }
+    if(D.phase==='failed'){
+      body += `<div class="tp-task"><span class="badge b-red">失败</span><b>技术设计生成</b>
+        <span class="sub err-t ell">read_file：目标仓路径不可达（ENOENT）</span>
+        <details class="tp-fail-detail"><summary>详情</summary><div class="tp-fail-body">
+          <p class="hint">检查「目标代码仓」配置与本机权限，修正后重试</p>
+          <pre class="diag">AgentPlatformTools.read_file: resolve /Users/hljy/IdeaProjects/hongr (typo) → ENOENT
+at tools.js:243 resolveInWorkspace</pre></div></details>
+        <button class="btn small" data-act="retry-design">重试</button>
+        <span class="sub">修正配置入口在详情头「目标代码仓 · 配置」</span></div>`;
+    }
+    // 门禁 lane 任务卡
+    if(G.phase==='running'){
+      body += `<div class="tp-task"><span class="spin"></span><b>门禁对抗评审</b>执行中
+        <span class="sub ell">${S.req.riskTier==='C'?'自查档（单 agent 五问）':(S.req.riskTier==='A'?'A 级 · 4 个独立子代理扇出':'B 级 · 2 个独立子代理')} · 已 7 分钟</span>
+        <button class="btn small danger" data-act="abort-gate">作废重审</button></div>`;
+    }
+    if(G.phase==='deciding'){
+      const s = decisionSummary(S);
+      body += `<div class="tp-lane">门禁 r${G.round}：
+        <span class="prog-inline" style="display:inline-flex;align-items:center;gap:8px">
+          <span class="bar"><span class="bar-fill" style="width:${s.total?Math.round(s.done/s.total*100):0}%"></span></span>
+          <span>${s.done}/${s.total} 已裁决</span></span>
+        <button class="btn small link" data-act="goto-deciding">去裁决 →</button></div>`;
+    }
+  }
+  return `
+  <div class="card taskpanel">
+    <div class="tp-summary">
+      <div class="tp-title">线上流水线</div>
+      <div class="tp-stages">${stages.map(([t,c])=>`<span class="tp-stage"><i class="st-dot ${c}"></i>${t}</span>`).join('')}</div>
+      ${na?`<button class="btn small primary" data-act="${na.act}" ${na.disabled?'disabled':''} title="${esc(na.why||'')}">${na.label}</button>`:''}
+      <button class="btn small link" data-act="tp-toggle" style="margin-left:auto">${S.tpOpen?'收起':'展开管理'}</button>
+    </div>
+    ${body}
+  </div>`;
+}
+
+function tabsHtml(){
+  const t = S.tab;
+  const G=S.gate;
+  const s = decisionSummary(S);
+  const disposed = S.clarify.filter(c=>c.status!=='pending').length;
+  const tab = (id,label,n)=>`<button class="tab${t===id?' on':''}" data-act="tab" data-arg="${id}">${label}${n?`<span class="n">${n}</span>`:''}</button>`;
+  return `<div class="tabs">
+    ${tab('origin','原始需求')}
+    ${tab('digest','需求摘要', FR_POINTS.length)}
+    ${tab('audit','体检报告', AUDIT_ITEMS.length)}
+    ${tab('clarify','澄清清单', disposed+'/'+S.clarify.length)}
+    ${tab('std','标准文档')}
+    ${tab('cases','用例', S.cases.length)}
+    ${tab('design','设计')}
+    ${tab('gate','门禁', G.phase==='released'?'✓':(s&&G.phase==='deciding'?`${s.done}/${s.total}`:(G.issues.length?G.issues.length:'')))}
+  </div>`;
+}
+
+function tabBodyHtml(){
+  switch(S.tab){
+    case 'origin': return originTab();
+    case 'digest': return digestTab();
+    case 'audit': return auditTab();
+    case 'clarify': return clarifyTab();
+    case 'design': return designTab();
+    case 'gate': return gateTab();
+    case 'cases': return casesTab();
+    default: return `<div class="card"><h3>标准需求文档</h3>
+      <div class="banner blue"><b>重写版定稿</b><span class="sub">以原始需求全文为底稿，整合体检定论与澄清答复——开发/AI 读这一份即可获得需求全貌。全文 FR / 体检.P / 需求.A 引用可点击跳转（同现有平台，此处从略；引用跳转交互已在设计/门禁 tab 演示）。</span></div>
+      <div class="empty">标准文档正文同现有平台渲染（markdown + TocPane + linkifyRefs），本原型聚焦新增环节，此处从略。</div></div>`;
+  }
+}
+
+/* ---- 通用分组折叠（对齐真实平台 grp-t 展开/收起 + 全部展开/收起 + 跳转自动展开） ---- */
+function grpWrap(key, title, items, rowFn, head){
+  const open = !!S.openGrps[key];
+  const body = head
+    ? `<table class="table" style="margin-top:6px"><thead>${head}</thead><tbody>${items.map(rowFn).join('')}</tbody></table>`
+    : `<div style="margin-top:6px">${items.map(rowFn).join('')}</div>`;
+  return `<div style="margin-bottom:12px">
+    <div class="grp-t" data-act="grp" data-arg="${key}" style="cursor:pointer;user-select:none"><span style="color:var(--faint);margin-right:4px;display:inline-block;transition:transform .18s;transform:${open?'rotate(90deg)':''}">▶</span>${esc(title)}<span class="cnt" style="margin-left:8px;font-size:11.5px;color:var(--stone);font-weight:400">${items.length} 条</span></div>
+    ${open?body:''}
+  </div>`;
+}
+const AUDIT_THEME = {P04:'状态机与流转', P11:'状态机与流转', P15:'作品管理'};
+function allGrpKeys(p){
+  if(p==='fr:') return [...new Set(FR_POINTS.map(f=>'fr:'+f.grp))];
+  if(p==='audit:') return [...new Set(AUDIT_ITEMS.map(a=>'audit:'+AUDIT_THEME[a.id]))];
+  if(p==='chk:') return [...new Set(S.clarify.map(c=>'chk:'+c.theme))];
+  if(p==='st:') return ['st:比赛'];
+  return [];
+}
+function flashSoon(id){
+  setTimeout(()=>{ const n=document.getElementById(id);
+    if(n){ n.scrollIntoView({behavior:'smooth',block:'center'}); n.classList.remove('flash'); void n.offsetWidth; n.classList.add('flash'); } },140);
+}
+
+/* ---- 原始需求 tab：快照（依据版本 · GR-1 冻结）+ 条款结构；出处 详述N.N 的定义源 ---- */
+function originTab(){
+  return `
+  <div class="banner blue" style="flex-wrap:wrap"><b>快照 v7</b><span>2026-09-28 抓取 · 本快照是质检与澄清的<b>依据版本</b>（GR-1：发布后冻结，引用永不漂移）</span>
+    <span class="sub">最新修订以 <span class="reflink" data-ref="__feishu">飞书文档 ↗</span> 为准 ｜ 出处引用（详述N.N）点击即定位到下方条款</span></div>
+  <div class="card"><details open><summary style="cursor:pointer;font-size:12.5px;color:var(--muted)">文档导航（点击定位条款）</summary>
+    <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px 16px">
+      ${ORIGIN_SECS.map(s=>`<a class="reflink" style="font-size:12.5px" data-act="toc" data-arg="src-${s.rows[0][0].replace(/\./g,'-')}">${s.h}</a>`).join('')}
+    </div></details></div>
+  <div class="card"><h3>原始需求（飞书块结构 · 章节分组）</h3>
+    ${ORIGIN_SECS.map(sec=>`<div style="margin:14px 0 4px"><b style="font-size:13.5px">${esc(sec.h)}</b></div>
+      ${sec.rows.map(([num,text])=>`<div id="src-${num.replace(/\./g,'-')}" style="border-left:2px solid var(--line);margin:6px 0 2px 8px;padding:4px 0 4px 12px;display:flex;gap:8px;align-items:baseline">
+        <span class="chip" style="flex:none;font-family:ui-monospace,Menlo,monospace">详述${num}</span>
+        <span style="flex:1;min-width:0;line-height:1.75">${esc(text).replace(/____（原文留白）/,'<span style="background:var(--yellow-light);border-radius:4px;padding:0 4px">____（❓ 原文留白）</span>')}</span>
+      </div>`).join('')}`).join('')}
+  </div>`;
+}
+
+/* ---- 需求摘要 tab：概述/功能点地图/flows/states 投影 + RTM 覆盖卡 + 需求点注册表（按出处分组折叠） ---- */
+function rtmStats(){
+  const total = FR_POINTS.length;
+  const covered = FR_POINTS.filter(f=>coveredBy(f.id).length);
+  const uncovered = FR_POINTS.filter(f=>!coveredBy(f.id).length);
+  const linked = S.cases.filter(c=>/FR-\d+/.test(c.pts||'')).length;
+  return {total, coveredN:covered.length, pct: total?Math.round(covered.length/total*100):null,
+          uncovered, caseTotal:S.cases.length, linked};
+}
+function digestTab(){
+  const cov = rtmStats();
+  const groups = {}; FR_POINTS.forEach(f=>{ (groups[f.grp] = groups[f.grp] || []).push(f); });
+  const FLOWS = [
+    {role:'区域管理员', step:'创建比赛（五步向导）', next:'提交审核', src:'详述6.2', gap:false},
+    {role:'区域管理员', step:'提交审核', next:'报名中', src:'详述6.3', gap:false},
+    {role:'教师', step:'报名', next:'等待截止', src:'详述6.3', gap:false},
+    {role:'系统', step:'报名截止顺延', next:'?', src:'详述6.3', gap:true},
+  ];
+  const STATES = [
+    {from:'报名中', on:'报名截止', to:'比赛中', src:'详述6.3', gap:false},
+    {from:'比赛中', on:'评审结束', to:'公示中', src:'详述7.1', gap:false},
+    {from:'已提交', on:'截止', to:'?', src:'详述6.3', gap:true},
+  ];
+  return `
+  <div class="card"><h3>需求概述</h3>
+    <p style="font-size:13px;line-height:1.8">区域考务比赛全流程线上化：创建（五步向导）→ 报名 → 截止自动顺延 → 评分 → 公示 → 发布，含保存冲突防护与成绩通知。</p>
+    <div class="kv" style="margin-top:6px">${['区域管理员','学校管理员','教师','评委'].map(r=>`<span class="chip">${r}</span>`).join('')}</div></div>
+  <div class="card"><h3>功能点地图（⭐ 本次关注范围）</h3>
+    <table class="table"><thead><tr><th>角色</th><th>页面/模块</th><th>功能</th><th style="width:90px">覆盖</th><th style="width:90px">出处</th><th style="width:160px">关联需求点</th></tr></thead><tbody>
+    ${[['区域管理员','比赛管理（列表）','列表/筛选/分页','详述6.1',['FR-01']],
+       ['区域管理员','报名与截止','截止自动顺延','详述6.3',['FR-05']],
+       ['教师','作品管理','保存与冲突处理','详述6.4',['FR-03','FR-15']],
+       ['系统','成绩与通知','发布通知与复核','详述7.2',['FR-12','FR-13']]].map(r=>
+      `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td class="sub">✅有详述</td>
+       <td class="sub">${lk(r[3])}</td>
+       <td>${r[4].map(x=>`<span class="reflink" data-ref="${x}" style="margin-right:6px">${x}</span>`).join('')}</td></tr>`).join('')}
+    </tbody></table></div>
+  <div class="card"><h3>主流程（§5 步骤投影；❓ = 原文断点）</h3>
+    <table class="table"><thead><tr><th style="width:110px">角色</th><th>步骤</th><th style="width:170px">去向</th><th style="width:90px">出处</th></tr></thead><tbody>
+    ${FLOWS.map(f=>`<tr class="${f.gap?'row-gap':''}"><td>${f.role}</td><td>${f.step}</td>
+      <td>${esc(f.next)}${f.gap?'<span class="gapmark" style="color:var(--yellow-dark)"> ❓</span>':''}</td><td class="sub">${lk(f.src)}</td></tr>`).join('')}
+    </tbody></table></div>
+  <div class="card"><h3>状态机流转（§6 边表投影）</h3>
+    ${grpWrap('st:比赛','状态机 · 比赛', STATES,
+      s=>`<tr class="${s.gap?'row-gap':''}"><td>${s.from}</td><td>${s.on}</td><td>${esc(s.to)}${s.gap?'<span class="gapmark" style="color:var(--yellow-dark)"> ❓</span>':''}</td><td class="sub">${lk(s.src)}</td></tr>`,
+      `<tr><th style="width:110px">从</th><th>触发</th><th style="width:110px">至</th><th style="width:90px">出处</th></tr>`)}
+  </div>
+  <div class="card"><h3>用例覆盖（RTM）</h3>
+    <div style="display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:var(--slate)">
+      <span>需求点覆盖 <b>${cov.coveredN}/${cov.total}</b> <span class="sub">（${cov.pct}%）</span></span>
+      <span>用例追溯 <b>${cov.linked}/${cov.caseTotal}</b></span>
+      <span>未覆盖 ${cov.uncovered.length} 条：${cov.uncovered.map(f=>`<span class="reflink" data-ref="${f.id}" style="margin-right:6px">${f.id}</span>`).join('')||'—'}</span>
+    </div>
+    ${cov.uncovered.length?`<p style="margin-top:8px;background:var(--amber-soft);border-radius:8px;padding:6px 10px;font-size:12px;color:var(--amber-deep)">⚠ ${cov.uncovered.map(f=>f.id+'（'+esc(f.name)+'）').join('、')} 无任何用例覆盖——正是 gate 分歧 X-02 的判定依据；放行落改 R-2 补录后此处归零。</p>`:''}
+  </div>
+  <div class="card"><h3>需求点注册表（按出处分组，共 ${FR_POINTS.length} 条）</h3>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;font-size:12px;color:var(--stone)">
+      <span>点组名展开 / 收起</span>
+      <button class="btn small link" data-act="grp-all" data-arg="fr:">全部展开</button>
+      <button class="btn small link" data-act="grp-none" data-arg="fr:">全部收起</button>
+    </div>
+    ${Object.entries(groups).map(([g,arr])=>grpWrap('fr:'+g, g, arr,
+      f=>`<tr id="fr-${f.id}"><td><span class="reflink" data-ref="${f.id}"><code>需求.${f.id}</code></span></td><td>${esc(f.name)}</td>
+          <td class="sub">${lk(f.src)}</td><td class="sub">${esc(f.mod)}</td>
+          <td>${coveredBy(f.id).length?coveredBy(f.id).map(c=>`<span class="reflink" data-ref="${c}" style="margin-right:6px">${c}</span>`).join(''):'<span class="chip warn">⚠ 未覆盖</span>'}</td></tr>`,
+      `<tr><th style="width:118px">编号</th><th>名称</th><th style="width:92px">行级出处</th><th style="width:104px">归属模块</th><th style="width:168px">被用例覆盖</th></tr>`)).join('')}
+    <p class="sub" style="margin-top:8px">测试用例通过关联这些编号挂到需求点，构成追溯链；点用例编号直达用例。跨页跳入时目标组自动展开（折叠不吞定位）。</p>
+  </div>
+  <details class="card"><summary style="cursor:pointer;font-size:13px;color:var(--muted)">查看 digest 原文（markdown，含假设清单——「需求.Axx」引用的定位落点）</summary>
+    <div class="doc" style="margin-top:10px">
+      <p><b>§8 假设清单</b></p>
+      <p>需求.A1 ｜ 位置：详述6.3 ｜ 模糊点：顺延时长 ｜ 假设：自动顺延 72 小时（对应 确认.Q-03）</p>
+      <p>需求.A2 ｜ 位置：详述7.2 ｜ 模糊点：通知触达范围 ｜ 假设：仅参赛教师本人（P19 答复后收窄）</p>
+    </div></details>`;
+}
+
+/* ---- 体检报告 tab：统计卡 + 域分组折叠 + 澄清互跳 + 出处定位 + 关联用例 ---- */
+function auditTab(){
+  const groups = {}; AUDIT_ITEMS.forEach(a=>{ (groups[AUDIT_THEME[a.id]] = groups[AUDIT_THEME[a.id]] || []).push(a); });
+  const cnt = (arr,sev)=>arr.filter(a=>a.sev===sev).length;
+  return `
+  <div class="stats" style="display:flex;gap:12px;margin-bottom:14px">
+    <div class="stat"><span class="stat-ico ti-red">🔴</span><div><div class="n">${cnt(AUDIT_ITEMS,'red')}</div><div class="l">阻断</div></div></div>
+    <div class="stat"><span class="stat-ico ti-amber">🟡</span><div><div class="n">${cnt(AUDIT_ITEMS,'yellow')}</div><div class="l">严重</div></div></div>
+    <div class="stat"><span class="stat-ico ti-gray">🔵</span><div><div class="n">${cnt(AUDIT_ITEMS,'blue')}</div><div class="l">建议</div></div></div>
+  </div>
+  <div class="banner"><span style="flex:1">问题按需求域分组（与澄清清单同序，可对照阅读）；出处与摘引可定位回原始需求快照。完整 26 项同现有平台，此处列被下游引用条目。</span>
+    <span style="display:flex;gap:4px"><button class="btn small link" data-act="grp-all" data-arg="audit:">全部展开</button><button class="btn small link" data-act="grp-none" data-arg="audit:">全部收起</button></span></div>
+  ${Object.entries(groups).map(([g,arr])=>grpWrap('audit:'+g, g, arr,
+    a=>`<div class="issue sev-${a.sev}" id="audit-${a.id}" style="margin-bottom:10px">
+      <div class="i-head"><span class="lvl-dot ${a.sev}"></span><b>体检.${a.id}</b>
+        <button class="btn small link" data-act="jump-clarify" data-arg="${a.id}">澄清 ${a.id} ↗</button><span class="grow"></span></div>
+      <div class="scene">${esc(a.title)}</div>
+      <div class="loc">出处：${lk(a.src)} ｜ 去向：${lk(a.go)}</div>
+      <div class="quote"><span class="qlb">原文摘引 · <span class="reflink" data-ref="${a.src}">在快照中定位</span></span>${lk(esc(a.quote))}</div>
+      ${a.related.length?`<div class="loc" style="margin-top:6px">关联用例：${a.related.map(c=>`<span class="reflink" data-ref="${c}" style="margin-right:6px">${c}</span>`).join('')}</div>`:''}
+    </div>`, '')).join('')}`;
+}
+
+/* ---- 澄清清单 tab：三态筛选 + 跳到下一待处置 + 作答/驳回/挂起/重开（D21 处置通道；published 场景试演） ---- */
+function clrItem(c){
+  let ans;
+  if(c.status==='pending'){
+    ans = `<div class="ans" style="margin-top:10px"><span class="lb warn">待答复</span>
+      <textarea data-clf="${c.seq}" placeholder="PM 在此作答…（失焦自动保存）" style="width:100%;border:1px solid var(--line-strong);border-radius:7px;padding:7px 10px;font-size:13px;margin-top:5px;min-height:48px;resize:vertical">${esc(c.answer||'')}</textarea>
+      <div style="display:flex;gap:14px;margin-top:6px">
+        <button class="btn small link" data-act="dispose-open" data-arg="${c.seq}:rejected">驳回（不是问题）</button>
+        <button class="btn small link" data-act="dispose-open" data-arg="${c.seq}:deferred">挂起（转遗留假设）</button>
+      </div></div>`;
+  } else if(c.status==='rejected' || c.status==='deferred'){
+    ans = `<div class="ans" style="margin-top:10px"><span class="lb">${c.status==='rejected'?'已驳回（不是问题，不进定稿）':'已挂起（转遗留假设 需求.Axx）'}</span>
+      <span class="sub">${esc(c.note||'')}</span>
+      <button class="btn small link" data-act="reopen-clr" data-arg="${c.seq}" style="margin-left:8px">重新作答</button></div>`;
+  } else {
+    ans = `<div class="ans" style="margin-top:10px"><span class="lb">答复</span>${esc(c.answer||'')}
+      <button class="btn small link" data-act="reopen-clr" data-arg="${c.seq}" style="margin-left:8px">重新作答</button></div>`;
+  }
+  return `<div class="check-item ${c.level}" id="clr-${c.seq}" style="background:var(--canvas)">
+    <div class="i-head"><span class="lvl-dot ${c.level}"></span><b>${c.seq}</b><span class="chip">${esc(c.theme)}</span>
+      <button class="btn small link" data-act="jump-audit" data-arg="${c.seq}">来自体检.${c.seq} ↗</button><span class="grow"></span></div>
+    <div class="scene">${esc(c.question)}</div>
+    <div class="loc">出处：${lk(c.ctx)}</div>
+    <div class="quote"><span class="qlb">原文摘引 · <span class="reflink" data-ref="${c.ctx}">在快照中定位</span></span>${lk(esc(c.quote))}</div>
+    ${ans}</div>`;
+}
+function clarifyTab(){
+  const f = S.clfFilter, items = S.clarify;
+  const disposed = items.filter(c=>c.status!=='pending').length;
+  const groups = {}; items.forEach(c=>{ (groups[c.theme] = groups[c.theme] || []).push(c); });
+  const visible = Object.entries(groups)
+    .map(([g,arr])=>({g, arr: arr.filter(c=> f==='all' || (f==='pending' ? c.status==='pending' : c.status!=='pending'))}))
+    .filter(x=>x.arr.length);
+  const nextP = items.find(c=>c.status==='pending');
+  return `
+  <div class="banner blue" style="position:sticky;top:104px;z-index:20;box-shadow:0 2px 8px rgba(16,24,40,.06)">
+    <div style="flex:1;min-width:240px">与体检报告一一对应（同源 P 编号），PM 逐条作答（失焦自动保存）；不是问题可驳回、本期不处理可挂起——处置完即可生成标准文档。
+      <div style="display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap">
+        <span class="bar" style="width:180px;display:inline-block;vertical-align:middle"><span class="bar-fill" style="width:${items.length?Math.round(disposed/items.length*100):0}%"></span></span>
+        <span class="sub">${disposed}/${items.length} 已处置</span>
+        ${nextP?`<button class="btn small" data-act="clf-next">跳到下一待处置</button>`:''}
+        <select data-act-change="clf-filter" style="border:1px solid var(--line-strong);border-radius:8px;padding:3px 10px;font-size:12px">
+          <option value="all" ${f==='all'?'selected':''}>全部</option>
+          <option value="pending" ${f==='pending'?'selected':''}>只看待处置</option>
+          <option value="done" ${f==='done'?'selected':''}>只看已处置</option>
+        </select>
+      </div></div></div>
+  <div class="banner amber"><b>试演说明</b><span class="sub">本需求已发布（真实平台此处只读回放处置结果）；原型放开交互供评审——作答 / 驳回 / 挂起 / 重开均可操作，语义对齐 v2.2 处置通道（D21）：驳回必填理由且不进定稿、挂起转遗留假设（需求.Axx）、驳回/挂起计入已处置。</span></div>
+  ${visible.map(({g,arr})=>grpWrap('chk:'+g, g, arr, clrItem, '')).join('')}
+  ${!visible.length?'<div class="empty">当前筛选下没有条目</div>':''}`;
+}
+
+/* ---------- 设计 tab ---------- */
+function designTab(){
+  const D = S.design, r = S.req;
+  const head = `<div class="banner blue"><b>设计 lane</b><span class="sub">输入 = 平台 digest/audit（GR-1：published 终态锁保证冻结，输入锚点见下方面板） ｜ 定稿 ≠ 放行，放行唯一口径 = 门禁已放行</span></div>`;
+  if(D.phase==='none'){
+    if(r.riskTier==='C'){
+      return head + `
+      <div class="card anim"><h3>轻量路径（C 级）</h3>
+        <p class="sub" style="margin-bottom:10px">C 级需求按方法论不产设计文档，但<strong>不免门禁</strong>：声明轻量跳过后，门禁将以自查档（单 agent 五问自查）照常产出 issues → 裁决 → 放行，开发闸照常生效。</p>
+        ${D.skipDeclared
+          ?`<div class="banner green" style="margin:0"><b>已声明轻量跳过</b><span class="sub">留痕：${op()} · ${now()}。可前往「门禁」tab 开评审（自查档）。</span>
+            <span class="b-act"><button class="btn small primary" data-act="tab" data-arg="gate">去门禁 →</button></span></div>`
+          :`<button class="btn primary" data-act="declare-skip">声明轻量跳过（留痕，可审计）</button>`}
+      </div>`;
+    }
+    return head + `
+    <div class="lanes anim">
+      <div class="lane"><h4>技术设计 <span class="badge b-gray">未开始</span></h4>
+        <p>AI 读平台 digest/audit + 目标代码仓勘察（按需求配置）产出 design.md → 你核对定稿。</p>
+        <div style="margin-top:10px">
+          ${!r.targetRepo
+            ?`<div class="banner amber" style="margin:0 0 10px"><b>未配置目标代码仓</b><span class="sub">存量勘察需要它（契约贴现状不悬空）。配置后才能生成。</span>
+              <span class="b-act"><button class="btn small primary" data-act="config-repo">去配置</button></span></div>
+              <button class="btn primary" disabled title="先配置目标代码仓">生成技术设计</button>`
+            :`<button class="btn primary" data-act="gen-design">生成技术设计</button>
+              <button class="btn" data-act="tab" data-arg="cases" style="margin-left:8px">先去用例 lane →</button>`}
+        </div></div>
+      <div class="lane"><h4>测试用例 <span class="badge b-blue">并行独立推导</span></h4>
+        <p>用例从 intake 三件套并行独立生成，<strong>禁止读设计</strong>（独立性红线：平台按任务类型隔离草稿读写面，服务端双向 403）。</p>
+        <div style="margin-top:10px"><button class="btn" data-act="tab" data-arg="cases">查看用例 →</button></div></div>
+    </div>`;
+  }
+  if(D.phase==='running'){
+    return head + `
+    <div class="card anim"><h3><span class="spin"></span> 技术设计生成中（design_gen · agentscope-inproc · 已 6 分钟）</h3>
+      <div style="margin:6px 0 12px">
+        ${dstep('done','Step 1 前置闸三道 + 输入定位',
+          'Q 表硬阻塞 1 项（确认.Q-03 → 只锁 F05 行，不锁全局，契约行按「当前假设」产出）；风险分级已拍板（'+S.req.riskTier+'）；输入锚点三件套就位（GR-1 冻结）；项目规范源 dev_standards/ 已读')}
+        ${dstep('run','Step 2 存量勘察（目标仓 '+esc(S.req.targetRepo||'—')+'）',
+          'works/works_log/signup 表结构 ✓ ｜ WorksStatusEnum 引用扫描 ⟳ —— 发现被 3 个存量模块消费、works 表被报表系统直读，影响面证据已产出升级提案（见下方卡片）')}
+        ${dstep('todo','Step 3 按 design-template 产出 design.md（'+(S.req.riskTier==='A'?'A 级全量':'B 级 mini')+'）','')}
+        ${dstep('todo','Step 4 齐套自检（六项，漏项即返工）','')}
+        ${dstep('todo','Step 5 落草稿 + 暂停等确认点②定稿','产物走 put_draft(type=design)；正式落盘只能由人采纳')}
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn primary" data-act="sim-design-done">模拟：任务完成，草稿回传 →</button>
+        <button class="btn danger" data-act="sim-design-fail">模拟：任务失败</button>
+        <button class="btn" data-act="cancel-design">取消任务</button>
+      </div></div>
+    ${tierProposalHtml()}`;
+  }
+  if(D.phase==='failed'){
+    return head + `<div class="card anim"><h3><span class="badge b-red">失败</span> 技术设计生成</h3>
+      <p class="sub err-t">read_file：目标仓路径不可达（ENOENT）</p>
+      <pre class="tp-fail-body" style="margin-top:8px"><p class="hint">检查「目标代码仓」配置与本机权限，修正后重试</p><pre class="diag">AgentPlatformTools.read_file: resolve ${esc(r.targetRepo)} → ENOENT</pre></pre>
+      <div style="margin-top:10px;display:flex;gap:8px"><button class="btn primary" data-act="retry-design">重试</button>
+      <button class="btn" data-act="config-repo">修正目标仓配置</button></div></div>`;
+  }
+  if(D.phase==='draft'){
+    return head + anchorPanel() + draftCard() + tierProposalHtml();
+  }
+  if(D.phase==='final'){
+    return head + anchorPanel() + `
+    <div class="anchor-card anim"><span class="badge b-green">已定稿</span>
+      <span>定稿人 ${esc(D.final.by)} · ${D.final.at} · v${D.final.ver}</span>
+      <span class="sub">确认点②已过；放行唯一口径 = 门禁已放行（GR-4）</span>
+      <button class="btn small primary" data-act="view-final">${D.showDoc?'收起文档':'查看定稿文档（全量九节）'}</button>
+      ${S.gate.phase==='released'?'':`<span class="sub" style="margin-left:auto">如需修改：评审中走「落改」通道；未开审/已放行后的实质变更将触发重审提示（GR-3）</span>`}
+    </div>
+    ${D.showDoc?`<div class="card anim"><div class="doc-layout"><div class="card tp-preview" style="max-height:560px"><div class="doc">${designDocHtml(S)}</div></div>
+      <div class="toc-side"><div class="toc-side-t">目录</div><div class="toc-side-list">
+        ${DOC_TOC.map(([id,t,lv])=>`<a class="toc-side-item lv${lv}" data-act="toc" data-arg="${id}">${t}</a>`).join('')}
+      </div></div></div></div>`:''}`;
+  }
+  if(D.phase==='skipped'){
+    return head + `<div class="card anim"><h3><span class="badge b-gray">轻量跳过</span></h3>
+      <p class="sub">C 级声明留痕：${op()} · ${now()}。开闸条件①以「已声明轻量跳过」满足，门禁以自查档执行。</p></div>`;
+  }
+  return head;
+}
+
+function anchorPanel(){
+  return `<div class="anchor-card"><b style="font-size:12.5px">输入锚点（GR-1 冻结）</b>
+    <span>digest-20260929.md（快照 v7）</span><span>audit-20260929.md（26 项）</span><span>pm-checklist-20260929.md</span>
+    <span class="chip ok">已冻结，不会漂移</span></div>`;
+}
+
+function draftCard(){
+  const D = S.design;
+  const mode = D.mode||'preview';
+  return `
+  <div class="card tp-draft anim" style="background:var(--bg-soft)">
+    <div class="tp-draft-h"><span class="badge b-amber">待定稿</span><b>设计文档草稿</b>
+      <span class="chip">九节全量</span><span class="chip">契约 写5+读3</span><span class="chip">D 表 5 项</span><span class="chip">备选 3 项</span>
+      <span class="chip lock">锁定待拍板 1 行</span></div>
+    <div class="tp-modes">
+      <button class="btn small ${mode==='preview'?'tp-on':''}" data-act="d-mode" data-arg="preview">渲染预览</button>
+      <button class="btn small ${mode==='edit'?'tp-on':''}" data-act="d-mode" data-arg="edit">编辑</button>
+      <span class="sub" style="flex:1">确认点② = 逐行核对后定稿；网页侧落地为「分段通读 + 强制拍板 + 齐套自检」</span>
+      <button class="btn small" data-act="save-draft"><span></span>保存草稿</button>
+    </div>
+    ${mode==='edit'
+      ?`<textarea class="tp-editor" spellcheck="false"># design.md（编辑模式演示）\n…直接编辑 markdown，保存写回草稿…</textarea>`
+      :`<div class="doc-layout"><div class="card tp-preview" style="max-height:560px"><div class="doc">${designDocHtml(S)}</div></div>
+        <div class="toc-side"><div class="toc-side-t">目录</div><div class="toc-side-list">
+          ${DOC_TOC.map(([id,t,lv])=>`<a class="toc-side-item lv${lv}" data-act="toc" data-arg="${id}">${t}</a>`).join('')}
+        </div></div></div>`}
+    <div class="tp-btns">
+      <button class="btn primary" data-act="finalize-design">定稿（确认点②）</button>
+      <button class="btn" data-act="regen-design">重新生成</button>
+      <button class="btn danger" data-act="drop-draft">丢弃</button>
+    </div>
+  </div>`;
+}
+
+function tierProposalHtml(){
+  const p = S.gate.tierProposal;
+  if(!p) return '';
+  return `<div class="banner amber anim"><b>风险升级提案（tier 只升不降）</b>
+    <span class="sub">${esc(p.by)} 勘察发现影响面证据：${esc(p.evidence)}。建议 ${p.from} → ${p.to}；采纳后 digest/cases/issues 三头同源渲染新档，在途产物按 A 级全量产出。发布锁不动 digest 正文，升级落需求级字段。</span>
+    <span class="b-act"><button class="btn small primary" data-act="accept-tier">采纳升级（${p.from}→${p.to}）</button>
+    <button class="btn small" data-act="reject-tier">驳回</button></span></div>`;
+}
+
+/* ---------- 用例 tab（双来源语义 + 筛选/排序 + caseNo + 详情弹层入口） ---------- */
+function casesTab(){
+  const f=S.caseFilter, q=S.caseQ.trim();
+  let list=[...S.cases];
+  if(f!=='all') list=list.filter(c=>c.st===f);
+  if(q) list=list.filter(c=>(c.title+' '+c.id).includes(q));
+  const k=S.caseSortKey, dir=S.caseSortDir==='asc'?1:-1;
+  if(k) list.sort((a,b)=>{ const x=k==='id'?(a.caseNo??a.id):(a[k]??''), y=k==='id'?(b.caseNo??b.id):(b[k]??'');
+    return (typeof x==='number'? x-y : String(x).localeCompare(String(y)))*dir; });
+  const reviewed=S.cases.filter(c=>c.st==='reviewed').length;
+  const sortTh=(key,label,w)=>`<th data-act="case-sort" data-arg="${key}" style="cursor:pointer;user-select:none;${w?'width:'+w:''}">${label}${S.caseSortKey===key?(S.caseSortDir==='asc'?' ↑':' ↓'):''}</th>`;
+  return `
+  <div class="banner blue"><b>用例 lane</b><span class="sub">双来源：sdlc-test 推送 = 平台只读 + 评论反馈维护人；表单提交 = 提交人可编辑。定稿是开闸前置（GR-2②）；门禁放行也会自动置定稿（标注来源，GR-4 联动）。</span></div>
+  <div class="card">
+    <h3>测试用例（${S.cases.length}）<span class="badge ${reviewed===S.cases.length?'b-green':'b-amber'}">${reviewed}/${S.cases.length} 已定稿</span>
+      <span style="flex:1"></span>
+      <button class="btn small primary" data-act="case-form-open">+ 表单提交用例</button>
+      <button class="btn small" data-act="bulk-review" ${reviewed===S.cases.length?'disabled':''}>一键定稿未定稿项</button>
+    </h3>
+    <div class="filters">
+      <select data-act-change="case-filter">
+        <option value="all" ${f==='all'?'selected':''}>全部状态</option>
+        <option value="draft" ${f==='draft'?'selected':''}>待审核</option>
+        <option value="reviewed" ${f==='reviewed'?'selected':''}>已定稿</option>
+      </select>
+      <input data-act-change="case-q" value="${esc(S.caseQ)}" placeholder="搜索用例标题…" style="width:200px">
+    </div>
+    <table class="table"><thead><tr>
+      ${sortTh('id','编号','108px')}<th>标题</th><th style="width:180px">关联需求点</th>
+      ${sortTh('pri','优先级','66px')}${sortTh('st','审核状态','92px')}
+      <th style="width:96px">来源人</th><th style="width:92px">来源工具</th><th style="width:150px">操作</th></tr></thead><tbody>
+      ${list.map(c=>`<tr data-act="case-open" data-arg="${c.id}" style="cursor:pointer">
+        <td class="sub"><div>${c.id}</div><div style="font-size:11px;color:var(--faint)" title="全局登记序号（跨需求唯一，口头可引用）">#${c.caseNo}</div></td>
+        <td>${esc(c.title)}</td>
+        <td class="sub">${lk(esc(c.pts))||'—'}</td>
+        <td><span class="badge ${c.pri==='P0'?'b-red':c.pri==='P1'?'b-amber':'b-gray'}">${c.pri}</span></td>
+        <td>${c.st==='reviewed'
+          ?`<span class="badge b-green">已定稿</span>${c.src?`<div style="font-size:11px;color:var(--muted)">${esc(c.src)}</div>`:''}`
+          :'<span class="badge b-gray">待审核</span>'}</td>
+        <td class="sub">${esc(c.owner)}</td>
+        <td class="sub">${esc(c.tool)}</td>
+        <td>${c.st==='reviewed'
+          ?`<button class="btn small" data-act="case-unreview" data-arg="${c.id}">退回</button>`
+          :`<button class="btn small primary" data-act="case-review" data-arg="${c.id}">定稿</button>`}
+          <button class="btn small link" data-act="case-open" data-arg="${c.id}">详情</button></td>
+      </tr>`).join('')}
+      ${!list.length?'<tr><td colspan="8"><div class="empty">当前筛选条件下没有用例</div></td></tr>':''}
+    </tbody></table>
+    ${S.gate.phase==='deciding'?'<div class="banner amber" style="margin:10px 0 0"><b>评审进行中</b><span class="sub">此刻退回/修改用例属于评审中变更——走「落改」通道，或人工「作废重审」（GR-3 窗口限定）。</span></div>':''}
+  </div>`;
+}
+
+/* ---------- 门禁 tab ---------- */
+function gateChecks(){
+  const D=S.design;
+  const reviewed = S.cases.filter(c=>c.st==='reviewed').length;
+  return [
+    {t:'设计已定稿 ∨ 轻量跳过', ok: D.phase==='final'||D.phase==='skipped',
+     d: D.phase==='final'?`已定稿 v${D.final.ver}（${D.final.by}）`:D.phase==='skipped'?'已声明轻量跳过（C 级）':'设计 lane 未完成',
+     goto:'design'},
+    {t:'用例 ≥1 且全部定稿', ok: S.cases.length>0 && reviewed===S.cases.length,
+     d:`${reviewed}/${S.cases.length} 已定稿`, goto:'cases'},
+    {t:'FR 覆盖检查（RTM）', ok:true, d:'正向 26/26 · 反向无 dangling', goto:''},
+  ];
+}
+
+function gateTab(){
+  const G = S.gate, r = S.req;
+  const head = `<div class="banner blue"><b>门禁 lane</b><span class="sub">分档对抗评审（A=4 独立子代理 / B=2 / C=自查） → RECONCILE 汇总 → 人逐条裁决 → 放行（GR-4）。放行 = 权威登记，开发侧仍由 guard_dev 机械拦截（平台口径唯一，guard_dev 改读平台 API）。</span></div>`;
+
+  if(G.phase==='none'){
+    if(D_none()) return head + `<div class="card"><h3>尚未开闸</h3><div class="empty">完成设计 lane（或声明轻量跳过）后，这里会出现开闸检查。</div></div>`;
+    return head + gateCheckCard();
+  }
+  if(G.phase==='blocked') return head + gateCheckCard();
+  if(G.phase==='running') return head + runningHtml();
+  if(G.phase==='summary') return head + reconcileHtml();
+  if(G.phase==='deciding') return head + releaseBannerHtml() + decidingHtml();
+  if(G.phase==='released') return head + releasedHtml();
+  return head;
+}
+function D_none(){ return S.design.phase!=='final' && S.design.phase!=='skipped'; }
+
+function gateCheckCard(){
+  const chk = gateChecks();
+  const allOk = chk.every(c=>c.ok);
+  return `
+  <div class="card anim"><h3>开闸检查（GR-2 三条件）</h3>
+    <div class="gate-check">
+      ${chk.map((c,i)=>`<div class="gc-item ${c.ok?'gc-ok':'gc-no'}">
+        <span class="gc-ico">${c.ok?'✓':'✗'}</span>
+        <div style="flex:1"><div class="gc-t">${c.t}</div><div class="gc-d">${c.d}</div></div>
+        ${!c.ok&&c.goto?`<button class="btn small" data-act="tab" data-arg="${c.goto}">去处理 →</button>`:''}
+      </div>`).join('')}
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+      <button class="btn primary" data-act="open-gate" ${allOk?'':'disabled'} title="${allOk?'':chk.filter(c=>!c.ok).map(c=>c.t).join('；')}">开评审（${S.req.riskTier==='C'?'C 级自查档':(S.req.riskTier==='A'?'A 级 · 4 角色扇出':'B 级 · 2 角色扇出')}）</button>
+      ${S.scen==='s5'?'<button class="btn small" data-act="sim-review-cases">演示：补齐用例定稿</button>':''}
+    </div></div>`;
+}
+
+function runningHtml(){
+  const G=S.gate;
+  return `
+  <div class="card anim"><h3><span class="spin"></span> 对抗评审执行中（r${G.round}）</h3>
+    <p class="sub" style="margin-bottom:10px">每个角色是<strong>独立上下文</strong>的子代理（fresh-context 对抗）；交叉审查者是唯一同时读设计×用例的角色，只产分歧清单。评审中产物冻结（GR-3）。</p>
+    <div class="roles">${G.roles.map(r=>`
+      <div class="role-card"><b>${r.st==='running'?'<span class="spin"></span>':'⏳'} ${r.name}</b><p>${r.desc}</p>
+      <p class="sub">${r.st==='running'?`已 ${r.min} 分钟`:'排队中'}</p></div>`).join('')}
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button class="btn primary" data-act="sim-gate-done">模拟：扇出完成 → 汇总</button>
+      <button class="btn danger" data-act="abort-gate">作废重审（人工）</button>
+    </div></div>`;
+}
+
+function reconcileHtml(){
+  const G=S.gate;
+  return `
+  <div class="card anim"><h3>RECONCILE 汇总完成（独立上下文运行）</h3>
+    <div class="recon" style="margin:6px 0 12px">
+      <div class="box"><b>${G.reconcile.raw}</b><span>原始发现</span></div><span class="arr">→</span>
+      <div class="box noise"><b>-${G.reconcile.mis}</b><span>契约误读</span></div>
+      <div class="box noise"><b>-${G.reconcile.tradeoff}</b><span>有效权衡·备案</span></div>
+      <div class="box noise"><b>-${G.reconcile.noise}</b><span>噪音</span></div><span class="arr">→</span>
+      <div class="box"><b>${G.reconcile.valid}</b><span>有效条目</span></div><span class="arr">→</span>
+      <div class="box"><b>${G.reconcile.merged}</b><span>同根因合并·裁决单元</span></div>
+    </div>
+    <div class="banner" style="margin:0 0 12px"><b>机械校验（入库前）</b><span class="sub">引用可达 ✓ ｜ 计数同源 ✓（速览↔明细） ｜ 场景列非空 ✓ ｜ 分歧单元置顶 ✓ —— 全绿才置「待裁决」，噪音不直达裁决人。</span></div>
+    <p class="sub" style="margin-bottom:10px">裁决单元已按：分歧单元置顶（必须逐条）→ 严重度/主题分组；角色为行内属性。中低严重度条目将由 AI 预填建议裁决，可整批确认、可单独改判。</p>
+    <button class="btn primary" data-act="to-deciding">进入裁决（${G.reconcile.merged} 条）</button>
+  </div>`;
+}
+
+function releaseBannerHtml(){
+  if(S.gate.change || S.gate.phase!=='deciding') return '';
+  return '';
+}
+
+/* issue 卡（全局：裁决列表与已放行归档共用；readonly=归档只读，无操作钮） */
+function issueCard(i, readonly=false){
+  const decided = !!i.dec;
+  return `<div class="issue sev-${i.sev} ${decided?'decided':''}" id="iss-${i.code}">
+    <div class="i-head">
+      <span class="lvl-dot ${i.sev}"></span><b>${i.code}</b>
+      ${i.div?'<span class="badge b-red">分歧单元</span>':''}
+      <span class="chip">${esc(i.theme)}</span><span class="chip">${esc(i.role)}</span>
+      <span class="chip ${i.basis==='hard'?'warn':''}">${i.basis==='hard'?'硬依据':'软依据'}</span>
+      ${i.lockedQ?`<span class="chip lock" data-act="open-q">${esc(i.lockedQ)}</span>`:''}
+      <span class="grow"></span>
+      ${decided?`<span class="badge ${i.dec==='落改'?'b-blue':i.dec==='驳回'?'b-gray':'b-amber'}">${i.dec}</span>`:''}
+    </div>
+    <div class="scene">${lk(esc(i.scene))}</div>
+    <details ${i.div?'open':''}><summary class="sub" style="cursor:pointer">原文摘引 / 位置</summary>
+      <div class="quote"><span class="qlb">原文摘引</span>${lk(esc(i.quote))}</div></details>
+    <div class="loc" style="margin-top:6px">落点：${lk(esc(i.loc))}</div>
+    ${decided
+      ?`<div class="i-verdict"><span class="badge ${i.dec==='落改'?'b-blue':i.dec==='驳回'?'b-gray':'b-amber'}">${i.dec}</span>
+          <span>${esc(i.by||op())} · ${esc(i.note||'')}</span>
+          ${i.dec==='落改'?'<span class="chip ok">修订工作项已关联 →</span>':''}
+          ${readonly?'':'<button class="btn small link" data-act="re-decide" data-arg="'+i.code+'">改判</button>'}</div>`
+      :(readonly
+        ?'<div class="i-verdict"><span class="badge b-amber">待裁决</span></div>'
+        :`<div class="i-ops">
+            <button class="btn small primary" data-act="dec" data-arg="${i.code}:落改">落改</button>
+            <button class="btn small" data-act="dec" data-arg="${i.code}:驳回">驳回</button>
+            <button class="btn small" data-act="dec" data-arg="${i.code}:存疑">存疑</button>
+            ${i.suggest?`<span class="sub">AI 预填建议：${i.suggest}（可一键批量确认）</span>`:''}
+          </div>`)}
+  </div>`;
+}
+
+function decidingHtml(){
+  const G = S.gate;
+  const f = G.filter||'all';
+  const s = decisionSummary(S);
+  const divs = G.issues.filter(i=>i.div);
+  const rest = G.issues.filter(i=>!i.div);
+  const match = i => f==='all' || (f==='todo'?!i.dec:!!i.dec);
+  const unreviewed = G.issues.filter(i=>!i.dec && i.suggest);
+  const doubts = G.issues.filter(i=>i.dec==='存疑');
+  return `
+  ${doubtPanel(doubts)}
+  ${revPanel()}
+  <div class="card anim">
+    <h3>裁决（r${G.round}）<span class="badge ${s.done>=s.total?'b-green':'b-amber'}">${s.done}/${s.total}</span>
+      <span style="flex:1"></span>
+      <span class="prog-row" style="width:220px"><span class="bar"><span class="bar-fill" style="width:${Math.round(s.done/s.total*100)}%"></span></span></span>
+    </h3>
+    <div class="filters">
+      <select data-act-change="gate-filter">
+        <option value="all" ${f==='all'?'selected':''}>全部</option>
+        <option value="todo" ${f==='todo'?'selected':''}>待裁决</option>
+        <option value="done" ${f==='done'?'selected':''}>已裁决</option>
+      </select>
+      <button class="btn small" data-act="jump-next">跳到下一条待裁决</button>
+      <span class="spacer"></span>
+      ${unreviewed.length?`<button class="btn small" data-act="batch-apply">批量确认 AI 预填建议（${unreviewed.length} 条）</button>`:''}
+    </div>
+    <p class="sub" style="margin-bottom:6px">原型仅渲染 12/${s.total} 条，交互口径与全量一致。裁决<strong>即时逐条保存</strong>（对齐澄清答复），中断后由主按钮「继续裁决」直达第一条未裁项。</p>
+    ${divs.filter(match).length?`<div class="grp-t">分歧单元（设计 × 用例冲突，必须逐条）<span class="cnt">置顶</span></div>${divs.filter(match).map(x=>issueCard(x)).join('')}`:''}
+    ${['数据模型','接口契约','状态机','公共资产','可测性','需求覆盖','命名空间'].map(th=>{
+      const g = rest.filter(i=>i.theme===th && match(i));
+      return g.length?`<div class="grp-t">${th}<span class="cnt">${g.length} 条</span></div>${g.map(x=>issueCard(x)).join('')}`:'';
+    }).join('')}
+  </div>`;
+}
+
+function revPanel(){
+  const revs = S.gate.revs;
+  if(!revs || !revs.length) return '';
+  return `<div class="card anim"><h3>修订工作项（落改的执行通道）<span class="sub" style="font-weight:400">有产物修订事实才能置「已执行」；全部已执行是放行前置（GR-4）</span></h3>
+    ${revs.map((rv,ri)=>`<div class="rev-card ${rv.status==='已执行'?'done':''}">
+      <div class="rev-h"><b>${rv.id}</b><span class="badge ${rv.status==='已执行'?'b-green':rv.status==='待采纳'?'b-amber':'b-blue'}">${rv.status}</span>
+        <span>落点：${esc(rv.target)}</span><span class="grow"></span><span class="sub">${esc(rv.by==='—'?'待处理':rv.by)}</span></div>
+      ${rv.status!=='待修订'?`<div class="rev-diff"><span class="del">- ${esc(rv.change.split(' → ')[0])}</span><span class="ins">+ ${esc(rv.change.split(' → ')[1]||rv.change)}</span></div>`:''}
+      <div class="i-ops">
+        ${rv.status==='待修订'?`<button class="btn small primary" data-act="rev-ai" data-arg="${ri}">AI 修订（产草稿）</button>`:''}
+        ${rv.status==='待修订'?`<span class="sub">修订将走草稿通道，由人采纳后落盘（正式产物只能人采纳）</span>`:''}
+        ${rv.status==='待采纳'?`<button class="btn small primary" data-act="rev-adopt" data-arg="${ri}">采纳修订（落盘 + 置已执行）</button><span class="sub">采纳需署名：${esc(op())}</span>`:''}
+        ${rv.status==='已执行'?`<span class="sub">已执行 · ${esc(rv.by)} —— 放行校验项「落改闭环」据此判定</span>`:''}
+      </div></div>`).join('')}
+  </div>`;
+}
+
+function doubtPanel(doubts){
+  if(!doubts.length) return '';
+  return `<div class="banner amber anim"><b>存疑聚合（${doubts.length}）</b>
+    <span class="sub">${doubts.map(i=>`<b>${i.code}</b> ${esc(i.note||'')}`).join(' ｜ ')}。存疑不阻断放行计数但会在此常驻老化——可转为澄清问题回流 PM，或随时改判。</span>
+    <span class="b-act"><button class="btn small" data-act="doubt-to-clarify">转为澄清问题</button></span></div>`;
+}
+
+/* ---------- 放行 / 已放行 ---------- */
+let relCtx = null;
+function releaseChecklist(){
+  const s = decisionSummary(S);
+  const revsPending = S.gate.revs.filter(r=>r.status!=='已执行');
+  return [
+    {t:`全部裁决（${s.done}/${s.total}）`, ok:s.done>=s.total},
+    {t:`落改闭环：修订工作项全部已执行（${S.gate.revs.filter(r=>r.status==='已执行').length}/${S.gate.revs.length}）`, ok:revsPending.length===0, pend:revsPending.map(r=>r.id)},
+    {t:'引用可达（命名空间引用一跳定位）', ok:true},
+    {t:'计数同源（速览 ↔ 明细）', ok:true},
+    {t:'FR 覆盖率 100%（RTM 正向 26/26）', ok:true},
+    {t:'场景列非空（白话可裁决）', ok:true},
+  ];
+}
+function openReleaseModal(){
+  const list = releaseChecklist();
+  const allOk = list.every(c=>c.ok);
+  relCtx = {list, allOk};
+  renderModal({type:'release'});
+}
+function releasedHtml(){
+  const G=S.gate;
+  return `
+  <div class="banner green anim"><b>已放行（r${G.released.round}）</b>
+    <span class="sub">${esc(G.released.by)} · ${G.released.at}。放行联动：用例已自动置「已定稿」（来源标注见用例列表）；设计冻结。开发闸解除——但放行=平台权威登记，本地开发入口仍由 guard_dev 机械拦截（guard_dev 改读平台 API，双源已消除）。</span></div>
+  ${G.change?changeBanner():''}
+  ${G.issues.length?`<div class="card anim"><h3>评审结论归档（r${G.released.round} · 只读）<span class="badge b-gray">裁决记录与引用跳转保留，操作钮隐藏</span></h3>
+    ${G.issues.map(x=>issueCard(x,true)).join('')}</div>`:''}
+  <div class="card anim"><h3>轮次记录</h3>
+    <table class="table"><thead><tr><th>轮次</th><th>裁决单元</th><th>放行时间</th><th>放行人</th><th>状态</th></tr></thead><tbody>
+    <tr><td><b>r1</b></td><td>41</td><td>${G.released.at}</td><td>${esc(G.released.by)}</td><td><span class="badge b-green">已放行</span></td></tr>
+    ${G.archived.slice(1).map(a=>`<tr><td>r${a.round}（归档只读）</td><td>${a.issues}</td><td>${a.released}</td><td>${esc(a.by)}</td><td><span class="badge b-gray">已归档</span></td></tr>`).join('')}
+    </tbody></table>
+    <p class="sub" style="margin-top:8px">放行后产物实质变更（GR-3：仅「已放行后」窗口，规范化内容 hash 判定）→ 常驻提示 + <strong>人工确认</strong>才开新一轮，不自动烧 token。</p>
+  </div>`;
+}
+function changeBanner(){
+  const G=S.gate;
+  return `<div class="banner amber anim"><b>检测到已放行产物变更</b>
+    <span class="sub">${esc(G.change.what)}（${esc(G.change.by)} · ${esc(G.change.at)}）。按 GR-3 需开新一轮评审，r${G.released.round} 结论归档只读。</span>
+    <span class="b-act"><button class="btn small primary" data-act="reopen-round">开新一轮评审 r${G.released.round+1}</button>
+    <button class="btn small" data-act="dismiss-change">忽略（留痕）</button></span></div>`;
+}
+
+/* ---------- 审计留痕 ---------- */
+function logHtml(){
+  return `<div class="card"><h3>动作留痕（无登录体系 · 全动作强制署名）</h3>
+    ${S.log.map(l=>`<div class="logline"><span class="lt">${l.t}</span><span class="lb2">${esc(l.by)}</span><span>${esc(l.act)}</span></div>`).join('')}
+  </div>`;
+}
+
+/* ============================================================
+   弹窗系统
+   ============================================================ */
+let modalCtx = null;
+function renderModal(ctx){
+  modalCtx = ctx ?? modalCtx;
+  const root = document.getElementById('modal-root');
+  if(!modalCtx){ root.innerHTML=''; return; }
+  const m = modalCtx;
+  let body='', foot='', narrow='';
+  if(m.type==='ask'){
+    narrow=' narrow';
+    body = `<div style="white-space:pre-wrap">${esc(m.body)}</div>`;
+    foot = `<button class="btn" data-act="modal-close">取消</button>
+            <button class="btn ${m.danger?'danger':'primary'}" data-act="ask-ok">${esc(m.confirmText||'确认')}</button>`;
+  }
+  if(m.type==='repo'){
+    body = `<div class="field"><label>目标代码仓路径（按需求配置，用于设计环节的存量勘察）</label>
+      <input id="f-repo" value="${esc(S.req.targetRepo)}" placeholder="/path/to/target/repo"></div>
+      <p class="sub">守卫：路径必须存在且为目录；仅 design_gen 任务的工具面获得该仓<strong>只读</strong>权限（最小权限，case_gen 永不可见设计草稿）。</p>`;
+    foot = `<button class="btn" data-act="modal-close">取消</button><button class="btn primary" data-act="repo-ok">保存</button>`;
+  }
+  if(m.type==='finalize'){
+    const qOk = !!S.design.locked['确认.Q-03'];
+    body = `<p><b>确认点②（定稿）</b>——ack 是定稿信号，<strong style="color:var(--red-deep)">不构成质量放行</strong>；放行唯一口径 = 门禁 issues「已放行」。</p>
+      <div class="checks" id="f-checks">
+      ${['D 表八类别显式决策（「不适用」也写明）','公共资产六类齐套 + 每项归属','接口契约每行挂 F 编号 + 口径来源','切分约束三件（骨架先行/横切矩阵/共享物归属）','audit 🔴🟡 问题去向逐条有落点','Q 表就位（含 1 行锁定待拍板处理）']
+        .map((t,i)=>`<label><input type="checkbox" data-ci="${i}" ${i===5&&!qOk?'disabled':''}> ${t}${i===5&&!qOk?' <span class="chip warn">先回文档拍板 确认.Q-03</span>':''}</label>`).join('')}
+      </div>
+      <div class="field"><label>定稿人<em>*</em></label><input id="f-by" value="${esc(op())}"></div>`;
+    foot = `<button class="btn" data-act="modal-close">取消</button><button class="btn primary" data-act="finalize-ok">定稿</button>`;
+  }
+  if(m.type==='dec'){
+    const [code, kind] = m.arg.split(':');
+    const iss = S.gate.issues.find(i=>i.code===code);
+    if(kind==='落改'){
+      body = `<p><b>落改 = 生成修订工作项</b>（绑定产物与版本）。修订由 AI 产草稿、你采纳后落盘并自动置「已执行」——没有产物修订事实，放行校验「落改闭环」不通过。</p>
+        <div class="field"><label>落点<em>*</em>（改哪里）</label>
+        <select id="f-target"><option>设计 ${iss.loc.includes('用例')?'§2 · 对应契约行':'§1/§2 · 对应行'}</option><option>用例（对应 TC）</option><option>设计 §6 D 表</option></select></div>
+        <div class="field"><label>修订说明</label><textarea id="f-note" placeholder="一句话说明改什么、为什么">${esc(iss.scene.slice(0,40))}…</textarea></div>`;
+      foot = `<button class="btn" data-act="modal-close">取消</button><button class="btn primary" data-act="dec-ok" data-arg="${m.arg}">生成修订工作项</button>`;
+    }
+    if(kind==='驳回'){
+      body = `<p><b>驳回</b>语义 = 「不采纳 AI 意见 / 接受风险」，<span style="color:var(--amber-deep)">与澄清的「驳回=不是问题」不同源</span>——理由是下轮评审的校准资产（误报模式回流）。</p>
+        <div class="field"><label>驳回理由<em>*</em></label><textarea id="f-note" placeholder="为什么这条不成立/为什么接受风险"></textarea></div>
+        <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="f-fp" checked style="width:auto"> 回流误报模式库（下轮评审 prompt 注入 3-5 条）</label>`;
+      foot = `<button class="btn" data-act="modal-close">取消</button><button class="btn primary" data-act="dec-ok" data-arg="${m.arg}">确认驳回</button>`;
+    }
+    if(kind==='存疑'){
+      body = `<p><b>存疑</b> = 已裁决的一种（必填去向，不阻断放行进度），条目进入「存疑聚合区」常驻老化可见。</p>
+        <div class="field"><label>去向<em>*</em></label><select id="f-target"><option>转澄清问题（回流 PM）</option><option>挂起待外部输入（注明依赖）</option></select></div>
+        <div class="field"><label>说明</label><textarea id="f-note"></textarea></div>`;
+      foot = `<button class="btn" data-act="modal-close">取消</button><button class="btn primary" data-act="dec-ok" data-arg="${m.arg}">确认存疑</button>`;
+    }
+  }
+  if(m.type==='release'){
+    narrow=' narrow';
+    body = `<p><b>放行是终态动作</b>，与「发布」同级确认：用例自动置已定稿（来源标注「门禁 r${S.gate.round} 放行 · ${esc(op())}」）、开发闸解除、本轮产物冻结。</p>
+      <div class="gate-check" style="margin:12px 0">
+      ${relCtx.list.map(c=>`<div class="gc-item ${c.ok?'gc-ok':'gc-no'}"><span class="gc-ico">${c.ok?'✓':'✗'}</span>
+        <div style="flex:1"><div class="gc-t" style="font-weight:500;font-size:13px">${esc(c.t)}</div>
+        ${c.pend&&c.pend.length?`<div class="gc-d">未执行：${esc(c.pend.join('、'))}——先到「修订工作项」采纳落盘</div>`:''}</div></div>`).join('')}
+      </div>
+      ${relCtx.allOk?'':'<p style="color:var(--red-deep)">存在未满足项，无法放行。补齐后重开本弹窗。</p>'}`;
+    foot = `<button class="btn" data-act="modal-close">取消</button>
+      <button class="btn ${relCtx.allOk?'danger':'primary'}" data-act="release-ok" ${relCtx.allOk?'':'disabled'}>${relCtx.allOk?'确认放行（终态）':'校验未通过'}</button>`;
+  }
+  if(m.type==='reopen'){
+    narrow=' narrow';
+    body = `<p>开新一轮评审 <b>r${S.gate.released.round+1}</b>：按当前产物内容重新分档扇出（A 级 = 4 子代理，将消耗对应额度）。</p>
+      <p style="margin-top:8px">变更清单：<b>${esc(S.gate.change.what)}</b>（${esc(S.gate.change.by)} · ${esc(S.gate.change.at)}）</p>
+      <p style="margin-top:8px;color:var(--red-deep)">r${S.gate.released.round} 评审结论归档只读；旧修订工作项随之封存。</p>`;
+    foot = `<button class="btn" data-act="modal-close">取消</button><button class="btn danger" data-act="reopen-ok">确认开 r${S.gate.released.round+1}</button>`;
+  }
+  if(m.type==='dispose'){
+    narrow = ' narrow';
+    const [seq, kind] = m.arg.split(':');
+    body = kind==='rejected'
+      ? `<p><b>驳回</b>——认定不是问题，不进标准文档定稿。</p>
+         <div class="sub" style="margin-bottom:8px">${seq} · 理由（<em style="color:var(--red);font-style:normal">必填</em>）——将随澄清记录流转，合成标准文档时知悉</div>
+         <textarea id="f-note" rows="3" style="width:100%" placeholder="例如：原文已在其他条款明确，不构成缺口"></textarea>`
+      : `<p><b>挂起</b>——转入遗留假设，本期不处理。</p>
+         <div class="sub" style="margin-bottom:8px">${seq} · 理由（可选）——合成时记入 需求.Axx</div>
+         <textarea id="f-note" rows="3" style="width:100%" placeholder="例如：待下期原型确认后再处理"></textarea>`;
+    foot = `<button class="btn" data-act="modal-close">取消</button>
+            <button class="btn primary" data-act="dispose-ok" data-arg="${m.arg}">确认${kind==='rejected'?'驳回':'挂起'}</button>`;
+  }
+  if(m.type==='case'){
+    const c = S.cases.find(x=>x.id===m.id);
+    if(!c){ closeModal(); }
+    else{
+      const ro = c.tool !== '表单';
+      body = `${ro?`<div class="banner"><b>只读用例</b><span class="sub">由 ${esc(c.tool)} 从本地工作区推送维护，平台内只读——修改建议通过评论反馈维护人 <b>${esc(c.owner)}</b>，由其本地迭代后重推。</span></div>`:''}
+        <div class="field"><label>标题</label><div>${esc(c.title)}</div></div>
+        <div class="field"><label>关联需求点（点击跳需求摘要行）</label><div>${lk(esc(c.pts))||'—'}</div></div>
+        ${(c.verifyRefs||[]).length?`<div class="field"><label>重点验证（点击回跳体检/假设）</label><div>${c.verifyRefs.map(r=>`<span class="reflink" data-ref="${r.replace(/^(体检\.|需求\.)/,'')}" style="margin-right:8px">${r}</span>`).join('')}</div></div>`:''}
+        ${(c.defectRefs||[]).length?`<div class="field"><label>产出缺陷（仅编号引用，详情在本地 cases.md）</label><div>${c.defectRefs.map(r=>`<span class="chip warn" data-act="defect-toast" style="cursor:pointer;margin-right:6px">${r}</span>`).join('')}</div></div>`:''}
+        <div class="field"><label>优先级 / 审核状态 / 来源</label><div>${c.pri} · ${c.st==='reviewed'?'已定稿':'待审核'} · ${esc(c.tool)} / ${esc(c.owner)}</div></div>
+        <div class="field"><label>前置条件</label><div>${esc(c.pre||'—')}</div></div>
+        <div class="field"><label>步骤</label><pre class="srctext" style="white-space:pre-wrap;max-height:190px">${esc(c.steps)}</pre></div>
+        <div class="field"><label>预期结果</label><div>${esc(c.expect)}</div></div>
+        <div class="field"><label>评论（${c.comments.length}）——有修改建议时留给维护人</label>
+          ${c.comments.map(cm=>`<div class="cmt"><span class="sub" style="float:right">${esc(cm.at)}</span><b>${esc(cm.by)}</b> ${esc(cm.text)}</div>`).join('')}
+          <textarea id="f-cmt" rows="2" placeholder="写下修改建议或评审意见…（⌘/Ctrl+Enter 提交）" style="width:100%;border:1px solid var(--line-strong);border-radius:8px;padding:8px 10px;font-size:13px"></textarea></div>`;
+      foot = `${ro?'':'<button class="btn" data-act="case-edit">编辑（表单用例可改）</button>'}
+        ${c.st==='reviewed'
+          ?`<button class="btn" data-act="case-unreview" data-arg="${c.id}">退回</button>`
+          :`<button class="btn primary" data-act="case-review" data-arg="${c.id}">定稿</button>`}
+        <button class="btn primary" data-act="cmt-add" data-arg="${c.id}">提交评论</button>
+        <button class="btn" data-act="modal-close">关闭</button>`;
+    }
+  }
+  if(m.type==='case-form'){
+    body = `<div class="field"><label>用例标题<em>*</em></label><input id="cf-title" placeholder="一句话说清验证什么"></div>
+      <div class="field"><label>关联需求点<em>*</em>（逗号分隔，保存时软校验）</label><input id="cf-pts" placeholder="如 需求.FR-03, 需求.FR-08"></div>
+      <div class="field"><label>优先级</label><select id="cf-pri"><option>P0</option><option selected>P1</option><option>P2</option></select></div>
+      <div class="field"><label>前置条件</label><input id="cf-pre"></div>
+      <div class="field"><label>步骤（每行一步）<em>*</em></label><textarea id="cf-steps"></textarea></div>
+      <div class="field"><label>预期结果<em>*</em></label><textarea id="cf-expect" style="min-height:46px"></textarea></div>
+      <div class="field"><label>来源人<em>*</em></label><input id="cf-owner" value="${esc(op())}"></div>`;
+    foot = `<button class="btn" data-act="modal-close">取消</button><button class="btn primary" data-act="case-form-ok">提交用例</button>`;
+  }
+  if(m.type==='submit'){
+    const k = m.keep||{};
+    body = `<div class="field"><label>提交渠道<em>*</em></label>
+      <div class="seg">
+        <label class="seg-opt ${m.ch==='feishu'?'on':''}" data-act="submit-ch" data-arg="feishu"><input type="radio" ${m.ch==='feishu'?'checked':''} readonly><div><div class="seg-t">飞书文档</div><div class="seg-d">粘贴飞书文档链接；质检时拉取原文与评论</div></div></label>
+        <label class="seg-opt ${m.ch==='text'?'on':''}" data-act="submit-ch" data-arg="text"><input type="radio" ${m.ch==='text'?'checked':''} readonly><div><div class="seg-t">粘贴文本</div><div class="seg-d">直接粘贴需求原文（无 lark 依赖）</div></div></label>
+      </div></div>
+      <div class="field"><label>需求名称<em>*</em></label><input id="f-name" value="${esc(k.name||'')}" placeholder="一句话说清需求，如：区域教学技能比赛线上化"></div>
+      <div class="field"><label>迭代</label><input value="v3.7.2" disabled style="background:var(--bg-soft)"></div>
+      ${m.ch==='feishu'
+        ?`<div class="field"><label>飞书文档链接<em>*</em></label><input id="f-url" value="${esc(k.url||'')}" placeholder="https://example.feishu.cn/wiki/…"></div>`
+        :`<div class="field"><label>需求原文<em>*</em></label><textarea id="f-text" placeholder="粘贴需求全文…">${esc(k.txt||'')}</textarea></div>`}
+      <div class="field"><label>提交人<em>*</em></label><input id="f-by" value="${esc(k.by||op())}"></div>
+      <div class="field"><label>风险分级（可选，质检后由 digest 定级回填）</label>
+        <select id="f-tier"><option value="">暂不定级</option><option ${k.tier==='A'?'selected':''}>A</option><option ${k.tier==='B'?'selected':''}>B</option><option ${k.tier==='C'?'selected':''}>C</option></select></div>`;
+    foot = `<button class="btn" data-act="modal-close">取消</button><button class="btn primary" data-act="submit-ok">提交登记</button>`;
+  }
+  root.innerHTML = `<div class="modal-mask" data-act="mask">
+    <div class="modal ${narrow}">
+      <div class="modal-h">${esc(m.title||'')}<button class="x" data-act="modal-close">✕</button></div>
+      <div class="modal-b">${body}</div>
+      <div class="modal-f">${foot}</div>
+    </div></div>`;
+}
+function closeModal(){ modalCtx=null; renderModal(null); }
+function ask(title, body, confirmText, danger){ renderModal({type:'ask', title, body, confirmText, danger}); }
+
+/* ============================================================
+   事件
+   ============================================================ */
+document.addEventListener('click', e=>{
+  const rf = e.target.closest('[data-ref]');
+  if(rf){ openRef(rf.dataset.ref); return; }
+  const el = e.target.closest('[data-act]');
+  if(!el || el.disabled) return;
+  const act = el.dataset.act, arg = el.dataset.arg;
+  const st = S, D = st.design, G = st.gate;
+  const A = {
+    'scen': ()=>{ closeModal(); const v=S.view; S = freshState(arg); S.view=v; },
+    'reset-scen': ()=>{ closeModal(); const v=S.view; S = freshState(S.scen); S.view=v; },
+    'view': ()=>{ S.view = (arg==='list'||arg==='overview') ? 'iter' : arg; S.refTrace=null; window.scrollTo(0,0); },
+    'row-open': ()=>{ if(arg==='REQ-2026-042'){ S.view='detail'; window.scrollTo(0,0); }
+      else toast('原型仅 REQ-2026-042 可交互，其余为静态演示数据'); },
+    'tab': ()=>{ st.tab = arg; },
+    'tp-toggle': ()=>{ st.tpOpen = !st.tpOpen; },
+    'config-repo': ()=>renderModal({type:'repo', title:'配置目标代码仓'}),
+    'repo-ok': ()=>{ const v=document.getElementById('f-repo').value.trim();
+      if(!v){ toast('路径不能为空', true); return; }
+      st.req.targetRepo = v; log(st, `配置目标代码仓：${v}`); closeModal(); toast('目标代码仓已配置'); },
+    'gen-design': ()=>ask('创建「技术设计生成」任务？', 'Agent 将读取平台 digest/audit 与目标代码仓勘察后产出设计草稿。产物以草稿回传待你确认。', '创建任务'),
+    'declare-skip': ()=>ask('声明轻量跳过（C 级）？', '声明后设计 lane 终态化（留痕可审计）；门禁以自查档执行，放行与开发闸照常。', '声明'),
+    'retry-design': ()=>{ D.phase='running'; D.task={type:'design_gen',status:'running'}; log(st,'重试 design_gen 任务'); },
+    'cancel-design': ()=>ask('取消任务？', '取消后如需设计须重新创建任务（人取消即终局，L2 不复活）。', '取消', true),
+    'sim-design-done': ()=>{ D.phase='draft'; D.task={type:'design_gen',status:'done',result:'9 节全量 · 契约 6 行 · D 表 5 项 · Q 表 1 锁定'};
+      log(st,'design_gen 完成，草稿回传（9 节/契约 6 行/D 表 5 项）'); },
+    'sim-design-fail': ()=>{ D.phase='failed'; log(st,'design_gen 失败（目标仓不可达）'); },
+    'd-mode': ()=>{ D.mode = arg; },
+    'save-draft': ()=>toast('草稿已保存（编辑内容写回 draft_artifact）'),
+    'drop-draft': ()=>ask('丢弃设计草稿？', '丢弃后如需该产物须重新生成任务。', '丢弃', true),
+    'regen-design': ()=>ask('重新生成设计草稿？', '当前草稿将被新草稿覆盖。', '重新生成', true),
+    'finalize-design': ()=>renderModal({type:'finalize', title:'设计定稿（确认点②）'}),
+    'view-final': ()=>{ D.showDoc = !D.showDoc; },
+    'accept-tier': ()=>{ st.req.riskTier=G.tierProposal.to; log(st,`采纳风险升级提案 ${G.tierProposal.from}→${G.tierProposal.to}（证据留痕）`); G.tierProposal=null; toast('风险分级已升级（只升不降），在途产物按新档产出'); },
+    'reject-tier': ()=>{ log(st,'驳回风险升级提案'); G.tierProposal=null; toast('已驳回提案（留痕）'); },
+    'open-q': ()=>{ renderModal({type:'ask', title:'拍板：确认.Q-03', body:'「报名截止后是否自动顺延 72 小时？」\n\n拍板后契约行解锁，锁定标记移除（留痕：操作人+时间）。', confirmText:'拍板：顺延 72h'}); modalCtx._q = true; },
+    'case-review': ()=>{ const c=st.cases.find(x=>x.id===arg); if(!c) return;
+      c.st='reviewed'; c.src=''; log(st,`用例 ${c.id} 定稿`); toast(`${c.id} 已定稿`); },
+    'case-unreview': ()=>{
+      const c = st.cases.find(x=>x.id===arg); if(!c) return;
+      if(G.phase==='deciding'){ ask('评审中退回定稿用例？', `按 GR-3，评审中变更走「落改」通道或人工「作废重审」。退回 ${c.id} 将把当轮评审置为「重审待确认」。`, '仍要退回', true); modalCtx._unreview=c.id; return; }
+      c.st='draft'; delete c.src; log(st,`用例 ${c.id} 退回待审核`); },
+    'case-open': ()=>{ if(!S.cases.some(x=>x.id===arg)) return; renderModal({type:'case', id:arg}); },
+    'case-edit': ()=>toast('表单用例编辑同现有平台 PATCH（乐观锁 expectedVersion）——原型从略'),
+    'cmt-add': ()=>{ const c=st.cases.find(x=>x.id===arg); const t=(document.getElementById('f-cmt')?.value||'').trim();
+      if(!t){ toast('评论内容为空', true); return; }
+      c.comments.push({by:op(), at:now(), text:t}); log(st,`评论用例 ${c.id}（反馈维护人 ${c.owner}）`); render(); toast('评论已提交，维护人将在本地迭代后重推'); },
+    'defect-toast': ()=>toast('缺陷留在本地工作区 cases.md（不上平台）'),
+    'case-form-open': ()=>renderModal({type:'case-form', title:'表单提交用例'}),
+    'case-form-ok': ()=>{
+      const title=document.getElementById('cf-title').value.trim();
+      const ptsRaw=document.getElementById('cf-pts').value.trim();
+      const steps=document.getElementById('cf-steps').value.trim();
+      const expect=document.getElementById('cf-expect').value.trim();
+      const owner=document.getElementById('cf-owner').value.trim();
+      if(!title) return toast('请填写用例标题', true);
+      if(!ptsRaw) return toast('请填写关联需求点', true);
+      if(!steps||!expect) return toast('请填写步骤与预期结果', true);
+      if(!owner) return toast('请填写来源人（归因红线）', true);
+      const points=ptsRaw.split(/[,，、\s]+/).filter(Boolean);
+      const unknown=points.filter(p=>!FR_POINTS.some(f=>p==='需求.'+f.id||p===f.id));
+      const no=S.cases.reduce((m,c)=>Math.max(m,c.caseNo||0),0)+1;
+      st.cases.push({id:'WEB-'+no, caseNo:no, title, pts:points.join('、'), st:'draft',
+        pri:document.getElementById('cf-pri').value, owner, tool:'表单',
+        pre:document.getElementById('cf-pre').value.trim(), steps, expect, verifyRefs:[], defectRefs:[], comments:[]});
+      log(st,`表单提交用例 WEB-${no}（${points.join('、')}）`);
+      closeModal();
+      toast(unknown.length?`已提交。软校验提醒：未在已发布需求点中找到 ${unknown.join('、')}（仍已登记）`:`用例 WEB-${no} 已登记，需求点关联校验通过`, !!unknown.length); },
+    'case-sort': ()=>{ if(S.caseSortKey===arg) S.caseSortDir=S.caseSortDir==='asc'?'desc':'asc';
+      else { S.caseSortKey=arg; S.caseSortDir='desc'; } },
+    'agg-jump': ()=>{ const n=document.getElementById('pipe-section'); if(n) n.scrollIntoView({behavior:'smooth',block:'start'}); },
+    'grp': ()=>{ if(S.openGrps[arg]) delete S.openGrps[arg]; else S.openGrps[arg]=true; },
+    'grp-all': ()=>{ allGrpKeys(arg).forEach(k=>S.openGrps[k]=true); },
+    'grp-none': ()=>{ Object.keys(S.openGrps).forEach(k=>{ if(k.startsWith(arg)) delete S.openGrps[k]; }); },
+    'clf-next': ()=>{ const it=S.clarify.find(c=>c.status==='pending'); if(!it) return;
+      if(S.clfFilter==='done') S.clfFilter='all';
+      S.openGrps['chk:'+it.theme]=true; render(); flashSoon('clr-'+it.seq);
+      setTimeout(()=>{ document.querySelector(`textarea[data-clf="${it.seq}"]`)?.focus(); },260); },
+    'jump-audit': ()=>{ S.tab='audit'; S.openGrps['audit:'+(AUDIT_THEME[arg]||'')]=true; render(); flashSoon('audit-'+arg); },
+    'jump-clarify': ()=>{ S.tab='clarify'; if(S.clfFilter==='done') S.clfFilter='all';
+      const c=S.clarify.find(x=>x.seq===arg); if(c) S.openGrps['chk:'+c.theme]=true;
+      render(); flashSoon('clr-'+arg); },
+    'dispose-open': ()=>renderModal({type:'dispose', title:arg.endsWith(':rejected')?'驳回问题（不是问题）':'挂起问题（转遗留假设）', arg}),
+    'dispose-ok': ()=>{ const [seq,kind]=arg.split(':');
+      const note=(document.getElementById('f-note')?.value||'').trim();
+      if(kind==='rejected' && !note){ toast('驳回必须填写理由', true); return; }
+      const c=st.clarify.find(x=>x.seq===seq); if(!c) return;
+      c.status=kind; c.note=note;
+      log(st,`${kind==='rejected'?'驳回':'挂起'}澄清 ${seq}${note?'：'+note:''}`);
+      closeModal(); toast(`已${kind==='rejected'?'驳回':'挂起'}：${seq}`); },
+    'reopen-clr': ()=>{ const c=st.clarify.find(x=>x.seq===arg); if(!c) return;
+      c.status='pending'; c.note='';
+      log(st,`重开澄清 ${arg}，可继续作答`); toast(`已重开 ${arg}，可继续作答`); },
+    'submit-open': ()=>renderModal({type:'submit', title:'提交需求', ch:'feishu', keep:{}}),
+    'submit-ch': ()=>{ const g=id=>document.getElementById(id)?.value||'';
+      const keep={name:g('f-name'), by:g('f-by'), url:g('f-url'), txt:g('f-text'), tier:g('f-tier')};
+      modalCtx.ch=arg; modalCtx.keep=keep; renderModal(); },
+    'submit-ok': ()=>{
+      const name=document.getElementById('f-name').value.trim();
+      const by=document.getElementById('f-by').value.trim();
+      const url=(document.getElementById('f-url')?.value||'').trim();
+      const txt=(document.getElementById('f-text')?.value||'').trim();
+      const tier=document.getElementById('f-tier').value;
+      if(!name) return toast('需求名称必填', true);
+      if(!by) return toast('提交人必填（归因红线）', true);
+      if(modalCtx.ch==='feishu' && !url) return toast('飞书渠道必须填文档链接', true);
+      if(modalCtx.ch==='text' && !txt) return toast('粘贴文本渠道必须填需求原文', true);
+      const id='REQ-2026-0'+(45+EXTRA_REQS.length);
+      EXTRA_REQS.push({id, name, tier:tier||'未定',
+        nodes:[['质检','doing'],['澄清','todo'],['发布','todo'],['设计','todo'],['用例','todo'],['门禁','todo'],['放行','todo']],
+        act:'待质检——质检后提取摘要与澄清', actCls:'b-blue', role:'—', live:false,
+        ls:{st:'待质检', clf:'0/0', dsg:['未开始','b-gray'], gate:['未开始','b-gray'], cases:'0', upd:'刚刚'}});
+      log(S, `提交需求 ${id} ${name}（${modalCtx.ch==='feishu'?'飞书':'文本'} · 提交人 ${by}${tier?' · 预分级 '+tier:''}）`);
+      closeModal(); toast(`${id} 已登记，进入待质检（迭代管道第一阶段）`); },
+    'bulk-review': ()=>{ let n=0; st.cases.forEach(c=>{ if(c.st!=='reviewed'){c.st='reviewed';c.src='';n++;} }); log(st,`批量定稿 ${n} 条用例`); toast(`${n} 条用例已定稿`); },
+    'open-gate': ()=>{ const chk=gateChecks(); if(!chk.every(c=>c.ok)){ toast('开闸条件未满足', true); return; }
+      G.phase='running';
+      G.roles = st.req.riskTier==='C'
+        ? [{name:'主会话自查（C 级）', desc:'五问自查清单，无扇出', st:'running', min:2}]
+        : st.req.riskTier==='A'
+        ? [{name:'架构一致性',desc:'分层/公共资产/切分约束',st:'running',min:0},{name:'数据模型与 SQL',desc:'DDL/索引/软删对账',st:'running',min:0},{name:'测试可测性',desc:'H 假设接受条件/验证入口',st:'running',min:0},{name:'交叉审查者',desc:'唯一同时读设计×用例，只产分歧',st:'queued',min:0}]
+        : [{name:'数据模型与 SQL',desc:'B 级档位',st:'running',min:0},{name:'交叉审查者',desc:'B 级档位',st:'running',min:0}];
+      log(st,`开评审 r${G.round}（${st.req.riskTier} 级档位）`); },
+    'sim-gate-done': ()=>{ G.phase='summary'; G.reconcile={raw:83, mis:14, tradeoff:9, noise:3, valid:57, merged:41}; log(st,'扇出完成 → RECONCILE 汇总（83→41 裁决单元），机械校验全绿'); },
+    'abort-gate': ()=>ask('作废当前评审轮？', '作废后产物可正常变更；如需评审须重新开轮。', '作废', true),
+    'to-deciding': ()=>{ G.phase='deciding';
+      if(!G.issues.length){ G.issues = BASE_ISSUES.map(i=>({...i})); }
+      log(st,'进入裁决（41 裁决单元）'); },
+    'goto-deciding': ()=>{ st.tab='gate';
+      const t=G.issues.find(i=>!i.dec);
+      if(t) setTimeout(()=>{ const n=document.getElementById('iss-'+t.code);
+        if(n){ n.scrollIntoView({behavior:'smooth',block:'center'}); n.classList.remove('flash'); void n.offsetWidth; n.classList.add('flash'); } },60); },
+    'toc': ()=>{ const n=document.getElementById(arg);
+      if(n){ n.scrollIntoView({behavior:'smooth',block:'start'}); n.classList.remove('flash'); void n.offsetWidth; n.classList.add('flash'); } },
+    'sim-review-cases': ()=>{ let n=0; st.cases.forEach(c=>{ if(c.st!=='reviewed'){c.st='reviewed';c.src='';n++;} });
+      if(n) log(st,`批量定稿 ${n} 条用例`); toast(`${n} 条用例已定稿——开闸条件②已满足`); },
+    'gate-filter': null,
+    'jump-next': ()=>{ const t=G.issues.find(i=>!i.dec); if(!t){ toast('没有待裁决项'); return; }
+      const n=document.getElementById('iss-'+t.code); if(n){ n.scrollIntoView({behavior:'smooth',block:'center'}); n.classList.remove('flash'); void n.offsetWidth; n.classList.add('flash'); } },
+    'dec': ()=>{ const [code,kind]=arg.split(':'); renderModal({type:'dec', title:`裁决 ${code} · ${kind}`, arg}); },
+    'dec-ok': ()=>{ const [code,kind]=arg.split(':');
+      const iss=G.issues.find(i=>i.code===code);
+      const note=(document.getElementById('f-note')?.value||'').trim();
+      const target=document.getElementById('f-target')?.value||'';
+      if(kind==='驳回' && !note){ toast('驳回必须填理由（它是下轮评审的校准资产）', true); return; }
+      iss.dec=kind; iss.by=op();
+      iss.note = kind==='落改'?`落点：${target}${note?' · '+note:''}` : kind==='驳回'?note : `去向：${target}${note?' · '+note:''}`;
+      if(kind==='落改') G.revs.push({id:'R-'+(G.revs.length+1), target:target+'（'+code+'）', change: note||iss.scene.slice(0,30), status:'待修订', by:'—'});
+      log(st,`裁决 ${code} → ${kind}`); closeModal(); },
+    're-decide': ()=>{ const iss=G.issues.find(i=>i.code===arg); iss.dec=null; delete iss.by; delete iss.note; log(st,`改判 ${arg}（撤销原裁决）`); },
+    'batch-apply': ()=>{ let n=0; G.issues.forEach(i=>{ if(!i.dec && i.suggest){ i.dec=i.suggest; i.by=op(); i.note='（批量预填确认，可单独改判）'; n++; } });
+      log(st,`批量确认 AI 预填建议 ${n} 条`); toast(`已确认 ${n} 条（可在条目上单独改判）`); },
+    'rev-ai': ()=>{ G.revs[+arg].status='待采纳'; G.revs[+arg].by='agent'; toast('AI 修订草稿已产出，待采纳'); },
+    'rev-adopt': ()=>{ const rv=G.revs[+arg]; rv.status='已执行'; rv.by=op();
+      if(rv.target.includes('D 表')||rv.target.includes('D5')) S.design.d5ok=true;
+      log(st,`采纳修订 ${rv.id}（${rv.target}）→ 已执行`); toast('修订已落盘，置「已执行」'); },
+    'doubt-to-clarify': ()=>{ const ds=G.issues.filter(i=>i.dec==='存疑'); log(st,`存疑转澄清问题 ${ds.map(i=>i.code).join('、')}（回流 PM 处置）`); toast(`已生成 ${ds.length} 条澄清问题（复用现有澄清处置流）`); },
+    'open-release': ()=>openReleaseModal(),
+    'release-ok': ()=>{ G.phase='released'; G.released={round:G.round, by:op(), at:now()};
+      st.cases.forEach(c=>{ if(c.st!=='reviewed'){c.st='reviewed'; c.src=`门禁 r${G.round} 放行 · ${op()}`;} else if(!c.src){ c.src=`门禁 r${G.round} 放行 · ${op()}`; } });
+      if(!st.cases.some(c=>c.id==='TC-21'))
+        st.cases.push({id:'TC-21', title:'成绩发布短信通知触达（gate 落改 R-2 补录）', pts:'需求.FR-12', st:'reviewed', src:`门禁 r${G.round} 放行 · ${op()}`});
+      log(st,`门禁 r${G.round} 放行（全部裁决+落改闭环+机械校验全绿）`); closeModal(); toast('已放行 ✓ 用例已自动置定稿（来源已标注）'); },
+    'reopen-round': ()=>renderModal({type:'reopen', title:'开新一轮评审'}),
+    'reopen-ok': ()=>{ const old={round:G.round, issues:41, released:G.released.at, by:G.released.by};
+      G.archived.unshift(old); G.round++; G.phase='running'; G.change=null; G.issues=[]; G.revs=[];
+      G.roles=[{name:'架构一致性',desc:'按当前产物重新扇出',st:'running',min:0},{name:'数据模型与 SQL',desc:'按当前产物重新扇出',st:'running',min:0},{name:'测试可测性',desc:'按当前产物重新扇出',st:'running',min:0},{name:'交叉审查者',desc:'按当前产物重新扇出',st:'running',min:0}];
+      log(st,`开新一轮评审 r${G.round}（r${old.round} 归档只读）`); closeModal(); },
+    'dismiss-change': ()=>{ log(st,'忽略变更提示（留痕）'); G.change=null; },
+    'ref-close': ()=>{ S.refTrace=null; },
+    'modal-close': ()=>closeModal(),
+    'mask': ()=>{ if(e.target.classList.contains('modal-mask')) closeModal(); return; },
+    'ask-ok': ()=>{
+      if(modalCtx._q){ D.locked['确认.Q-03']=true; log(st,'拍板 确认.Q-03：报名截止自动顺延 72h'); closeModal(); toast('已拍板，契约行解锁'); return; }
+      if(modalCtx._unreview!==undefined){ const c=st.cases.find(x=>x.id===modalCtx._unreview); if(c){ c.st='draft'; delete c.src;
+        log(st,`评审中退回 ${c.id} → 当轮评审置「重审待确认」`); } G.phase='blocked'; closeModal(); toast('已退回，当轮评审待确认重开', true); return; }
+      const a=modalCtx;
+      if(a.title && a.title.includes('技术设计生成')){ D.phase='running'; D.task={type:'design_gen',status:'running',auto:false}; log(st,'创建 design_gen 任务'); }
+      if(a.title && a.title.includes('轻量跳过')){ D.phase='skipped'; D.skipDeclared=true; log(st,'声明轻量跳过（C 级，留痕）'); }
+      if(a.title && a.title==='取消任务？'){ D.phase='none'; log(st,'取消 design_gen 任务'); }
+      if(a.title && a.title.includes('丢弃设计草稿')){ D.phase='none'; log(st,'丢弃设计草稿'); }
+      if(a.title && a.title.includes('重新生成设计草稿')){ D.phase='running'; log(st,'重新生成设计草稿'); }
+      if(a.title && a.title==='作废当前评审轮？'){ G.phase='none'; log(st,'人工作废当轮评审'); }
+      closeModal(); },
+    'finalize-ok': ()=>{
+      const boxes=[...document.querySelectorAll('#f-checks input')];
+      const by=document.getElementById('f-by').value.trim();
+      if(!by){ toast('定稿人必填（归因红线）', true); return; }
+      if(boxes.some(b=>b.disabled)){ toast('「锁定待拍板」行未拍板——先回文档处理 确认.Q-03', true); return; }
+      if(!boxes.every(b=>b.checked)){ toast('齐套自检六项须全部勾选（漏项即返工）', true); return; }
+      D.phase='final'; D.final={by, at:now(), ver:(D.final?.ver||0)+1};
+      log(st,`设计定稿（确认点②）v${D.final.ver} · 齐套自检六项全过 · 定稿人 ${by}`); closeModal(); toast('设计已定稿——放行仍需门禁评审'); },
+  };
+  if(act==='gate-filter'){ G.filter = e.target.value; render(); return; }
+  if(A[act]){ A[act](); render(); }
+});
+document.addEventListener('change', e=>{
+  const t=e.target;
+  const host=t.closest ? t.closest('[data-act-change]') : null;
+  if(host){
+    const act=host.dataset.actChange;
+    if(act==='gate-filter'){ S.gate.filter=t.value; render(); }
+    else if(act==='clf-filter'){ S.clfFilter=t.value; render(); }
+    else if(act==='case-filter'){ S.caseFilter=t.value; render(); }
+    else if(act==='case-q'){ S.caseQ=t.value; render(); }
+  }
+  const clf=t.closest ? t.closest('[data-clf]') : null;
+  if(clf){
+    const c=S.clarify.find(x=>x.seq===clf.dataset.clf);
+    if(c){ const v=t.value.trim();
+      if((c.answer||'')===v) return;
+      c.answer=v; c.status = v?'answered':'pending';
+      log(S, `澄清 ${c.seq} ${v?'作答':'撤销答复'}（失焦自动保存）`); render(); toast(`已保存 ${c.seq}`); }
+  }
+});
+document.addEventListener('keydown', e=>{
+  if((e.metaKey||e.ctrlKey) && e.key==='Enter'){
+    const b=document.querySelector('[data-act="cmt-add"]'); if(b) b.click();
+  }
+});
+document.getElementById('d-scen-select').addEventListener('change', e=>{
+  closeModal(); const v=S.view; S=freshState(e.target.value); S.view=v; render();
+});
+render();
+</script>
+</body>
+</html>

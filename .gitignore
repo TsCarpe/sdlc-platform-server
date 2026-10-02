@@ -1,0 +1,9 @@
+.venv/
+data/
+static/
+*.log
+.DS_Store
+__pycache__/
+.pytest_cache/
+.sdlc/
+sdlc/
