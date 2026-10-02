@@ -30,7 +30,7 @@ class Services:
 
     @classmethod
     def create(cls, db: Database, repos: Repos, media_dir: Path) -> Services:
-        media = MediaService(repos, media_dir)
+        media = MediaService(db, repos, media_dir)
         iterations = IterationService(db, repos)
         requirements = RequirementService(db, repos)
         cases = CaseService(db, repos)

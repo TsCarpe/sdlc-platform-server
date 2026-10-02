@@ -575,3 +575,18 @@ def test_any_task_of_type_beyond_limit_100(env: tuple[Repos, Services]) -> None:
                                payload="", result="", runner="", created_by="",
                                created_at=NOW))
     assert services.tasks.any_task_of_type(req_id, "standard_doc") is True
+
+
+def test_media_upload_same_id_concurrent_idempotent(env: tuple[Repos, Services]) -> None:
+    """并发上传同 mediaId：find→insert 已入 tx，后进者幂等返回（原撞唯一键 IntegrityError 500）。"""
+    import concurrent.futures
+
+    repos, services = env
+    req_id = make_req(repos, services)
+    payload = b"x" * 64
+    with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:
+        outs = list(pool.map(
+            lambda _: services.media.upload(req_id, "a.png", "image/png", payload, explicit_id="m-000000000001"),
+            range(6)))
+    assert all(f.media_id == "m-000000000001" for f in outs)
+    assert len(repos.media.list_by_req(req_id)) == 1  # 只落一行

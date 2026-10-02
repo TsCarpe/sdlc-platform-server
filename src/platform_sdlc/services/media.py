@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from platform_sdlc.common import ApiException, Times
+from platform_sdlc.db import Database
 from platform_sdlc.models import MediaFile
 from platform_sdlc.repositories import Repos
 
@@ -22,7 +23,8 @@ class MediaData:
 
 
 class MediaService:
-    def __init__(self, repos: Repos, media_dir: Path) -> None:
+    def __init__(self, db: Database, repos: Repos, media_dir: Path) -> None:
+        self.db = db
         self.repos = repos
         self.media_dir = media_dir
 
@@ -37,20 +39,23 @@ class MediaService:
             media_id = explicit_id
         else:
             media_id = "m-" + sha[:12]
-        existing = self.repos.media.find(req_id, media_id)
-        if existing is not None:
-            return existing
+        # find→insert 同事务：并发同 mediaId 双过检查后第二笔撞 (req_id,media_id) 唯一键的 500 被堵住
+        # （RLock 串行：后进者在锁内 find 命中先提交者 → 幂等返回）
+        with self.db.tx():
+            existing = self.repos.media.find(req_id, media_id)
+            if existing is not None:
+                return existing
 
-        f = MediaFile(req_id=req_id, media_id=media_id, sha256=sha, name=_safe_name(name),
-                      mime=_safe_mime(mime), bytes=len(data), created_at=Times.now())
-        try:
-            d = self.media_dir / req_id
-            d.mkdir(parents=True, exist_ok=True)
-            (d / media_id).write_bytes(data)
-        except OSError as e:
-            raise ApiException(500, f"媒体落盘失败：{e}") from e
-        self.repos.media.insert(f)
-        return f
+            f = MediaFile(req_id=req_id, media_id=media_id, sha256=sha, name=_safe_name(name),
+                          mime=_safe_mime(mime), bytes=len(data), created_at=Times.now())
+            try:
+                d = self.media_dir / req_id
+                d.mkdir(parents=True, exist_ok=True)
+                (d / media_id).write_bytes(data)
+            except OSError as e:
+                raise ApiException(500, f"媒体落盘失败：{e}") from e
+            self.repos.media.insert(f)
+            return f
 
     def load(self, req_id: str, media_id: str) -> MediaData:
         """读取媒体（文件 + 元数据）；ETag = sha256 供 304 协商缓存（由路由层使用）。"""

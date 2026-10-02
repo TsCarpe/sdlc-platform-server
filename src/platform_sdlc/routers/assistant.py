@@ -7,6 +7,7 @@ SSE 事件：{type:"delta",text} … {type:"done"} / {type:"error",message}。
 
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 from collections.abc import AsyncIterator
@@ -58,12 +59,12 @@ def router(ctx: AppContext) -> APIRouter:
             raise ApiException(400, "缺少必填字段：sessionId")
         if not message:
             raise ApiException(400, "缺少必填字段：message")
-        session = SqliteChatSession(sid, _session_db(ctx))
+        session = await asyncio.to_thread(SqliteChatSession, sid, _session_db(ctx))
 
         async def stream() -> AsyncIterator[str]:
             try:
                 result = Runner.run_streamed(agent(), message,
-                                             context=AssistantContext(services=ctx.services), session=session)
+                                             context=AssistantContext(services=ctx.services, repos=ctx.repos), session=session)
                 async for event in result.stream_events():
                     if event.type == "raw_response_event" and isinstance(event.data, ResponseTextDeltaEvent):
                         yield _sse({"type": "delta", "text": event.data.delta})
@@ -76,7 +77,7 @@ def router(ctx: AppContext) -> APIRouter:
 
     @r.get("/api/assistant/sessions")
     async def sessions() -> list[str]:
-        return list_session_ids(_session_db(ctx))
+        return await asyncio.to_thread(list_session_ids, _session_db(ctx))
 
     @r.delete("/api/assistant/sessions/{sid}")
     async def clear_session(sid: str) -> dict[str, Any]:

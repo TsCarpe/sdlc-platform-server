@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from fastapi import APIRouter, Request
@@ -25,8 +26,8 @@ def router(ctx: AppContext) -> APIRouter:
 
     @r.get("/api/iterations")
     async def list_all() -> list[dict[str, Any]]:
-        out = []
-        for it in svc.list():
+        out: list[dict[str, Any]] = []
+        for it in await asyncio.to_thread(svc.list):
             out.append({
                 "name": it.name, "note": it.note, "createdBy": it.created_by, "createdAt": it.created_at,
                 "reqId": it.req_id, "reqName": it.req_name, "reqStatus": it.req_status,
@@ -38,11 +39,12 @@ def router(ctx: AppContext) -> APIRouter:
 
     @r.post("/api/iterations")
     async def create(request: Request) -> dict[str, Any]:
-        return {"name": svc.create(await read_json(request, required=True))}
+        body = await read_json(request, required=True)
+        return {"name": await asyncio.to_thread(svc.create, body)}
 
     @r.get("/api/iterations/detail")
     async def detail(name: str | None = None) -> dict[str, Any]:
-        it = svc.get(require_name(name))
+        it = await asyncio.to_thread(svc.get, require_name(name))
         return {
             "name": it.name, "note": it.note, "createdBy": it.created_by, "createdAt": it.created_at,
             "reqId": it.req_id, "reqName": it.req_name, "reqStatus": it.req_status,
@@ -53,7 +55,7 @@ def router(ctx: AppContext) -> APIRouter:
 
     @r.delete("/api/iterations/detail")
     async def delete(name: str | None = None) -> dict[str, Any]:
-        svc.delete(require_name(name))
+        await asyncio.to_thread(svc.delete, require_name(name))
         return OkResult().model_dump()
 
     return r
