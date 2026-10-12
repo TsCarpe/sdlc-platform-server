@@ -14,6 +14,9 @@ from platform_sdlc.repositories import Repos
 
 _MEDIA_ID = re.compile(r"^m-[0-9a-f]{12}$")
 _REQ_ID = re.compile(r"^REQ-[0-9]{4}-[0-9]{3}$")
+# 可执行/可脚本内容拒绝入库（防存储型同源 XSS：响应端只对图片白名单内联，双防线）
+_DANGEROUS_MIME = {"text/html", "image/svg+xml", "application/xhtml+xml", "text/xml", "application/xml"}
+_DEFAULT_MAX_BYTES = 20 * 1024 * 1024
 
 
 @dataclass
@@ -23,15 +26,21 @@ class MediaData:
 
 
 class MediaService:
-    def __init__(self, db: Database, repos: Repos, media_dir: Path) -> None:
+    def __init__(self, db: Database, repos: Repos, media_dir: Path,
+                 max_bytes: int = _DEFAULT_MAX_BYTES) -> None:
         self.db = db
         self.repos = repos
         self.media_dir = media_dir
+        self.max_bytes = max_bytes
 
     def upload(self, req_id: str, name: str, mime: str, data: bytes, explicit_id: str | None = None) -> MediaFile:
         self._check_req(req_id)
         if not data:
             raise ApiException(400, "媒体内容为空")
+        if len(data) > self.max_bytes:
+            raise ApiException(413, f"媒体过大（上限 {self.max_bytes // (1024 * 1024)}MB）")
+        if (mime or "").split(";")[0].strip().lower() in _DANGEROUS_MIME:
+            raise ApiException(400, f"不允许的媒体类型：{mime}（可执行/可脚本内容拒绝入库）")
         sha = hashlib.sha256(data).hexdigest()
         if explicit_id:
             if not _MEDIA_ID.match(explicit_id):

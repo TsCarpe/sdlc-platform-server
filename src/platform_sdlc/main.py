@@ -37,7 +37,7 @@ def create_app(settings: Settings | None = None, cwd: Path | None = None) -> Fas
     db = Database(paths.db)
     run_migrations(db)
     repos = Repos.create(db)
-    services = Services.create(db, repos, paths.media_dir)
+    services = Services.create(db, repos, paths.media_dir, settings.media_max_bytes)
     ctx = AppContext(settings=settings, paths=paths, db=db, repos=repos, services=services)
 
     @asynccontextmanager

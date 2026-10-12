@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     write_token: str = ""  # 为空不启用；设置后非 GET 的 /api 写接口要求 X-Token 头
     db_path: str = "./data/platform.db"  # 相对路径走 resolve_paths 的数据目录定位规则
     media_dir: str = "./data/media"
+    media_max_bytes: int = 20 * 1024 * 1024  # 媒体上传上限：路由层 Content-Length 预检 + 服务层兜底
     static_dir: str = "static"  # vite 构建产物目录（约定 uvicorn 以 server/ 为工作目录启动）
 
     # v2.1 进程内 agent（openai-agents）；P0–P3 阶段保持 False，P4 起由部署环境打开
