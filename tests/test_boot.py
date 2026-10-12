@@ -14,7 +14,7 @@ from platform_sdlc.main import create_app
 
 @pytest.fixture()
 def client(tmp_path: Path) -> Iterator[TestClient]:
-    settings = Settings(_env_file=None, db_path=str(tmp_path / "data" / "platform.db"), media_dir=str(tmp_path / "data" / "media"))
+    settings = Settings(_env_file=None, db_path=str(tmp_path / "data" / "platform.db"), media_dir=str(tmp_path / "data" / "media"))  # pyright: ignore[reportCallIssue]
     app = create_app(settings, cwd=tmp_path)
     with TestClient(app, raise_server_exceptions=False) as c:
         yield c
@@ -27,7 +27,7 @@ def test_health_shape(client: TestClient) -> None:
 
 
 def test_migrations_idempotent(tmp_path: Path) -> None:
-    settings = Settings(_env_file=None, db_path=str(tmp_path / "data" / "platform.db"))
+    settings = Settings(_env_file=None, db_path=str(tmp_path / "data" / "platform.db"))  # pyright: ignore[reportCallIssue]
     create_app(settings, cwd=tmp_path)  # 首次：建库 + 全量迁移
     create_app(settings, cwd=tmp_path)  # 二次：幂等无异常
 
@@ -43,7 +43,7 @@ def test_unknown_path_error_shape(client: TestClient) -> None:
 
 
 def test_token_guard(tmp_path: Path) -> None:
-    settings = Settings(_env_file=None, db_path=str(tmp_path / "data" / "platform.db"), write_token="secret")
+    settings = Settings(_env_file=None, db_path=str(tmp_path / "data" / "platform.db"), write_token="secret")  # pyright: ignore[reportCallIssue]
     app = create_app(settings, cwd=tmp_path)
     with TestClient(app) as c:
         denied = c.post("/api/anything", json={})

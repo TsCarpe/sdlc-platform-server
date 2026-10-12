@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from contextlib import suppress
 from datetime import datetime
@@ -18,6 +19,8 @@ from platform_sdlc.models import Artifact, ClarifyItem, FrPoint, Requirement, st
 from platform_sdlc.repositories import Repos
 from platform_sdlc.schemas import wire
 from platform_sdlc.services.iteration import NAME_MAX
+
+log = logging.getLogger(__name__)
 
 _A = "anchor"
 _EMPTY_LIST: list[Any] = []
@@ -50,6 +53,7 @@ class RequirementService:
                 req_id, None, '{"error":"需求已删除，任务自动作废","reason":"req-deleted"}', Times.now())
             if self.repos.requirement.soft_delete(req_id, Times.now()) == 0:
                 raise ApiException(404, f"需求不存在或已删除：{req_id}")
+        log.info("软删除需求 %s（取消 queued 任务 %d 个，行与子表保留）", req_id, cancelled)
         return {
             "ok": True,
             "deletedAt": Times.now(),
@@ -217,6 +221,8 @@ class RequirementService:
                 self.repos.requirement.set_status(req_id, "clarifying")
             self.repos.requirement.touch_synced(req_id, at)
 
+        log.info("推送质检产物 %s：%d 问 %d 点（保留答复 %d / 漂移 %d，缺媒体 %d）",
+                 req_id, len(parsed), len(frs), carried, changed, missing_media)
         return {
             "ok": True, "items": len(parsed), "frPoints": len(frs), "carriedAnswers": carried,
             "changedQuestions": changed, "snapshotUpdated": snapshot_updated,
@@ -272,6 +278,7 @@ class RequirementService:
             self.repos.requirement.set_standard(req_id, md, at)
             # 发布终态即清除标准文档草稿（草稿使命完成，避免已发布卡上残留「待发布」块）
             self.repos.draft.delete(req_id, "standard")
+            log.info("发布标准文档 %s（%d/%d 问已处置）", req_id, answered, total)
             return {"ok": True, "publishedAt": at}
 
     def set_status(self, req_id: str, body: dict[str, Any]) -> None:

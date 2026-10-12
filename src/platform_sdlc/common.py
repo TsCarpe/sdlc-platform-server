@@ -52,6 +52,13 @@ class Times:
 # ---------- JsonNode 取值助手（文案与 Java Json.java 逐字一致） ----------
 
 
+def _jget(n: Any, field: str) -> Any:
+    """dict 成员安全取值（非 dict 一律 None）。strict 下裸 dict 窄化产生的 Unknown 集中压制在此单点。"""
+    if isinstance(n, dict):
+        return n.get(field)  # pyright: ignore[reportUnknownMemberType]
+    return None
+
+
 def _as_text(v: Any) -> str:
     """Jackson asText 口径：null→""、bool→true/false、数值→字面量、容器→""。"""
     if v is None:
@@ -66,7 +73,7 @@ def _as_text(v: Any) -> str:
 
 
 def jtext(n: Any, field: str, default: str) -> str:
-    v = n.get(field) if isinstance(n, dict) else None
+    v = _jget(n, field)
     return default if v is None else _as_text(v)
 
 
@@ -79,7 +86,7 @@ def jrequired(n: Any, field: str) -> str:
 
 def jrequired_non_blank(n: Any, field: str) -> str:
     """区分缺字段与空白值（评测 P1-4）：缺失报「缺少必填字段」，存在但空白报「不能为空」。"""
-    v = n.get(field) if isinstance(n, dict) else None
+    v = _jget(n, field)
     if v is None:
         raise ApiException(400, f"缺少必填字段：{field}")
     s = _as_text(v).strip()
@@ -89,7 +96,7 @@ def jrequired_non_blank(n: Any, field: str) -> str:
 
 
 def jint(n: Any, field: str, default: int) -> int:
-    v = n.get(field) if isinstance(n, dict) else None
+    v = _jget(n, field)
     if isinstance(v, bool) or v is None:
         return default
     if isinstance(v, int):
@@ -102,7 +109,7 @@ def jint(n: Any, field: str, default: int) -> int:
 def jint_or_400(n: Any, field: str, default: int | None = None) -> int | None:
     """宽松整型绑定（入参面）：int / 整值 float / 纯数字串取整；存在但不可取整 → 400（对齐
     Java HttpMessageNotReadable 的绑定失败口径，替代服务层裸 int() 的 500）。缺失/None 给 default。"""
-    v = n.get(field) if isinstance(n, dict) else None
+    v = _jget(n, field)
     if v is None:
         return default
     if isinstance(v, bool):
@@ -117,7 +124,7 @@ def jint_or_400(n: Any, field: str, default: int | None = None) -> int | None:
 
 
 def jbool(n: Any, field: str, default: bool) -> bool:
-    v = n.get(field) if isinstance(n, dict) else None
+    v = _jget(n, field)
     if isinstance(v, bool):
         return v
     if v == "true":
@@ -128,7 +135,7 @@ def jbool(n: Any, field: str, default: bool) -> bool:
 
 
 def jarray(n: Any, field: str) -> list[Any]:
-    v = n.get(field) if isinstance(n, dict) else None
+    v = _jget(n, field)
     return list(v) if isinstance(v, list) else []
 
 

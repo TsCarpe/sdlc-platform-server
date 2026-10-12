@@ -1,5 +1,5 @@
 #!/bin/bash
-# v3 全量回归：全部验证脚本（v1.0 守卫 → v1.1 追溯 → v1.2 原文块 → v2.0 任务/草稿 → v2.4 迭代/设计/门禁）
+# v3 全量回归：全部验证脚本（v1.0 守卫 → v1.1 追溯 → v1.2 原文块 → v2.0 任务/草稿 → v2.4 迭代/设计/门禁 → 令牌/agent）
 # 用法：scripts/verify-all.sh [BASE]   （需平台已运行，默认 http://127.0.0.1:8080）
 set -e
 cd "$(dirname "$0")/.."
@@ -30,6 +30,20 @@ if curl -sf "$BASE/api/agent/status" 2>/dev/null | grep -q '"paused":false'; the
 fi
 
 FAIL=0
+
+# 恢复动作收敛为唯一出口（EXIT trap）：正常结尾与 Ctrl-C/异常中断 alike 都恢复被暂停的执行通道（AUDIT D8-3）
+restore() {
+  if [ "$RUNNER_WAS_RUNNING" = "1" ] && ! pgrep -f "runner/runner.mjs" >/dev/null 2>&1; then
+    nohup scripts/runner.sh > /tmp/sdlc-runner.log 2>&1 &
+    echo
+    echo "== Runner 已恢复 =="
+  fi
+  if [ "$AGENT_WAS_PAUSED" = "1" ]; then
+    curl -sf -X POST "$BASE/api/agent/resume" >/dev/null 2>&1 && echo "== 进程内 agent 已恢复 =="
+  fi
+}
+trap restore EXIT
+
 # 写令牌端到端冒烟（自建临时实例：独立库+随机端口+SDLC_WRITE_TOKEN，不依赖主服务配置）
 echo
 echo "== verify-token（自建实例）=="
@@ -41,13 +55,16 @@ for s in verify-m2 verify-guard verify-m3 verify-m4 verify-m5 verify-m6 verify-d
   node "scripts/$s.mjs" "$BASE" || FAIL=1
 done
 
-if [ "$RUNNER_WAS_RUNNING" = "1" ]; then
-  nohup scripts/runner.sh > /tmp/sdlc-runner.log 2>&1 &
+# 进程内 agent 端到端（可选）：需真实模型配置与余额——就绪才跑，未配置打印 SKIP 不红（AUDIT D7-1 补链）
+if [ -n "$SDLC_AGENT_BASE_URL" ] && [ -n "$SDLC_AGENT_MODEL" ] && [ "${SDLC_VERIFY_AGENT:-}" = "1" ]; then
   echo
-  echo "== Runner 已恢复 =="
-fi
-if [ "$AGENT_WAS_PAUSED" = "1" ]; then
-  curl -sf -X POST "$BASE/api/agent/resume" >/dev/null 2>&1 && echo "== 进程内 agent 已恢复 =="
+  echo "== verify-agent（SDLC_VERIFY_AGENT=1 且模型已配置）=="
+  node scripts/verify-agent.mjs "$BASE" || FAIL=1
+  echo "== verify-assistant =="
+  node scripts/verify-assistant.mjs "$BASE" || FAIL=1
+else
+  echo
+  echo "== verify-agent SKIP（需 SDLC_VERIFY_AGENT=1 且 SDLC_AGENT_BASE_URL/MODEL 已配置——agent 通道端到端未纳入本轮）=="
 fi
 
 echo

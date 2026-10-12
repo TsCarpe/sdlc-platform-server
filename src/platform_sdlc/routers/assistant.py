@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import re
 from collections.abc import AsyncIterator
 from pathlib import Path
@@ -28,6 +29,8 @@ from platform_sdlc.agent.assistant import (
 from platform_sdlc.common import ApiException
 from platform_sdlc.routers.http import read_json
 from platform_sdlc.runtime import AppContext
+
+log = logging.getLogger(__name__)
 
 _SAFE_SID = re.compile(r"[^A-Za-z0-9._-]")
 
@@ -69,7 +72,8 @@ def router(ctx: AppContext) -> APIRouter:
                     if event.type == "raw_response_event" and isinstance(event.data, ResponseTextDeltaEvent):
                         yield _sse({"type": "delta", "text": event.data.delta})
                 yield _sse({"type": "done"})
-            except Exception as e:  # noqa: BLE001——流中异常以 error 事件收尾（前端可展示）
+            except Exception as e:  # noqa: BLE001——流中异常以 error 事件收尾（前端可展示）；服务端同步留痕（AUDIT D7-6）
+                log.warning("助理 SSE 流异常 sid=%s：%s: %s", sid, type(e).__name__, e)
                 yield _sse({"type": "error", "message": f"{type(e).__name__}: {e}"})
 
         return StreamingResponse(stream(), media_type="text/event-stream",

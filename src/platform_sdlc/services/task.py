@@ -7,12 +7,15 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any
 
 from platform_sdlc.common import ApiException, Times, jint_or_400, jrequired, jtext
 from platform_sdlc.db import Database
 from platform_sdlc.models import DraftArtifact, Task
 from platform_sdlc.repositories import Repos
+
+log = logging.getLogger(__name__)
 
 T_QUALITY = "quality_check"
 T_STANDARD = "standard_doc"
@@ -76,6 +79,7 @@ class TaskService:
                 raise ApiException(400, f"非法任务类型：{type_}")
             if r.status == "published" and not _post_publish_task(type_):
                 # 终态锁定只约束质检与标准文档；用例/设计/修订本来就是发布后的正常动作
+                log.warning("建任务被终态锁拒绝：%s %s（已发布，非发布后类型）", req_id, type_)
                 raise ApiException(409, f"该需求已发布标准文档（终态锁定），不能新建{type_}任务")
             if type_ in (T_DESIGN, T_DESIGN_REV):
                 # 设计 lane 前置（D34）：发布后才可生成；C 级/已跳过/未配仓守卫收敛在 DesignService
@@ -122,6 +126,7 @@ class TaskService:
             raise ApiException(409, f"仅执行中（running）的任务可回报结果（当前：{t.status}）")
         out = self.repos.task.find(task_id)
         assert out is not None
+        log.info("任务 #%s %s：%s（runner=%s）", task_id, out.status, out.type, out.runner)
         return out
 
     def settle_terminal(self, req_id: str) -> int:

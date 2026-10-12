@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from typing import Any
 
@@ -11,6 +12,8 @@ from platform_sdlc.db import Database
 from platform_sdlc.models import CaseComment, TestCase, string_list
 from platform_sdlc.repositories import Repos
 from platform_sdlc.schemas import wire
+
+log = logging.getLogger(__name__)
 
 _PRIORITIES = {"P0", "P1", "P2"}
 
@@ -27,7 +30,7 @@ class CaseService:
         req_id = jrequired(body if req_id_arg is None else {**body, "reqId": req_id_arg}, "reqId")
         if self.repos.requirement.find(req_id) is None:
             raise ApiException(404, f"需求不存在：{req_id}")
-        items = body.get("items") or []
+        items: list[Any] = body.get("items") or []
         if not isinstance(items, list):
             raise ApiException(400, "items 必须是数组（空数组走删除语义请另走表单）")
         if not items:
@@ -72,6 +75,7 @@ class CaseService:
                 if cur is not None and ev >= 0 and cur.version != ev:
                     conflicts.append({"id": t.id, "currentVersion": cur.version, "expectedVersion": ev})
             if conflicts:
+                log.warning("用例同步版本冲突 %s：%d 条不一致，批次未应用", req_id, len(conflicts))
                 raise ConflictException("版本冲突，批次未应用", conflicts)
 
             at = Times.now()

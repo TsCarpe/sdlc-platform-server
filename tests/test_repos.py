@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 from pathlib import Path
 
 import pytest
 
 from platform_sdlc.db import Database
-from platform_sdlc.main import create_app  # noqa: F401 ——确保包可导入
 from platform_sdlc.migrations import run_migrations
 from platform_sdlc.models import (
     CaseComment,
@@ -25,7 +25,9 @@ from platform_sdlc.models import (
 from platform_sdlc.models import TestCase as TestCaseEntity  # 别名：避免 pytest 收集 Test* 类
 from platform_sdlc.repositories import Repos
 
-EXISTING_DB = Path(__file__).resolve().parents[2] / "backend" / "data" / "platform.db"
+# 存量库副本抽查（可选）：SDLC_EXISTING_DB=/path/to/platform.db uv run pytest 才启用；
+# 默认跳过（原 backend/ 为 Java v2 时代目录已删除，原硬编码路径恒 skipif——AUDIT D7-5）
+EXISTING_DB = Path(os.environ["SDLC_EXISTING_DB"]).resolve() if os.environ.get("SDLC_EXISTING_DB") else None
 
 
 @pytest.fixture()
@@ -147,7 +149,7 @@ def test_media_iteration_comment_frpoint(repos: Repos) -> None:
     assert repos.test_case.next_web_id("REQ-1") == "WEB-002"
 
 
-@pytest.mark.skipif(not EXISTING_DB.exists(), reason="无存量库")
+@pytest.mark.skipif(not (EXISTING_DB and EXISTING_DB.exists()), reason="无存量库（SDLC_EXISTING_DB 未配置）")
 def test_existing_db_smoke(tmp_path: Path) -> None:
     """存量库副本：迁移幂等 + 列表聚合可读（抽查真实数据形状）。"""
     work = tmp_path / "existing"

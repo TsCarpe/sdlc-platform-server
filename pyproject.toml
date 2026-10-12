@@ -40,5 +40,10 @@ src = ["src", "tests"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 
+[tool.ruff.lint.per-file-ignores]
+# prompt/工具 docstring 是给模型的指令文本（长句不可断行——断行改变语义），豁免行宽
+"src/platform_sdlc/agent/prompts.py" = ["E501"]
+"src/platform_sdlc/agent/tools.py" = ["E501"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

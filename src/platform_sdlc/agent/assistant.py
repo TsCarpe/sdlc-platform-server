@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -39,7 +40,8 @@ class AssistantContext:
 # ---------- 只读工具面（跨需求；正式写入通道不存在） ----------
 
 
-async def _read(async_fn):  # noqa: ANN001——薄包装：阻塞查询进线程池
+async def _read[T](async_fn: Callable[[], T]) -> T:
+    """薄包装：阻塞查询进线程池（不冻结事件循环）。"""
     return await asyncio.to_thread(async_fn)
 
 

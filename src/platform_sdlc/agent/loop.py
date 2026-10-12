@@ -8,6 +8,7 @@ verify 回归期间可通过 POST /api/agent/pause 暂停，避免抢领验证�
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 from typing import Any
@@ -44,10 +45,8 @@ class AgentLoop:
     async def stop(self) -> None:
         if self._runner is not None:
             self._runner.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError, Exception):  # noqa: BLE001  # 停机路径尽力而为
                 await self._runner
-            except (asyncio.CancelledError, Exception):  # noqa: BLE001——停机路径尽力而为
-                pass
             self._runner = None
 
     # ---------- 状态与回归开关 ----------
@@ -84,7 +83,7 @@ class AgentLoop:
                 await self._handle(t)
         except asyncio.CancelledError:
             raise
-        except Exception:  # noqa: BLE001——循环体兜底：记日志置死态，不静默消亡
+        except Exception:  # noqa: BLE001  # 循环体兜底：记日志置死态，不静默消亡
             log.exception("[agent] 主循环异常退出")
         finally:
             self._alive = False
@@ -107,7 +106,7 @@ class AgentLoop:
         diag = ""
         try:
             res = await self.executor.execute(t)
-        except Exception as e:  # noqa: BLE001——执行异常进 failed 回执
+        except Exception as e:  # noqa: BLE001  # 执行异常进 failed 回执
             error = f"{type(e).__name__}: {e}"
             reason = "agent-exception"
             hint = "请重试；连续失败请检查 agent 配置与模型额度"
@@ -128,7 +127,7 @@ class AgentLoop:
                 await asyncio.to_thread(self.services.tasks.finish, t.id, False,
                                         {"error": error, "reason": reason, "hint": hint, "diag": diag})
                 log.warning("[agent] #%s 失败（%s）：%s", t.id, reason, error)
-        except Exception as e:  # noqa: BLE001——回报终态失败仅记日志
+        except Exception as e:  # noqa: BLE001  # 回报终态失败仅记日志
             log.error("[agent] #%s 回报终态失败：%s", t.id, e)
 
     # ---------- 机械自查（自 runner.mjs selfCheck / SdlcAgentService 逐条移植） ----------

@@ -167,7 +167,7 @@ async def put_draft(wrapper: RunContextWrapper[TaskRunContext], type: str, md: s
 
     try:
         return await asyncio.to_thread(impl)
-    except Exception as e:  # noqa: BLE001——守卫拒绝（非法类型/终态锁 409 等）回灌给模型
+    except Exception as e:  # noqa: BLE001  # 守卫拒绝（非法类型/终态锁 409 等）回灌给模型
         return _err(str(e))
 
 
