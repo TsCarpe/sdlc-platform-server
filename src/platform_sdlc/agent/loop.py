@@ -65,28 +65,39 @@ class AgentLoop:
     # ---------- 主循环 ----------
 
     async def _run(self) -> None:
+        """主循环（自愈版，AUDIT D5-2）：异常退出指数退避重启（30s 起、5min 封顶）——一次意外
+        不再等于通道永久停摆；CancelledError 是正常停机不重启；_paused 为实例属性，重启后语义保留。"""
         self._alive = True
+        backoff = 30.0
         try:
-            # 归属过滤：只清本执行器名下任务（双通道恢复互不越界，AUDIT D1-3）
-            recovered = await asyncio.to_thread(
-                self.services.tasks.expire_stale, self.settings.agent_timeout_min, self.RUNNER_NAME)
-            if recovered > 0:
-                log.info("[agent] 启动恢复：%d 个超时 running 任务置 failed（runner=%s）", recovered, self.RUNNER_NAME)
             while True:
-                if self._paused:
-                    await asyncio.sleep(1)
-                    continue
-                t = await asyncio.to_thread(self.services.tasks.claim, self.RUNNER_NAME)
-                if t is None:
-                    await asyncio.sleep(self.settings.agent_poll_interval_ms / 1000)
-                    continue
-                await self._handle(t)
-        except asyncio.CancelledError:
-            raise
-        except Exception:  # noqa: BLE001  # 循环体兜底：记日志置死态，不静默消亡
-            log.exception("[agent] 主循环异常退出")
+                try:
+                    await self._loop_body()
+                    return
+                except asyncio.CancelledError:
+                    raise
+                except Exception:  # noqa: BLE001  # 自愈重启：异常仅降级为一次退避等待
+                    log.exception("[agent] 主循环异常退出，%.0fs 后重启（paused=%s）", backoff, self._paused)
+                    await asyncio.sleep(backoff)
+                    backoff = min(backoff * 2, 300.0)
         finally:
             self._alive = False
+
+    async def _loop_body(self) -> None:
+        # 归属过滤：只清本执行器名下任务（双通道恢复互不越界，AUDIT D1-3）
+        recovered = await asyncio.to_thread(
+            self.services.tasks.expire_stale, self.settings.agent_timeout_min, self.RUNNER_NAME)
+        if recovered > 0:
+            log.info("[agent] 启动恢复：%d 个超时 running 任务置 failed（runner=%s）", recovered, self.RUNNER_NAME)
+        while True:
+            if self._paused:
+                await asyncio.sleep(1)
+                continue
+            t = await asyncio.to_thread(self.services.tasks.claim, self.RUNNER_NAME)
+            if t is None:
+                await asyncio.sleep(self.settings.agent_poll_interval_ms / 1000)
+                continue
+            await self._handle(t)
 
     async def _handle(self, t: Task) -> None:
         log.info("[agent] 领取 #%s %s @ %s", t.id, t.type, t.req_id)

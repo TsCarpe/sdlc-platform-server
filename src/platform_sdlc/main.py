@@ -51,6 +51,9 @@ def create_app(settings: Settings | None = None, cwd: Path | None = None) -> Fas
         yield
         if ctx.agent is not None:
             await ctx.agent.stop()
+        from platform_sdlc.agent.assistant import close_shared_session_db
+
+        close_shared_session_db()  # assistant.db 共享连接显式关闭（AUDIT D5-1）
 
     app = FastAPI(title="sdlc-platform", lifespan=lifespan, redirect_slashes=False)
     _install_exception_handlers(app)

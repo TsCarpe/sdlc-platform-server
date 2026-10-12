@@ -68,10 +68,16 @@ def router(ctx: AppContext) -> APIRouter:
             try:
                 result = Runner.run_streamed(agent(), message,
                                              context=AssistantContext(services=ctx.services, repos=ctx.repos), session=session)
-                async for event in result.stream_events():
-                    if event.type == "raw_response_event" and isinstance(event.data, ResponseTextDeltaEvent):
-                        yield _sse({"type": "delta", "text": event.data.delta})
+                # 服务端 deadline（AUDIT D5-3）：run_streamed 是非阻塞启动 API，超时必须包住整个事件消费循环
+                # （wait_for 包构造调用无效果——对抗审查 B1）；阈值与任务通道共用 agent_timeout_min
+                with asyncio.timeout(ctx.settings.agent_timeout_min * 60):  # type: ignore[attribute-error]  # pyright typeshed 对 SyncAsync CM 的同步用法误报
+                    async for event in result.stream_events():
+                        if event.type == "raw_response_event" and isinstance(event.data, ResponseTextDeltaEvent):
+                            yield _sse({"type": "delta", "text": event.data.delta})
                 yield _sse({"type": "done"})
+            except TimeoutError:
+                log.warning("助理回复超时 sid=%s（%dmin 上限）", sid, ctx.settings.agent_timeout_min)
+                yield _sse({"type": "error", "message": f"回复超时（{ctx.settings.agent_timeout_min} 分钟上限），请稍后重试"})
             except Exception as e:  # noqa: BLE001——流中异常以 error 事件收尾（前端可展示）；服务端同步留痕（AUDIT D7-6）
                 log.warning("助理 SSE 流异常 sid=%s：%s: %s", sid, type(e).__name__, e)
                 yield _sse({"type": "error", "message": f"{type(e).__name__}: {e}"})

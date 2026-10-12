@@ -25,6 +25,10 @@ class Database:
         self._lock = threading.RLock()
         self._conn = sqlite3.connect(str(db_path), check_same_thread=False, isolation_level=None)
         self._conn.row_factory = sqlite3.Row
+        # WAL + busy 超时（AUDIT D2-8）：外部进程（backup 脚本/IDE/verify）并发访问不再立即 SQLITE_BUSY；
+        # WAL 与单连接 RLock + 显式 tx() 无行为冲突，读写并发亦为后续读负载分离留出空间
+        self._conn.execute("PRAGMA journal_mode=WAL")
+        self._conn.execute("PRAGMA busy_timeout=5000")
         self._tx_depth = 0  # 事务嵌套深度：内层 tx() 加入外层事务（对应 Spring REQUIRED 传播）
 
     @property

@@ -72,6 +72,7 @@ scripts/verify-all.sh        # 黑盒全量回归（需服务已启动；10 个 
 node scripts/verify-agent.mjs      # agent 执行侧端到端冒烟（需模型余额）
 node scripts/verify-assistant.mjs  # 查询聊天助理冒烟（需模型余额）
 scripts/backup.sh            # SQLite 快照到 backups/（挂 cron，保留 30 份）
+                              # 注意：库为 WAL 模式，直接 cp 库文件会丢未 checkpoint 数据——备份只信本脚本（sqlite3 .backup）
 ```
 
 静态检查（贡献者）：`uv run pyright && uv run ruff check src tests`（pyright strict 全量）。
