@@ -57,7 +57,7 @@ IDE 断点：直接 Debug `debug_server.py`（单进程无 reload，等价 dev.s
 推送全量替换；重推按 seq+问题文本保留已答内容（P 编号漂移不携带）；发布终态锁（拒推/拒草稿/拒任务/拒作答）；
 用例乐观锁 409+conflicts；sdlc-test 来源用例平台只读+评论；L2 编排只自动一次（人取消即终局）；
 任务原子 claim 双通道互斥；agent 工具面不存在正式产物写入通道；GR-2/3/4 平台机械校验 + 放行关卡互认。
-细节见 docs/DESIGN-v2* 与 DESIGN-v3 守卫对照清单。
+细节见 docs/DESIGN-v3-Python迁移.md §5 守卫对照清单。
 
 ## Git 惯例
 
