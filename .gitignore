@@ -6,5 +6,11 @@ static/
 .DS_Store
 __pycache__/
 .pytest_cache/
+.ruff_cache/
 .sdlc/
 sdlc/
+backups/
+logs/
+.idea/
+.serena/
+.codegraph/
