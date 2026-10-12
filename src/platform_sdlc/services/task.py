@@ -166,13 +166,15 @@ class TaskService:
     def list(self, req_id: str | None, status: str | None) -> list[Task]:
         return self.repos.task.list(req_id, status)
 
-    def expire_stale(self, older_than_minutes: int) -> int:
-        """Runner 启动恢复：超时 running 置 failed，返回处理条数。"""
+    def expire_stale(self, older_than_minutes: int, runner: str | None = None) -> int:
+        """执行器启动恢复：超时 running 置 failed，返回处理条数。
+        runner 非空时按归属过滤（双通道各清自己名下任务）。"""
         from datetime import datetime, timedelta
 
         cutoff = (datetime.now() - timedelta(minutes=older_than_minutes)).strftime("%Y-%m-%d %H:%M:%S")
         return self.repos.task.expire_stale_running(
-            cutoff, '{"error":"任务超时（执行器中断）","reason":"timeout","hint":"可重试再次排队"}', Times.now())
+            cutoff, '{"error":"任务超时（执行器中断）","reason":"timeout","hint":"可重试再次排队"}', Times.now(),
+            runner=runner)
 
     # ---------- 草稿 ----------
 

@@ -30,6 +30,11 @@ if curl -sf "$BASE/api/agent/status" 2>/dev/null | grep -q '"paused":false'; the
 fi
 
 FAIL=0
+# 写令牌端到端冒烟（自建临时实例：独立库+随机端口+SDLC_WRITE_TOKEN，不依赖主服务配置）
+echo
+echo "== verify-token（自建实例）=="
+node scripts/verify-token.mjs || FAIL=1
+
 for s in verify-m2 verify-guard verify-m3 verify-m4 verify-m5 verify-m6 verify-delete verify-iter verify-design verify-gate; do
   echo
   echo "== $s =="

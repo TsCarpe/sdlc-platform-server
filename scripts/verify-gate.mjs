@@ -24,7 +24,7 @@ async function call(method, path, body) {
 const DESIGN_MD_V1 = '# 设计\n\n## §0 方案总览\n\n决策。\n\n## §1 数据模型\n\n无变更。\n'
 const claimTask = async targetId => {
   for (let i = 0; i < 50; i++) {
-    const r = await fetch(`${base}/api/tasks/next?runner=verify-gate`)
+    const r = await fetch(`${base}/api/tasks/next?runner=verify-gate`, { method: 'POST' })
     if (r.status === 204) break
     const tk = await r.json()
     if (tk.id === targetId) return tk

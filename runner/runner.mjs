@@ -34,7 +34,11 @@ const log = (...a) => console.log(new Date().toISOString().slice(11, 19), `[${RU
 async function api(method, p, body) {
   const res = await fetch(PLATFORM + p, {
     method,
-    headers: { ...(body ? { 'Content-Type': 'application/json' } : {}) },
+    headers: {
+      ...(body ? { 'Content-Type': 'application/json' } : {}),
+      // 启用写令牌的部署（SDLC_WRITE_TOKEN）随请求注入 X-Token（AUDIT D1-2）
+      ...(process.env.SDLC_WRITE_TOKEN ? { 'X-Token': process.env.SDLC_WRITE_TOKEN } : {})
+    },
     body: body ? JSON.stringify(body) : undefined
   })
   if (res.status === 204) return null
@@ -235,15 +239,13 @@ async function handle(task) {
 }
 
 async function recoverStale() {
-  // 启动恢复：把超时仍 running 的任务置 failed（上次 Runner 中断遗留）
-  const running = await api('GET', '/api/tasks?status=running')
-  const cutoff = Date.now() - TIMEOUT_MIN * 60 * 1000
-  for (const t of running) {
-    if (new Date((t.updatedAt || '').replace(' ', 'T') + '+08:00').getTime() < cutoff) {
-      await api('POST', `/api/tasks/${t.id}/failed`, { error: '任务超时（Runner 中断），请重试' })
-      log(`恢复：#${t.id} 超时 running → failed`)
-    }
-  }
+  // 启动恢复走服务端（POST /api/tasks/recover-stale，按本 runner 名归属过滤）：
+  // 替代客户端逐条判定——旧实现受 list LIMIT 100 窗口约束、硬编码 +08:00 时区，
+  // 且两通道各用独立超时配置判定全队列 running，存在跨通道互杀窗口（AUDIT D1-3）
+  try {
+    const r = await api('POST', `/api/tasks/recover-stale?runner=${encodeURIComponent(RUNNER)}`)
+    if (r.expired > 0) log(`恢复：${r.expired} 个超时 running 任务置 failed（本 runner 名下）`)
+  } catch (e) { log('启动恢复失败：', e.message) }
 }
 
 async function main() {
@@ -252,7 +254,7 @@ async function main() {
   await recoverStale().catch(e => log('启动恢复失败：', e.message))
   for (;;) {
     try {
-      const task = await api('GET', `/api/tasks/next?runner=${encodeURIComponent(RUNNER)}`)
+      const task = await api('POST', `/api/tasks/next?runner=${encodeURIComponent(RUNNER)}`)
       if (task) { await handle(task); continue }
     } catch (e) { log('轮询异常：', e.message) }
     await sleep(INTERVAL)

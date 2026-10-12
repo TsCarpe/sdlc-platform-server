@@ -85,9 +85,9 @@ def test_case_and_task_and_agent_shapes(client: TestClient) -> None:
     task = client.post("/api/requirements/REQ-2026-001/tasks", json={"type": "quality_check"}).json()
     assert set(task) == {"id", "reqId", "type", "status", "payload", "result", "runner",
                          "createdBy", "createdAt", "updatedAt"}
-    claimed = client.get("/api/tasks/next", params={"runner": "smoke"})
+    claimed = client.post("/api/tasks/next", params={"runner": "smoke"})
     assert claimed.status_code == 200 and claimed.json()["status"] == "running"
-    assert client.get("/api/tasks/next").status_code == 204  # 队列空
+    assert client.post("/api/tasks/next").status_code == 204  # 队列空
     done = client.post(f"/api/tasks/{task['id']}/done", json={"result": '{"k":1}'})
     assert done.json()["status"] == "done"
 

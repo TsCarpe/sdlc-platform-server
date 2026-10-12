@@ -37,7 +37,7 @@ try {
 
 // ===== 启动清理：排空历史 queued 任务（防止常驻执行器领走本夹具任务） =====
 for (let i = 0; i < 50; i++) {
-  const r = await fetch(`${base}/api/tasks/next?runner=verify-m6`)
+  const r = await fetch(`${base}/api/tasks/next?runner=verify-m6`, { method: 'POST' })
   if (r.status !== 200) break
   const t = await r.json()
   await call('POST', `/api/tasks/${t.id}/done`, { result: '{"drainedBy":"verify-m6"}' })

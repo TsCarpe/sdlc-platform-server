@@ -29,7 +29,7 @@ IDE 断点：直接 Debug `debug_server.py`（单进程无 reload，等价 dev.s
 - 装配链：`main.create_app()` → `run_migrations` → `Repos.create` / `Services.create` → `AppContext`
   （`runtime.py`，路由层唯一共享对象）→ `register_routers` → `_mount_static`（SPA 同源托管，index no-cache；
   `static/` 不存在即纯 API 模式）。lifespan 在 `SDLC_AGENT_ENABLED` 时启动 `AgentLoop`。
-- 任务双通道互斥：外置 runner 与进程内 `AgentLoop` 抢同一队列，都走 `/api/tasks/next` → `task_repo.claim()`
+- 任务双通道互斥：外置 runner 与进程内 `AgentLoop` 抢同一队列——runner 走 `POST /api/tasks/next`、进程内直调服务层，同归 `task_repo.claim()`
   （条件 UPDATE，affected=1 才算领到）；`finish()` 仅 running 可回报终态。回归用 `/api/agent/pause` + 停 runner
   防竞态（verify-all.sh 已内置）。
 - 路由层惯例：async 路由里的同步服务调用一律 `asyncio.to_thread(...)`——SQLite/文件 IO 不得冻结事件循环

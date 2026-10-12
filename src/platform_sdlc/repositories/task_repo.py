@@ -100,9 +100,13 @@ class TaskRepo:
         return bool(self.db.query_scalar(
             "SELECT EXISTS(SELECT 1 FROM task WHERE req_id=? AND type=?)", (req_id, type_)))
 
-    def expire_stale_running(self, cutoff: str, fail_result: str, at: str) -> int:
-        """Runner 启动恢复：把超时仍 running 的任务置 failed（执行器崩溃遗留）。"""
-        return self.db.execute(
-            "UPDATE task SET status='failed', result=?, updated_at=? WHERE status='running' AND updated_at < ?",
-            (fail_result, at, cutoff),
-        )
+    def expire_stale_running(self, cutoff: str, fail_result: str, at: str, runner: str | None = None) -> int:
+        """执行器启动恢复：把超时仍 running 的任务置 failed（执行器崩溃遗留）。
+        runner 非空时仅清该执行器名下任务（双通道恢复互不越界——A 通道重启
+        不得把 B 通道正在执行的任务判死，AUDIT D1-3 互杀窗口）。"""
+        sql = "UPDATE task SET status='failed', result=?, updated_at=? WHERE status='running' AND updated_at < ?"
+        args: list[object] = [fail_result, at, cutoff]
+        if runner:
+            sql += " AND runner=?"
+            args.append(runner)
+        return self.db.execute(sql, tuple(args))

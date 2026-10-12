@@ -36,7 +36,7 @@ const DESIGN_MD = '# 设计\n\n## §0 方案总览与备选\n\n决策一。\n\n#
 const runTask = async (id, type) => {
   const t = await call('POST', `/api/requirements/${id}/tasks`, { type })
   for (let i = 0; i < 50; i++) {
-    const r = await fetch(`${base}/api/tasks/next?runner=verify-design`)
+    const r = await fetch(`${base}/api/tasks/next?runner=verify-design`, { method: 'POST' })
     if (r.status === 204) break
     const tk = await r.json()
     if (tk.id === t.id) return tk

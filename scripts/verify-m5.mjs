@@ -28,7 +28,7 @@ const expectErr = async (method, path, body, status, name) => {
 
 // ===== 启动清理：排空历史运行残留的 queued 任务（逐个领走并回报 done），保证后续断言确定性 =====
 for (let i = 0; i < 50; i++) {
-  const t = await fetch(`${base}/api/tasks/next?runner=verify-m5`).then(r => r.status === 200 ? r.json() : null)
+  const t = await fetch(`${base}/api/tasks/next?runner=verify-m5`, { method: 'POST' }).then(r => r.status === 200 ? r.json() : null)
   if (!t) break
   await call('POST', `/api/tasks/${t.id}/done`, { result: '{"drainedBy":"verify-m5"}' })
 }
@@ -78,9 +78,9 @@ await expectErr('POST', '/api/requirements/REQ-9999-999/tasks', { type: 'quality
 await expectErr('POST', `/api/requirements/${reqA}/tasks`, { type: 'standard_doc' }, 409, '非待澄清状态生成标准文档：409')
 
 // ===== 2. Runner 领取与回报状态机 =====
-const next1 = await call('GET', '/api/tasks/next?runner=verify-m5')
+const next1 = await call('POST', '/api/tasks/next?runner=verify-m5')
 check('领取：原子置 running + 记录 runner', [next1.status, next1.runner], ['running', 'verify-m5'])
-const next2raw = await fetch(`${base}/api/tasks/next?runner=verify-m5`)
+const next2raw = await fetch(`${base}/api/tasks/next?runner=verify-m5`, { method: 'POST' })
 check('队列为空：204', next2raw.status, 204)
 const doneRet = await call('POST', `/api/tasks/${next1.id}/done`, { result: '{"anchors":{"hit":3,"miss":0}}' })
 check('回报 done：状态 + result 保存', [doneRet.status, doneRet.result], ['done', '{"anchors":{"hit":3,"miss":0}}'])
@@ -88,7 +88,7 @@ await expectErr('POST', `/api/tasks/${next1.id}/done`, { result: 'x' }, 409, '�
 
 // ===== 3. failed + retry =====
 const t3 = await call('POST', `/api/requirements/${reqA}/tasks`, { type: 'case_gen' })
-await call('GET', '/api/tasks/next?runner=verify-m5') // 领走 t3
+await call('POST', '/api/tasks/next?runner=verify-m5') // 领走 t3
 await call('POST', `/api/tasks/${t3.id}/failed`, { error: '注入的失败' })
 const t3view = await call('GET', `/api/tasks?req_id=${reqA}&status=failed`)
 check('回报 failed：状态 + 错误保存', t3view.filter(x => x.id === t3.id).map(x => [x.status, JSON.parse(x.result).error]), [['failed', '注入的失败']])

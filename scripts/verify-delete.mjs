@@ -75,7 +75,7 @@ await call('DELETE', `/api/requirements/${R2}`)   // 清理夹具
 
 // ===== 5. running 任务时拒绝删除（review 修复：先排空队列再自建自领，保证领到本夹具任务且不遗弃他人任务） =====
 for (let i = 0; i < 50; i++) {
-  const r = await fetch(`${base}/api/tasks/next?runner=verify-delete-drain`)
+  const r = await fetch(`${base}/api/tasks/next?runner=verify-delete-drain`, { method: 'POST' })
   if (r.status !== 200) break
   const t = await r.json()
   await call('POST', `/api/tasks/${t.id}/done`, { result: '{"drainedBy":"verify-delete"}' })
@@ -84,7 +84,7 @@ const { id: R3 } = await call('POST', '/api/requirements', {
   name: 'B4 running 拒删验证', sourceType: 'text', sourceText: 'running fixture', submittedBy: 'verify-delete'
 })
 const t3 = await call('POST', `/api/requirements/${R3}/tasks`, { type: 'quality_check' })
-const mine = await fetch(`${base}/api/tasks/next?runner=verify-delete`).then(r => r.status === 200 ? r.json() : null)
+const mine = await fetch(`${base}/api/tasks/next?runner=verify-delete`, { method: 'POST' }).then(r => r.status === 200 ? r.json() : null)
 check('夹具任务被本脚本领取（running）', [mine?.id, mine?.status], [t3.id, 'running'])
 let busy = null
 try { await call('DELETE', `/api/requirements/${R3}`) } catch (e) { busy = e.status }

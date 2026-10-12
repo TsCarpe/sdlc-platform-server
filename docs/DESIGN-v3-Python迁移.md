@@ -28,7 +28,7 @@ server/src/platform_sdlc/
 ## 2. 契约兼容要点（评审修订后落地）
 
 - **序列化**：响应键名 camelCase（schemas.wire）；`RequirementCreateRequest.risk_tier` 是下划线键（@JsonProperty）；查询参数混用（`/api/tasks?req_id=` vs `/api/cases?reqId=`）为既有契约。
-- **错误体**：ApiException/405/415/参数错误统一 `{error}`；乐观锁 409 携带 `conflicts:[{id,currentVersion,expectedVersion}]`；`/api/tasks/next` 空队列 204 无 body。
+- **错误体**：ApiException/405/415/参数错误统一 `{error}`；乐观锁 409 携带 `conflicts:[{id,currentVersion,expectedVersion}]`；`POST /api/tasks/next`（写语义，纳入 X-Token 写保护）空队列 204 无 body。
 - **NON_NULL 子集**：RequirementDetail 等 8 视图 null 键不输出（服务层过滤）；Requirement/Task 等实体 null 键照常输出。
 - **静态五行为**：/assets 365 天缓存、index.html no-cache、无扩展名路径 SPA 回退、favicon.ico→svg 重定向、未命中 404 `{error}`；API 面路径命中方法不符 → 405（对齐 Spring）。
 - **媒体**：mediaId `^m-[0-9a-f]{12}$`、双引号 ETag 304 协商、immutable 缓存、X-Media-Mime 上传头。

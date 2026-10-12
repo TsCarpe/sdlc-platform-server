@@ -68,9 +68,11 @@ class AgentLoop:
     async def _run(self) -> None:
         self._alive = True
         try:
-            recovered = await asyncio.to_thread(self.services.tasks.expire_stale, self.settings.agent_timeout_min)
+            # 归属过滤：只清本执行器名下任务（双通道恢复互不越界，AUDIT D1-3）
+            recovered = await asyncio.to_thread(
+                self.services.tasks.expire_stale, self.settings.agent_timeout_min, self.RUNNER_NAME)
             if recovered > 0:
-                log.info("[agent] 启动恢复：%d 个超时 running 任务置 failed", recovered)
+                log.info("[agent] 启动恢复：%d 个超时 running 任务置 failed（runner=%s）", recovered, self.RUNNER_NAME)
             while True:
                 if self._paused:
                     await asyncio.sleep(1)
