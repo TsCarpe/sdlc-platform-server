@@ -12,19 +12,19 @@ from fastapi import APIRouter, Request, Response
 
 from platform_sdlc.routers.http import read_json
 from platform_sdlc.runtime import AppContext
-from platform_sdlc.schemas import wire
+from platform_sdlc.schemas import DraftOut, TaskOut, wire
 
 
 def router(ctx: AppContext) -> APIRouter:
     r = APIRouter()
     svc = ctx.services.tasks
 
-    @r.post("/api/requirements/{req_id}/tasks")
+    @r.post("/api/requirements/{req_id}/tasks", response_model=TaskOut)
     async def create(req_id: str, request: Request) -> dict[str, Any]:
         body = await read_json(request, required=True)
         return wire(await asyncio.to_thread(svc.create, req_id, body))
 
-    @r.get("/api/tasks")
+    @r.get("/api/tasks", response_model=list[TaskOut])
     async def list_tasks(req_id: str | None = None, status: str | None = None) -> list[dict[str, Any]]:
         return [wire(t) for t in await asyncio.to_thread(svc.list, req_id, status)]
 
@@ -52,36 +52,36 @@ def router(ctx: AppContext) -> APIRouter:
 
         return Response(content=json.dumps(wire(t), ensure_ascii=False), media_type="application/json")
 
-    @r.post("/api/tasks/{task_id}/done")
+    @r.post("/api/tasks/{task_id}/done", response_model=TaskOut)
     async def done(task_id: int, request: Request) -> dict[str, Any]:
         body = await read_json(request)
         return wire(await asyncio.to_thread(svc.finish, task_id, True, body))
 
-    @r.post("/api/tasks/{task_id}/failed")
+    @r.post("/api/tasks/{task_id}/failed", response_model=TaskOut)
     async def failed(task_id: int, request: Request) -> dict[str, Any]:
         body = await read_json(request)
         return wire(await asyncio.to_thread(svc.finish, task_id, False, body))
 
-    @r.post("/api/tasks/{task_id}/retry")
+    @r.post("/api/tasks/{task_id}/retry", response_model=TaskOut)
     async def retry(task_id: int) -> dict[str, Any]:
         return wire(await asyncio.to_thread(svc.retry, task_id))
 
-    @r.post("/api/tasks/{task_id}/cancel")
+    @r.post("/api/tasks/{task_id}/cancel", response_model=TaskOut)
     async def cancel(task_id: int) -> dict[str, Any]:
         return wire(await asyncio.to_thread(svc.cancel, task_id))
 
     # ---------- 草稿 ----------
 
-    @r.put("/api/requirements/{req_id}/drafts/{type}")
+    @r.put("/api/requirements/{req_id}/drafts/{type}", response_model=DraftOut)
     async def put_draft(req_id: str, type: str, request: Request) -> dict[str, Any]:
         body = await read_json(request, required=True)
         return wire(await asyncio.to_thread(svc.put_draft, req_id, type, body))
 
-    @r.get("/api/requirements/{req_id}/drafts")
+    @r.get("/api/requirements/{req_id}/drafts", response_model=list[DraftOut])
     async def drafts(req_id: str) -> list[dict[str, Any]]:
         return [wire(d) for d in await asyncio.to_thread(svc.list_drafts, req_id)]
 
-    @r.get("/api/requirements/{req_id}/drafts/{type}")
+    @r.get("/api/requirements/{req_id}/drafts/{type}", response_model=DraftOut)
     async def draft(req_id: str, type: str) -> dict[str, Any]:
         return wire(await asyncio.to_thread(svc.get_draft, req_id, type))
 

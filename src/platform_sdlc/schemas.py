@@ -11,6 +11,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from pydantic import BaseModel, ConfigDict
+
 from platform_sdlc.models import (
     Artifact,
     CaseComment,
@@ -52,6 +54,37 @@ _WIRE: dict[type[Any], tuple[str, ...]] = {
 def to_camel(snake: str) -> str:
     head, *rest = snake.split("_")
     return head + "".join(w.capitalize() for w in rest)
+
+
+# ---------- 出参模型（批次5 A 轨）：字段声明序 = 既有契约键序 ----------
+# 仅用于纯 wire() 实体端点挂 response_model（键序由字段声明序保证 + snapshot-keys.mjs 守门）；
+# NON_NULL 条件键视图端点（requirement detail 等）不挂——见 docs/AUDIT-2026-10.md D4-4 与方案批次5。
+
+
+class _CamelModel(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+
+class TaskOut(_CamelModel):
+    id: int
+    req_id: str
+    type: str
+    status: str
+    payload: str
+    result: str
+    runner: str
+    created_by: str
+    created_at: str | None = None
+    updated_at: str | None = None
+
+
+class DraftOut(_CamelModel):
+    req_id: str
+    type: str
+    md: str
+    content_json: str
+    task_id: int | None = None
+    updated_at: str | None = None
 
 
 def wire(entity: Any) -> dict[str, Any]:

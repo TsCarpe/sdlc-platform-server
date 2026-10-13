@@ -1,7 +1,9 @@
 # SDLC 产物协作平台 —— ER 图与业务流程（技术侧）
 
 > 依据：`src/platform_sdlc/` 当前代码（main / routers / services / repositories / agent）+ `schema.sql` + `runner/runner.mjs`。
-> 权威契约文档见 `docs/DEV-PLAN.md`（API）与 `docs/DESIGN-v3-Python迁移.md`（映射 + 守卫对照）；本文是两者之外的技术侧总览。
+> **契约权威（2026-10 起生效）**：人读契约 = 本文 §13 端点速览表；机器可读契约 = `docs/openapi.json`
+> （`scripts/export-openapi.mjs` 导出，契约面变更须随批次重跑并 commit）。`docs/DEV-PLAN.md` 已归档为
+> v1 历史文档（停留 Java v1 时代，勿据其开发——AUDIT D1-1）。
 > 生成日期：2026-10-12。
 
 ---
@@ -51,7 +53,7 @@ flowchart LR
     subgraph 数据
         REPO[repositories/* 11 个仓储<br/>SQL 全参数化]
         DB[(SQLite platform.db<br/>单连接 + RLock，db.tx 可重入)]
-        MEDIA[(媒体文件<br/>data/media/{reqId}/{mediaId})]
+        MEDIA[("媒体文件<br/>data/media/{reqId}/{mediaId}")]
         ASSIST[(assistant.db<br/>助理会话独立 SQLite)]
     end
     WEB --> RT
@@ -84,13 +86,13 @@ SQLite **不建外键**：实线表示服务层维护的逻辑归属；`iteratio
 
 ```mermaid
 erDiagram
-    ITERATION[iteration 迭代] {
+    ITERATION["iteration 迭代"] {
         TEXT name PK "迭代名即主键，≤64字"
         TEXT note "备注 ≤200字"
         TEXT created_by "创建人 ≤40字"
         TEXT created_at
     }
-    REQUIREMENT[requirement 需求卡] {
+    REQUIREMENT["requirement 需求卡"] {
         TEXT id PK "REQ-年-序号（REQ-2026-001），软删编号不复用"
         TEXT name "需求名 ≤120字"
         TEXT iter "弱引用 iteration.name；存活需求按 iter 唯一（1:1）"
@@ -109,7 +111,7 @@ erDiagram
         TEXT design_final_json "设计域留痕：finalized/skipDeclared/tierProposal"
         TEXT target_repos "多目标仓清单 JSON（D39）"
     }
-    CLARIFY_ITEM[clarify_item 澄清项] {
+    CLARIFY_ITEM["clarify_item 澄清项"] {
         INTEGER id PK "AUTOINCREMENT"
         TEXT req_id FK "归属需求"
         TEXT seq UK "处置唯一键，[A-Za-z0-9._-]{1,32}；UNIQUE(req_id,seq)"
@@ -124,7 +126,7 @@ erDiagram
         TEXT status "pending | answered | rejected | deferred"
         TEXT note "处置备注（驳回必填理由）"
     }
-    ARTIFACT[artifact 正式产物] {
+    ARTIFACT["artifact 正式产物"] {
         TEXT req_id PK "复合主键 (req_id,type)"
         TEXT type PK "digest | audit | snapshot | standard | design"
         TEXT markdown "正式产物正文"
@@ -132,7 +134,7 @@ erDiagram
         INTEGER version "乐观递增"
         TEXT pushed_at
     }
-    FR_POINT[fr_point 需求点] {
+    FR_POINT["fr_point 需求点"] {
         TEXT req_id PK "复合主键 (req_id,id)"
         TEXT id PK "功能点编号（FR-xx，digest 推送注册）"
         TEXT name
@@ -141,7 +143,7 @@ erDiagram
         TEXT module
         TEXT anchor
     }
-    MEDIA[media 媒体] {
+    MEDIA["media 媒体"] {
         TEXT req_id PK "复合主键 (req_id,media_id)"
         TEXT media_id PK "m-+sha256前12位；显式 id 须同格式"
         TEXT sha256 "内容寻址，兼 ETag"
@@ -150,7 +152,7 @@ erDiagram
         INTEGER bytes
         TEXT created_at
     }
-    TEST_CASE[test_case 测试用例] {
+    TEST_CASE["test_case 测试用例"] {
         TEXT req_id PK "复合主键 (req_id,id)"
         TEXT id PK "skill 自带编号；表单通道 WEB-xxx"
         TEXT title
@@ -169,7 +171,7 @@ erDiagram
         TEXT defect_refs "JSON：缺陷引用"
         INTEGER case_no "全局单调序号（seq_case_no 发号）"
     }
-    CASE_COMMENT[case_comment 用例评论] {
+    CASE_COMMENT["case_comment 用例评论"] {
         INTEGER id PK "AUTOINCREMENT"
         TEXT req_id FK
         TEXT case_id FK "逻辑引用 test_case(req_id,id)"
@@ -177,7 +179,7 @@ erDiagram
         TEXT text
         TEXT created_at
     }
-    TASK[task 任务] {
+    TASK["task 任务"] {
         INTEGER id PK "AUTOINCREMENT"
         TEXT req_id FK
         TEXT type "quality_check | standard_doc | case_gen | design_gen | design_rev | gate_review"
@@ -189,7 +191,7 @@ erDiagram
         TEXT created_at
         TEXT updated_at "超时恢复的判断依据"
     }
-    DRAFT_ARTIFACT[draft_artifact 草稿] {
+    DRAFT_ARTIFACT["draft_artifact 草稿"] {
         TEXT req_id PK "复合主键 (req_id,type)"
         TEXT type PK "digest_bundle | standard | cases | design | gate_issues"
         TEXT md "markdown 载体"
@@ -197,11 +199,11 @@ erDiagram
         INTEGER task_id "回传来源任务（可空）"
         TEXT updated_at
     }
-    SEQ_CASE_NO[seq_case_no 用例序号发号器] {
+    SEQ_CASE_NO["seq_case_no 用例序号发号器"] {
         INTEGER id PK "恒为 1（单行发号器）"
         INTEGER val "case_no 当前值（全局跨需求单调）"
     }
-    GATE_ROUND[gate_round 评审轮] {
+    GATE_ROUND["gate_round 评审轮"] {
         INTEGER id PK "AUTOINCREMENT"
         TEXT req_id FK
         INTEGER round_no "UNIQUE(req_id,round_no)，r1/r2/…"
@@ -213,7 +215,7 @@ erDiagram
         TEXT created_by "开闸人"
         TEXT opened_at
     }
-    GATE_ISSUE[gate_issue 评审issue] {
+    GATE_ISSUE["gate_issue 评审issue"] {
         INTEGER id PK "AUTOINCREMENT"
         INTEGER round_id FK "归属评审轮"
         TEXT code "D-分歧/A-架构/S-数据/T-可测性 前缀，如 S-01"
@@ -392,7 +394,7 @@ sequenceDiagram
     participant EXE as 执行器
     participant DB as SQLite task 表
 
-    R->>API: GET /api/tasks/next?runner=local-123
+    R->>API: POST /api/tasks/next?runner=local-123
     API->>DB: claim（条件 UPDATE）
     alt 领到（affected=1）
         API-->>R: 200 任务 JSON
@@ -593,7 +595,7 @@ flowchart TD
 | **媒体存储** | 内容寻址：media_id = `m-` + sha256[:12]（显式须同格式）；文件 `data/media/{reqId}/{mediaId}`；同 id 幂等；读取 ETag=sha256 → 304 + immutable 缓存 |
 | **静态托管** | `static/` 存在才挂载：/assets hash 文件名长缓存；index no-cache（防旧 HTML 引已删 assets 白屏）；无扩展名路径 SPA 回退；favicon.ico 转 svg |
 | **迁移** | 幂等两段：schema.sql `IF NOT EXISTS` 建表 + `migrations.py` 判列补列；结构以运行库为权威 |
-| **回归开关** | `/api/agent/pause|resume|status`（进程内通道）；verify-all.sh 黑盒回归自动暂停 agent + 提示停 Runner，防回归任务被抢 |
+| **回归开关** | `/api/agent/pause\|resume\|status`（进程内通道）；verify-all.sh 黑盒回归自动暂停 agent + 提示停 Runner，防回归任务被抢 |
 
 ---
 
@@ -602,8 +604,8 @@ flowchart TD
 | 域 | 端点 |
 |---|---|
 | 健康 | `GET /api/health` |
-| 需求 | `POST /api/requirements` · `GET /api/requirements`（iter/status 过滤）· `GET /api/requirements/{id}` · `POST …/artifacts`（质检推送）· `GET …/answers` · `PUT …/answers/{seq}`（处置）· `POST …/publish` · `POST …/status` · `DELETE …/{id}`（软删）· `GET /api/fr-points?reqId=` |
-| 任务/草稿 | `POST …/tasks` · `GET /api/tasks`（过滤）· `GET /api/tasks/next?runner=`（原子领取，空 204）· `POST /api/tasks/{id}/done|failed|retry|cancel` · `PUT/GET/DELETE …/drafts[/{type}]` · `POST …/drafts/{type}/approve` |
+| 需求 | `POST /api/requirements` · `GET /api/requirements`（iter/status 过滤）· `GET /api/requirements/{id}` · `POST …/artifacts`（质检推送）· `GET …/answers` · `PUT …/answers/{seq}`（处置）· `POST …/publish` · `POST …/status` · `DELETE …/{id}`（软删）· `GET /api/fr-points?req_id=` |
+| 任务/草稿 | `POST …/tasks` · `GET /api/tasks`（过滤）· `POST /api/tasks/next?runner=`（原子领取，写语义纳入 X-Token，空 204）· `POST /api/tasks/recover-stale?runner=`（执行器崩溃恢复，按 runner 归属过滤）· `POST /api/tasks/{id}/done\|failed\|retry\|cancel` · `PUT/GET/DELETE …/drafts[/{type}]` · `POST …/drafts/{type}/approve` |
 | 用例 | `POST /api/cases`（skill 批量）· `POST /api/cases/form` · `GET /api/cases`（iter/reqId/status/tool/q）· `GET/PATCH /api/cases/{req}/{case}` · `POST …/comments` |
 | 设计 | `GET …/design` · `PUT …/target-repos` · `POST …/design/skip` |
 | 门禁 | `GET …/gate` · `POST …/gate/open` · `POST …/gate/rounds/{rid}/ingest` · `GET …/gate/change-status` · `POST …/gate/reopen` · `POST /api/gate/issues/{id}/verdict` · `POST /api/gate/issues/{id}/revision` · `POST /api/gate/rounds/{rid}/release` |
