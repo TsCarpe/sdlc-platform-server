@@ -40,6 +40,11 @@ class ReqBlockRepo:
         return not bool(self.db.query_scalar(
             "SELECT EXISTS(SELECT 1 FROM req_block WHERE req_id=?)", (req_id,)))
 
+    def list_all(self, req_id: str) -> list[ReqBlock]:
+        """含软删行全量读取（v4-13 放弃的乐观锁面：insert 逆/delete 逆要看到软删行）。"""
+        return [ReqBlock.from_row(r) for r in self.db.query_all(
+            "SELECT * FROM req_block WHERE req_id=? ORDER BY seq", (req_id,))]
+
     def deleted_ids(self, req_id: str) -> set[str]:
         """软删块 ID 集（v4-7 编辑面基线过期检测：提交 id 命中即拒——软删块的复活是三期放弃变更
         的逆向语义，不属窗口 1 直接编辑，引导前端刷新基线）。"""

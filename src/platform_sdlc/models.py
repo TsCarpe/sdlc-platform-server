@@ -354,6 +354,9 @@ class ReqChange:
     status: str = "draft"  # draft | confirmed | aborted
     impact_json: str = ""
     blocks_json: str = ""  # v4.12：draft 全量块数组留底（confirm 应用面的顺序来源）
+    snapshot_json: str = ""  # v4.13（§5.6）：confirm 时点快照（baseline 块序 + 重开澄清原值）
+    aborted_by: str = ""
+    aborted_at: str | None = None
     created_at: str | None = None
     confirmed_at: str | None = None
 
@@ -369,6 +372,9 @@ class ReqChange:
             status=_s(row, "status"),
             impact_json=_s(row, "impact_json"),
             blocks_json=_s(row, "blocks_json"),
+            snapshot_json=_s(row, "snapshot_json"),
+            aborted_by=_s(row, "aborted_by"),
+            aborted_at=_sn(row, "aborted_at"),
             created_at=_sn(row, "created_at"),
             confirmed_at=_sn(row, "confirmed_at"),
         )

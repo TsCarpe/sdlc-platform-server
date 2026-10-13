@@ -44,6 +44,16 @@ class ReqChangeRepo:
             " WHERE id=? AND status='draft'",
             (impact_json, confirmed_by, at, change_id))
 
+    def set_snapshot(self, change_id: int, snapshot_json: str) -> None:
+        """confirm 时点快照落库（§5.6：放弃的逆向回滚依据——baseline 块序 + 重开澄清原值）。"""
+        self.db.execute("UPDATE req_change SET snapshot_json=? WHERE id=?", (snapshot_json, change_id))
+
+    def set_aborted(self, change_id: int, aborted_by: str, at: str) -> int:
+        """放弃落库（§5.6）：confirmed 之外不可放弃（draft 走 delete 通道，aborted 是终态）。"""
+        return self.db.execute(
+            "UPDATE req_change SET status='aborted', aborted_by=?, aborted_at=? WHERE id=? AND status='confirmed'",
+            (aborted_by, at, change_id))
+
     def confirmed_undigested(self, req_id: str, digest_pushed_at: str | None) -> list[int]:
         """影响面未消化的前序 confirmed 单（§5.1 串行 confirm）：digest/FR 非空 ∧ 消化时点早于
         confirm 时点。digest_pushed_at = digest artifact 最近推送时间（None = 从未推送，视为未消化）。"""

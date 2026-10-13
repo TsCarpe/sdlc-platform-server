@@ -74,8 +74,8 @@ class ChangeService:
         out: list[dict[str, Any]] = []
         for c in self.repos.req_change.list_by_req(req_id):
             row = {"id": c.id, "title": c.title, "detail": c.detail, "proposedBy": c.proposed_by,
-                   "confirmedBy": c.confirmed_by, "status": c.status, "createdAt": c.created_at,
-                   "confirmedAt": c.confirmed_at}
+                   "confirmedBy": c.confirmed_by, "status": c.status, "abortedBy": c.aborted_by,
+                   "createdAt": c.created_at, "confirmedAt": c.confirmed_at, "abortedAt": c.aborted_at}
             out.append({k: v for k, v in row.items() if v is not None})
         return out
 
@@ -86,7 +86,8 @@ class ChangeService:
         return {
             "id": c.id, "reqId": c.req_id, "title": c.title, "detail": c.detail,
             "proposedBy": c.proposed_by, "confirmedBy": c.confirmed_by, "status": c.status,
-            "createdAt": c.created_at, "confirmedAt": c.confirmed_at,
+            "abortedBy": c.aborted_by, "createdAt": c.created_at,
+            "confirmedAt": c.confirmed_at, "abortedAt": c.aborted_at,
             "items": [{"blockId": i.block_id, "op": i.op, "oldText": i.old_text, "newText": i.new_text,
                        "oldAttrs": _load_or_none(i.old_attrs), "newAttrs": _load_or_none(i.new_attrs)}
                       for i in items],
@@ -167,29 +168,152 @@ class ChangeService:
                 self.repos.requirement.set_status(req_id, "changed")
 
             # ⑤受影响澄清重开（冻结影响面口径；已答/驳回/挂起行回 pending，旧答复挪 note 前缀）
-            reopen = self._reopen_rows(req_id, change_id, impact)
+            reopen, reopen_snapshot = self._reopen_rows(req_id, change_id, impact)
             self.repos.clarify_item.reopen_items(req_id, reopen)
+            # §5.6 放弃的全量逆向回滚依据：baseline 块序（应用前）+ 重开原值快照
+            snapshot = {"baseline": [[b.block_id, b.seq] for b in current], "reopen": reopen_snapshot}
+            self.repos.req_change.set_snapshot(change_id, json.dumps(snapshot, ensure_ascii=False,
+                                                                    separators=(",", ":")))
         log.info("变更单 #%s confirm %s（by=%s，重开澄清 %d 项）", change_id, req_id, confirmed_by, len(reopen))
         out = self.detail(req_id, change_id)
         after = self.repos.requirement.find(req_id)
         out["contentRev"] = after.content_rev if after is not None else 0
         return out
 
-    def _reopen_rows(self, req_id: str, change_id: int, impact: dict[str, Any]) -> list[tuple[str, str, str | None]]:
+    # ---------- 放弃变更（§5.6：changed 态的受控逃生门——增量通道死锁时的出口） ----------
+
+    def abort(self, req_id: str, change_id: int, body: dict[str, Any]) -> dict[str, Any]:
+        """放弃 = 当无事发生（除变更单留痕）的全量逆向回滚，一个事务：
+        ①守卫：confirmed 单 ∧ changed 态 ∧ 无已采纳 incremental_bundle（v4-14 前以草稿不存在近似）
+        ∧ 为最新 confirmed 单（串行 confirm 下即唯一未消化单，LIFO——只能从最新弃起）；
+        ②块乐观锁：逆向 edit 前逐条校验块现值 == new_text（confirm 后无人再动过），不符 409；
+        ③逆向应用：edit 逆（new→old，version 再 +1，updated_by=放弃人）、insert 逆（软删——不构成
+        §2.4 封存痕迹，判定排除 deleted 行）、delete 逆（复活清 deleted）、move 逆（按快照 baseline
+        恢复 seq——重排常规化语义下 seq 数值无冻结面，恢复仅为呈现回到原样）；
+        ④澄清恢复 pending-only：仍为 pending 的行按快照恢复原答复/处置（changed 期间已被人再处置的
+        保留新答复，note 追加「变更单#N 已放弃，此为放弃后处置」——防人工新作答无痕丢失）；
+        ⑤content_rev 不回退（单调递增，§5.7）+ aborted + changed→published（表外通道）。"""
+        with self.db.tx():
+            r = self.repos.requirement.find(req_id)
+            if r is None:
+                raise ApiException(404, f"需求不存在：{req_id}")
+            c = self._require_change(req_id, change_id)
+            if c.status != "confirmed":
+                raise ApiException(409, f"变更单 #{change_id} 状态 {c.status}，放弃仅对 confirmed 单开放"
+                                        "（draft 可直接删除）")
+            if r.status != "changed":
+                raise ApiException(409, f"放弃是 changed 态的逃生门（当前：{r.status}）")
+            if self.repos.draft.find(req_id, "incremental_bundle") is not None:
+                raise ApiException(409, "存在未采纳的 incremental_bundle 草稿，请先处理后再放弃")
+            latest = max((x.id or 0) for x in self.repos.req_change.list_by_req(req_id)
+                         if x.status == "confirmed")
+            if latest != change_id:
+                raise ApiException(409, f"只能放弃最新的 confirmed 单（当前最新：#{latest}），LIFO")
+            aborted_by = jrequired(body, "abortedBy")
+            items = self.repos.req_change.list_items(change_id)
+            snapshot = _load_snapshot(c.snapshot_json)
+            if snapshot is None:
+                raise ApiException(409, "变更单无 confirm 快照（旧版本数据），无法放弃")
+
+            # ②块乐观锁（§5.6：逆向 edit 前逐条校验块现值 == new_text）
+            live = {b.block_id: b for b in self.repos.req_block.list_by_req(req_id)}
+            all_rows = {b.block_id: b for b in self.repos.req_block.list_all(req_id)}
+            for it in items:
+                if it.op in ("edit", "move"):
+                    cur = live.get(it.block_id)
+                    if cur is None or cur.text != it.new_text:
+                        raise ApiException(409, f"块 {it.block_id} 已被后续修改，无法放弃")
+                elif it.op == "delete":
+                    row = all_rows.get(it.block_id)
+                    if row is None or not row.deleted:
+                        raise ApiException(409, f"块 {it.block_id} 未处于软删态，无法放弃（状态与 confirm 时不符）")
+                elif it.op == "insert":
+                    row = all_rows.get(it.block_id)
+                    if row is not None and row.deleted:
+                        raise ApiException(409, f"insert 块 {it.block_id} 已被删除，无法放弃")
+
+            # ③逆向应用（executemany 批量；顺序无关——各 op 目标块不相交）
+            at = Times.now()
+            rev_edit = [(it.old_text, it.old_attrs, at, aborted_by, req_id, it.block_id)
+                        for it in items if it.op in ("edit", "move") and it.old_text != it.new_text]
+            if rev_edit:
+                self.db.executemany(
+                    "UPDATE req_block SET text=?, attrs_json=?, version=version+1, updated_at=?, updated_by=?"
+                    " WHERE req_id=? AND block_id=?", rev_edit)
+            rev_touch = [(at, aborted_by, req_id, it.block_id)
+                         for it in items if it.op in ("edit", "move") and it.old_text == it.new_text]
+            if rev_touch:
+                self.db.executemany(
+                    "UPDATE req_block SET version=version+1, updated_at=?, updated_by=? WHERE req_id=? AND block_id=?",
+                    rev_touch)
+            rev_insert = [(at, at, aborted_by, req_id, it.block_id) for it in items if it.op == "insert"]
+            if rev_insert:
+                self.db.executemany(
+                    "UPDATE req_block SET deleted=?, updated_at=?, updated_by=? WHERE req_id=? AND block_id=?",
+                    rev_insert)
+            rev_delete = [(at, aborted_by, req_id, it.block_id) for it in items if it.op == "delete"]
+            if rev_delete:
+                self.db.executemany(
+                    "UPDATE req_block SET deleted='', updated_at=?, updated_by=? WHERE req_id=? AND block_id=?",
+                    rev_delete)
+            # move 逆恢复原 seq（快照 baseline；软删行不动）
+            baseline = [(int(seq), req_id, bid) for bid, seq in snapshot.get("baseline", [])]
+            if baseline:
+                self.db.executemany(
+                    "UPDATE req_block SET seq=? WHERE req_id=? AND block_id=? AND deleted=''", baseline)
+
+            # ④澄清恢复 pending-only（快照原值；已再处置行保留 + note 追加）
+            by_seq = {x.seq: x for x in self.repos.clarify_item.list_by_req(req_id)}
+            restore: list[tuple[str, str, str, str | None, str, str]] = []
+            keep_note: list[tuple[str, str, str]] = []
+            for snap in snapshot.get("reopen", []):
+                seq = str(snap.get("seq") or "")
+                cur = by_seq.get(seq)
+                if cur is None:
+                    continue
+                if cur.status == "pending":
+                    restore.append((str(snap.get("answer") or ""), str(snap.get("status") or "answered"),
+                                    str(snap.get("note") or ""), _at_or_none(snap.get("answeredAt")),
+                                    req_id, seq))
+                else:
+                    keep_note.append((cur.note + f"（变更单#{change_id} 已放弃，此为放弃后处置）", req_id, seq))
+            if restore:
+                self.db.executemany(
+                    "UPDATE clarify_item SET answer=?, status=?, note=?, answered_at=? WHERE req_id=? AND seq=?",
+                    restore)
+            if keep_note:
+                self.db.executemany(
+                    "UPDATE clarify_item SET note=? WHERE req_id=? AND seq=?", keep_note)
+
+            # ⑤aborted + changed→published（表外；content_rev 不回退）
+            if self.repos.req_change.set_aborted(change_id, aborted_by, at) == 0:
+                raise ApiException(409, "放弃竞态：变更单状态已变化")
+            self.repos.requirement.set_status(req_id, "published")
+        log.info("变更单 #%s 放弃 %s（by=%s，逆向 %d 项/恢复澄清 %d 项）",
+                 change_id, req_id, aborted_by, len(items), len(restore))
+        out = self.detail(req_id, change_id)
+        return out
+
+    def _reopen_rows(self, req_id: str, change_id: int,
+                     impact: dict[str, Any]) -> tuple[list[tuple[str, str, str | None]], list[dict[str, Any]]]:
         """重开行构造：冻结影响面的 clarifyItems（含人工增删）∩ 已处置行——旧答复挪 note 前缀
-        「因变更单#N 重开，原答复：…」（answer 空的行 note 只记重开标记）。"""
+        「因变更单#N 重开，原答复：…」（answer 空的行 note 只记重开标记）。返回 (重开写入口径,
+        原值快照)——快照进 snapshot_json 供放弃时 pending-only 恢复（§5.6）。"""
         raw: Any = impact.get("clarifyItems")
         seqs = {jtext(x, "seq", "") for x in _arr(raw) if is_json_obj(x)}
         seqs.discard("")
         if not seqs:
-            return []
+            return [], []
         out: list[tuple[str, str, str | None]] = []
+        snapshot: list[dict[str, Any]] = []
         for item in self.repos.clarify_item.list_by_req(req_id):
             if item.seq not in seqs or item.status == "pending":
                 continue
             note = f"因变更单#{change_id} 重开，原答复：{item.answer}" if item.answer else f"因变更单#{change_id} 重开"
             out.append((item.seq, note, None))
-        return out
+            snapshot.append({"seq": item.seq, "answer": item.answer, "status": item.status,
+                             "note": item.note, "answeredAt": item.answered_at})
+        return out, snapshot
 
     # ---------- 影响面预览（§5.4：机械 join 现算，不冻结） ----------
 
@@ -364,3 +488,17 @@ def _load_raw_list(raw: str) -> list[Any]:
     except json.JSONDecodeError:
         return []
     return list(v) if is_json_list(v) else []
+
+
+def _load_snapshot(raw: str) -> dict[str, Any] | None:
+    if not raw:
+        return None
+    try:
+        v: Any = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+    return dict(v) if is_json_obj(v) else None
+
+
+def _at_or_none(v: Any) -> str | None:
+    return str(v) if isinstance(v, str) and v else None

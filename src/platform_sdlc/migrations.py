@@ -42,6 +42,11 @@ _COLUMNS: list[tuple[str, str, str]] = [
     # blocks_json = draft 全量块数组留底（confirm 应用面的顺序来源——items 只存变更行不含新序）
     ("requirement", "content_rev", "ALTER TABLE requirement ADD COLUMN content_rev INTEGER NOT NULL DEFAULT 0"),
     ("req_change", "blocks_json", "ALTER TABLE req_change ADD COLUMN blocks_json TEXT DEFAULT ''"),
+    # v4.13（DESIGN-v4 §5.6）：snapshot_json = confirm 时点快照（baseline 块序 + 重开澄清原值——
+    # 放弃的全量逆向回滚依据）；aborted_by/at = 放弃留痕
+    ("req_change", "snapshot_json", "ALTER TABLE req_change ADD COLUMN snapshot_json TEXT DEFAULT ''"),
+    ("req_change", "aborted_by", "ALTER TABLE req_change ADD COLUMN aborted_by TEXT DEFAULT ''"),
+    ("req_change", "aborted_at", "ALTER TABLE req_change ADD COLUMN aborted_at TEXT"),
     ("fr_point", "source", "ALTER TABLE fr_point ADD COLUMN source TEXT DEFAULT ''"),
     ("fr_point", "group_name", "ALTER TABLE fr_point ADD COLUMN group_name TEXT DEFAULT ''"),
     ("fr_point", "module", "ALTER TABLE fr_point ADD COLUMN module TEXT DEFAULT ''"),

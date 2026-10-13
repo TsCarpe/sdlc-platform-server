@@ -56,6 +56,13 @@ def router(ctx: AppContext) -> APIRouter:
                                 req_id, change_id, out.get("impact"))
         return out
 
+    @r.post("/api/requirements/{req_id}/changes/{change_id}/abort")
+    async def abort(req_id: str, change_id: int, request: Request) -> dict[str, Any]:
+        """放弃变更（§5.6）：全量逆向回滚（edit 逆/insert 逆软删/delete 逆复活/move 逆恢复 seq/
+        澄清 pending-only 恢复）+ aborted + changed→published；content_rev 不回退。LIFO 仅最新单。"""
+        body = await read_json(request, required=True)
+        return await asyncio.to_thread(svc.abort, req_id, change_id, body)
+
     @r.get("/api/requirements/{req_id}/changes/{change_id}/impact")
     async def preview_impact(req_id: str, change_id: int) -> dict[str, Any]:
         """影响面预览（机械 join 现算不冻结，§5.4）：受影响块集（edit/move 直接 ∪ delete 子孙递归

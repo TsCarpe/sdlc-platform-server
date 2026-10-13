@@ -1156,6 +1156,57 @@
     }
    }
   },
+  "/api/requirements/{req_id}/changes/{change_id}/abort": {
+   "post": {
+    "summary": "Abort",
+    "description": "放弃变更（§5.6）：全量逆向回滚（edit 逆/insert 逆软删/delete 逆复活/move 逆恢复 seq/\n澄清 pending-only 恢复）+ aborted + changed→published；content_rev 不回退。LIFO 仅最新单。",
+    "operationId": "abort_api_requirements__req_id__changes__change_id__abort_post",
+    "parameters": [
+     {
+      "name": "req_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Req Id"
+      }
+     },
+     {
+      "name": "change_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Change Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Abort Api Requirements  Req Id  Changes  Change Id  Abort Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/requirements/{req_id}/changes/{change_id}/impact": {
    "get": {
     "summary": "Preview Impact",

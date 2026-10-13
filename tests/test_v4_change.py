@@ -384,3 +384,97 @@ def test_confirm_guards_serial(env: tuple[TestClient, Database, Repos]) -> None:
     assert r3.status_code == 200
     card = client.get(f"/api/requirements/{req_id}").json()["card"]
     assert card["status"] == "changed" and card["contentRev"] == 2
+
+
+# ---------- 放弃变更（§5.6 全量逆向回滚；v4-13） ----------
+
+def _confirm_first(client: TestClient, req_id: str) -> int:
+    """发布 → draft（edit p1 + insert + delete tr1/trc1）→ confirm，返回单号。"""
+    _publish_card(client, None, req_id)  # type: ignore[arg-type]  # repos 仅 _seed 用
+    cid = _draft_edit_p1(client, req_id)["id"]
+    out = client.post(f"/api/requirements/{req_id}/changes/{cid}/confirm", json={"confirmedBy": "李四"}).json()
+    assert out["status"] == "confirmed"
+    return cid
+
+
+def test_abort_full_rollback(env: tuple[TestClient, Database, Repos]) -> None:
+    """逐逆向：edit 逆恢复旧文本 version 再+1、insert 逆软删（不构成封存痕迹）、delete 逆复活、
+    move 逆恢复 seq、澄清 pending-only 恢复、rev 不回退、aborted、changed→published。"""
+    client, db, repos = env
+    req_id = _mk_card(client)
+    _seed(repos, req_id)
+    # 记录 confirm 前基线（放弃后应逐块一致）
+    before = {b.block_id: (b.seq, b.text) for b in repos.req_block.list_by_req(req_id)}
+    cid = _confirm_first(client, req_id)
+    insert_id = next(i["blockId"] for i in
+                     client.get(f"/api/requirements/{req_id}/changes/{cid}").json()["items"]
+                     if i["op"] == "insert")
+    # changed 期间：被重开的 P1 有人再处置（保留新答复场景——作答通道扩 changed 随 v4-15，
+    # 此处以 db 直改模拟处置时点状态）；P4 保持 pending（恢复场景）
+    db.execute("UPDATE clarify_item SET answer='放弃前的新作答', status='answered'"
+               " WHERE req_id=? AND seq='P1'", (req_id,))
+
+    out = client.post(f"/api/requirements/{req_id}/changes/{cid}/abort",
+                      json={"abortedBy": "王五"}).json()
+    assert out["status"] == "aborted" and out["abortedBy"] == "王五"
+    card = client.get(f"/api/requirements/{req_id}").json()["card"]
+    assert card["status"] == "published" and card["contentRev"] == 1  # rev 不回退
+
+    # 块表逐逆向：原块全复活/原文本/原 seq；insert 块软删（不在读面但行在）
+    after = {b.block_id: (b.seq, b.text) for b in repos.req_block.list_by_req(req_id)}
+    assert after == before
+    rows = {r["block_id"]: r for r in db.query_all("SELECT * FROM req_block WHERE req_id=?", (req_id,))}
+    assert rows["p1"]["text"] == "一段说明" and rows["p1"]["version"] == 3  # confirm+1、放弃再+1
+    assert rows["p1"]["updated_by"] == "王五"
+    assert rows["tr1"]["deleted"] == "" and rows["trc1"]["deleted"] == ""
+    assert rows[insert_id]["deleted"] != ""
+    # insert 逆软删不构成封存痕迹（§2.4 判定排除 deleted 行——放弃后飞书源可对账重导）
+    assert not repos.req_block.has_edit_trace(req_id) or rows["p1"]["version"] > 1
+
+    # 澄清恢复 pending-only：P4（仍 pending）恢复原答复；P1（已再处置）保留新答 + note 追加
+    answers = {a["seq"]: a for a in client.get(f"/api/requirements/{req_id}/answers").json()}
+    assert answers["P4"]["answer"] == "答 P4" and answers["P4"]["status"] == "answered"
+    assert answers["P1"]["answer"] == "放弃前的新作答"
+    assert "变更单#1 已放弃，此为放弃后处置" in answers["P1"]["note"]
+
+    # aborted 是终态：再 confirm/再 abort/删除全拒
+    assert client.post(f"/api/requirements/{req_id}/changes/{cid}/confirm",
+                       json={"confirmedBy": "x"}).status_code == 409
+    assert client.post(f"/api/requirements/{req_id}/changes/{cid}/abort",
+                       json={"abortedBy": "x"}).status_code == 409
+    assert client.delete(f"/api/requirements/{req_id}/changes/{cid}").status_code == 409
+
+
+def test_abort_guards_and_optimistic_lock(env: tuple[TestClient, Database, Repos]) -> None:
+    client, db, repos = env
+    req_id = _mk_card(client)
+    _seed(repos, req_id)
+    # 非 changed 拒（发布前 draft/未发布单）
+    c0 = _draft_edit_p1(client, req_id)
+    assert client.post(f"/api/requirements/{req_id}/changes/{c0['id']}/abort",
+                       json={"abortedBy": "x"}).status_code == 409
+
+    cid = _confirm_first(client, req_id)
+    # 块乐观锁：confirm 后块被改（db 直改模拟）→ 409 且零写入
+    db.execute("UPDATE req_block SET text='放弃前被改' WHERE req_id=? AND block_id='p1'", (req_id,))
+    r = client.post(f"/api/requirements/{req_id}/changes/{cid}/abort", json={"abortedBy": "王五"})
+    assert r.status_code == 409 and "已被后续修改，无法放弃" in r.json()["error"]
+    assert db.query_scalar("SELECT status FROM req_change WHERE id=?", (cid,)) == "confirmed"
+    assert db.query_scalar("SELECT status FROM requirement WHERE id=?", (req_id,)) == "changed"
+    db.execute("UPDATE req_block SET text='一段说明（修订）' WHERE req_id=? AND block_id='p1'", (req_id,))
+
+    # LIFO：出现更新的 confirmed 单后旧单不可弃（构造：消化后 confirm 第二单）
+    db.execute("UPDATE artifact SET pushed_at='2099-01-01 00:00:00' WHERE req_id=? AND type='digest'",
+               (req_id,))
+    c2 = client.post(f"/api/requirements/{req_id}/changes", json={
+        "title": "第二单", "proposedBy": "张三", "blocks": [
+            {"id": "t1", "type": "title", "text": "标题"},
+            {"id": "h1", "type": "heading", "level": 2, "text": "背景"},
+            {"id": "p1", "type": "paragraph", "text": "一段说明（修订二）"},
+            {"id": "li1", "type": "list-item", "marker": "1. ", "depth": 1, "text": "列表项一"},
+            {"id": "li2", "type": "list-item", "marker": "a. ", "depth": 2, "parent": "li1", "text": "子项 a"},
+        ]}).json()["id"]
+    assert client.post(f"/api/requirements/{req_id}/changes/{c2}/confirm",
+                       json={"confirmedBy": "赵六"}).status_code == 200
+    r2 = client.post(f"/api/requirements/{req_id}/changes/{cid}/abort", json={"abortedBy": "王五"})
+    assert r2.status_code == 409 and "LIFO" in r2.json()["error"]

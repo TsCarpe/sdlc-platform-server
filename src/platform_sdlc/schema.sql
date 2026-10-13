@@ -67,7 +67,7 @@ CREATE INDEX IF NOT EXISTS idx_clarify_req_status ON clarify_item(req_id, status
 CREATE INDEX IF NOT EXISTS idx_task_status ON task(status);
 CREATE INDEX IF NOT EXISTS idx_gate_round_req ON gate_round(req_id);
 -- v4.11 变更单（DESIGN-v4 §5.2）：已发布需求原文变更的结构化载体；draft 可删，confirmed 不作废（放弃走 §5.6 逆向回滚）
-CREATE TABLE IF NOT EXISTS req_change ( id INTEGER PRIMARY KEY AUTOINCREMENT, req_id TEXT NOT NULL, title TEXT DEFAULT '', detail TEXT DEFAULT '', proposed_by TEXT DEFAULT '', confirmed_by TEXT DEFAULT '', status TEXT NOT NULL DEFAULT 'draft', impact_json TEXT DEFAULT '', blocks_json TEXT DEFAULT '', created_at TEXT, confirmed_at TEXT );
+CREATE TABLE IF NOT EXISTS req_change ( id INTEGER PRIMARY KEY AUTOINCREMENT, req_id TEXT NOT NULL, title TEXT DEFAULT '', detail TEXT DEFAULT '', proposed_by TEXT DEFAULT '', confirmed_by TEXT DEFAULT '', status TEXT NOT NULL DEFAULT 'draft', impact_json TEXT DEFAULT '', blocks_json TEXT DEFAULT '', snapshot_json TEXT DEFAULT '', aborted_by TEXT DEFAULT '', aborted_at TEXT, created_at TEXT, confirmed_at TEXT );
 CREATE INDEX IF NOT EXISTS idx_req_change_req ON req_change(req_id);
 CREATE TABLE IF NOT EXISTS req_change_item ( id INTEGER PRIMARY KEY AUTOINCREMENT, change_id INTEGER NOT NULL, block_id TEXT NOT NULL, op TEXT NOT NULL, old_text TEXT DEFAULT '', new_text TEXT DEFAULT '', old_attrs TEXT DEFAULT '', new_attrs TEXT DEFAULT '' );
 CREATE INDEX IF NOT EXISTS idx_req_change_item_change ON req_change_item(change_id);

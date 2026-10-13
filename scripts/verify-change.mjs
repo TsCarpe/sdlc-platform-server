@@ -94,6 +94,7 @@ check('draft 建：四态 items', draft.counts, { edit: 1, insert: 1, delete: 2,
 check('draft insert 草稿期即有平台 ID', draft.items.find(i => i.op === 'insert').blockId.startsWith('blk-'), true)
 const draftInsert = draft.items.find(i => i.op === 'insert').blockId
 
+const docBeforeConfirm = await call('GET', `/api/requirements/${req}/doc.json`)  // confirm 前基线（放弃后应回此状）
 const confirmed = await call('POST', `/api/requirements/${req}/changes/${draft.id}/confirm`, { confirmedBy: '李四' })
 check('confirm：状态 + contentRev', [confirmed.status, confirmed.contentRev], ['confirmed', 1])
 const card = (await call('GET', `/api/requirements/${req}`)).card
@@ -129,6 +130,37 @@ const c2 = await call('POST', `/api/requirements/${req}/changes`, {
     { id: 'ch-li2', type: 'list-item', marker: 'a. ', depth: 2, parent: 'ch-li1', text: '子项 a' }] })
 await expectErr('POST', `/api/requirements/${req}/changes/${c2.id}/confirm`, { confirmedBy: '王五' }, 409,
                 '串行 confirm：前序未消化 409')
+
+// ===== 4.5 放弃变更（§5.6 全量逆向回滚） =====
+const aborted = await call('POST', `/api/requirements/${req}/changes/${draft.id}/abort`, { abortedBy: '王五' })
+check('放弃：aborted + 留痕', [aborted.status, aborted.abortedBy], ['aborted', '王五'])
+const cardA = (await call('GET', `/api/requirements/${req}`)).card
+check('放弃：changed→published（表外）+ content_rev 不回退', [cardA.status, cardA.contentRev], ['published', 1])
+const docAfter = await call('GET', `/api/requirements/${req}/doc.json`)
+check('放弃：块表逐逆向回原状（doc.json 与 confirm 前一致）',
+      docAfter.blocks.map(b => [b.id, b.text]), docBeforeConfirm.blocks.map(b => [b.id, b.text]))
+const ansA = await call('GET', `/api/requirements/${req}/answers`)
+const bySeqA = Object.fromEntries(ansA.map(a => [a.seq, a]))
+check('放弃：澄清恢复原答复（pending-only 恢复面）',
+      [bySeqA.P1.answer, bySeqA.P1.status, bySeqA.P2.answer],
+      ['答 P1', 'answered', '答 P2'])
+await expectErr('POST', `/api/requirements/${req}/changes/${draft.id}/abort`, { abortedBy: 'x' }, 409,
+                'aborted 是终态：再弃 409')
+await expectErr('POST', `/api/requirements/${req}/changes/${draft.id}/confirm`, { confirmedBy: 'x' }, 409,
+                'aborted 不可 confirm：409')
+
+// 弃后通道恢复：新 draft → confirm 再次可行（串行锁随 aborted 单解除）
+const c3 = await call('POST', `/api/requirements/${req}/changes`, {
+  title: '弃后再变', proposedBy: '张三', blocks: [
+    { id: 'ch-t1', type: 'title', text: '标题' },
+    { id: 'ch-h1', type: 'heading', level: 2, text: '背景' },
+    { id: 'ch-p1', type: 'paragraph', text: '一段说明（再修订）' },
+    { id: 'ch-tr1', type: 'table-row', head: ['列A'], cells: [['v1']] },
+    { id: 'ch-trc1', type: 'paragraph', parent: 'ch-tr1', text: '行内块' },
+    { id: 'ch-li1', type: 'list-item', marker: '1. ', depth: 1, text: '列表项一' },
+    { id: 'ch-li2', type: 'list-item', marker: 'a. ', depth: 2, parent: 'ch-li1', text: '子项 a' }] })
+const c3c = await call('POST', `/api/requirements/${req}/changes/${c3.id}/confirm`, { confirmedBy: '赵六' })
+check('弃后再变更可行（串行锁解除 + rev 继续）', [c3c.status, c3c.contentRev], ['confirmed', 2])
 await call('DELETE', `/api/requirements/${req}/changes/${c2.id}`)  // draft 可直接删（收尾清理）
 
 // ===== 5. 未发布卡守卫（建卡走窗口 1 语义） =====
