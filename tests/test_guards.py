@@ -27,7 +27,7 @@ def env(tmp_path: Path) -> tuple[Repos, Services]:
     db = Database(tmp_path / "platform.db")
     run_migrations(db)
     repos = Repos.create(db)
-    services = Services.create(db, repos, tmp_path / "media")
+    services = Services.create(db, repos, tmp_path / "media", tmp_path)
     return repos, services
 
 

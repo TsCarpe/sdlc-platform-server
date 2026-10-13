@@ -12,6 +12,7 @@ import asyncio
 import json
 import re
 from pathlib import Path
+from typing import Any
 
 from agents import RunContextWrapper, Tool, function_tool
 
@@ -60,15 +61,21 @@ def _read_text(p: Path) -> str:
 
 @function_tool
 async def get_requirement_card(wrapper: RunContextWrapper[TaskRunContext]) -> str:
-    """读取当前需求卡：id、名称、状态、风险分级、来源类型、来源URL、需求原文全文、已发布标准文档（text 源质检直接以原文全文为输入）。"""
+    """读取当前需求卡：id、名称、状态、风险分级、来源类型、来源URL、已发布标准文档；需求原文双源
+    （DESIGN-v4 §2.3）——doc 为块表组装的 {blocks,media}（导入后权威，质检/梳理以它为输入），
+    sourceText 保留兼容（未导入卡的降级输入）。"""
     def impl() -> str:
         c = wrapper.context
         r = c.services.requirements.require(c.req_id)
-        return json.dumps({
+        data: dict[str, Any] = {
             "id": r.id, "name": r.name, "status": r.status, "riskTier": r.risk_tier,
             "sourceType": r.source_type, "sourceUrl": r.source_url,
             "sourceText": r.source_text, "standardDoc": r.standard_doc or "",
-        }, ensure_ascii=False)
+        }
+        doc = c.services.blocks.doc_payload(c.req_id)
+        if doc is not None:
+            data["doc"] = doc
+        return json.dumps(data, ensure_ascii=False)
 
     return await asyncio.to_thread(impl)
 

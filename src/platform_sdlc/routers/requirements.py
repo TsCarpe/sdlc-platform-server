@@ -8,7 +8,7 @@ from typing import Any
 
 from fastapi import APIRouter, Request
 
-from platform_sdlc.common import OkResult
+from platform_sdlc.common import ApiException, OkResult
 from platform_sdlc.routers.http import read_json
 from platform_sdlc.runtime import AppContext
 
@@ -31,6 +31,27 @@ def router(ctx: AppContext) -> APIRouter:
     @r.get("/api/requirements/{req_id}")
     async def detail(req_id: str) -> dict[str, Any]:
         return await asyncio.to_thread(svc.detail, req_id)
+
+    @r.get("/api/requirements/{req_id}/doc.json")
+    async def doc_json(req_id: str) -> dict[str, Any]:
+        """原文同形状导出（DESIGN-v4 §2.3/§12 一期：curl -o 直落供质检管线；块表权威，空表回退 doc artifact）。"""
+        def load() -> dict[str, Any]:
+            svc.require(req_id)  # 404 守卫（软删根过滤）
+            out = ctx.services.blocks.doc_export(req_id)
+            if out is None:
+                raise ApiException(404, f"原文未导入：{req_id}（无块表数据，先完成 source_import）")
+            return out
+
+        return await asyncio.to_thread(load)
+
+    @r.get("/api/requirements/{req_id}/comments.json")
+    async def comments_json(req_id: str) -> list[dict[str, Any]]:
+        """评论兼容导出（resolve_anchors --comments 契约：数组 + comment_id，按序号 → comment-id 映射）。"""
+        def load() -> list[dict[str, Any]]:
+            svc.require(req_id)
+            return ctx.services.blocks.comments_payload(req_id)
+
+        return await asyncio.to_thread(load)
 
     @r.post("/api/requirements/{req_id}/artifacts")
     async def artifacts(req_id: str, request: Request) -> dict[str, Any]:

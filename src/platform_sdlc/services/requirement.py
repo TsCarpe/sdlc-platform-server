@@ -18,6 +18,7 @@ from platform_sdlc.db import Database
 from platform_sdlc.models import Artifact, ClarifyItem, FrPoint, Requirement, string_list
 from platform_sdlc.repositories import Repos
 from platform_sdlc.schemas import wire
+from platform_sdlc.services.block import BlockService
 from platform_sdlc.services.iteration import NAME_MAX
 from platform_sdlc.states import req_can_transition
 
@@ -28,9 +29,10 @@ _EMPTY_LIST: list[Any] = []
 
 
 class RequirementService:
-    def __init__(self, db: Database, repos: Repos) -> None:
+    def __init__(self, db: Database, repos: Repos, blocks: BlockService) -> None:
         self.db = db
         self.repos = repos
+        self.blocks = blocks  # v4.2：detail.doc 读面切源块表（空表回退 doc artifact）
 
     def list_all(self, iter_name: str | None, status: str | None) -> list[dict[str, Any]]:
         return [self._list_row_dict(r) for r in self.repos.requirement.list_all(iter_name, status)]
@@ -341,7 +343,9 @@ class RequirementService:
         snap = self.repos.artifact.find(req_id, "snapshot")
         if snap is not None:
             out["snapshot"] = {"md": snap.markdown, "at": snap.pushed_at, "version": snap.version}
-        out["doc"] = self._artifact_view(req_id, "doc")
+        # v4.2 读面切源（DESIGN-v4 §2.3）：块表非空 → 块表组装（权威）；空且 doc artifact 存在 → 回退
+        # （未导入卡/verify 夹具过渡安全网——doc artifact 写面已随块表权威退役，仅存读兜底）
+        out["doc"] = self.blocks.doc_view(req_id) or self._artifact_view(req_id, "doc")
         out["domains"] = self._resolve_domains(req_id, audit_view, items)
 
         fr_maps: list[dict[str, Any]] = []

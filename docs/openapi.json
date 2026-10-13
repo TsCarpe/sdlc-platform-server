@@ -210,6 +210,93 @@
     }
    }
   },
+  "/api/requirements/{req_id}/doc.json": {
+   "get": {
+    "summary": "Doc Json",
+    "description": "原文同形状导出（DESIGN-v4 §2.3/§12 一期：curl -o 直落供质检管线；块表权威，空表回退 doc artifact）。",
+    "operationId": "doc_json_api_requirements__req_id__doc_json_get",
+    "parameters": [
+     {
+      "name": "req_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Req Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Doc Json Api Requirements  Req Id  Doc Json Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/requirements/{req_id}/comments.json": {
+   "get": {
+    "summary": "Comments Json",
+    "description": "评论兼容导出（resolve_anchors --comments 契约：数组 + comment_id，按序号 → comment-id 映射）。",
+    "operationId": "comments_json_api_requirements__req_id__comments_json_get",
+    "parameters": [
+     {
+      "name": "req_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Req Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "additionalProperties": true
+         },
+         "title": "Response Comments Json Api Requirements  Req Id  Comments Json Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/requirements/{req_id}/artifacts": {
    "post": {
     "summary": "Artifacts",

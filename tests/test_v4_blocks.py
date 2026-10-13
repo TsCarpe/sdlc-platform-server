@@ -16,6 +16,7 @@ from platform_sdlc.db import Database
 from platform_sdlc.migrations import _SCHEMA, run_migrations
 from platform_sdlc.models import ClarifyItem, ReqBlock, ReqComment, Requirement
 from platform_sdlc.repositories import Repos
+from platform_sdlc.services.block import BlockService
 from platform_sdlc.services.requirement import RequirementService
 
 
@@ -122,7 +123,7 @@ def test_push_artifacts_sets_skill_origin(tmp_path: Path) -> None:
     db = Database(tmp_path / "platform.db")
     run_migrations(db)
     repos = Repos.create(db)
-    svc = RequirementService(db, repos)
+    svc = RequirementService(db, repos, BlockService(db, repos, tmp_path))
     repos.requirement.insert(Requirement(
         id="REQ-2026-001", name="来源标记验证", source_type="text", source_text="# 原文",
         status="submitted", submitted_by="tester",
