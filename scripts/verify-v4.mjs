@@ -3,7 +3,8 @@
 // 覆盖：建卡自动排（只一次）、自建自领自落文件全链（完成回调落库→doc.json/comments.json）、
 // 分源封存守卫、块表空质检 failed 引导、块表就位后质检放行、
 // 块级编辑（diff 预览四态/PUT 应用 blk-ID/幂等/published 与活跃质检双守卫，v4-7）、
-// 评论（CRUD/线程级解决/升级 L 系带 quote·anchor·回链/幂等，v4-8）。
+// 评论（CRUD/线程级解决/升级 L 系带 quote·anchor·回链/幂等，v4-8）、
+// 窗口 1 闭环（编辑→重质检→产物 anchor ∈ 新块集 + L 系幸存，v4-9/10）。
 // 用法：node scripts/verify-v4.mjs [baseUrl]   （默认 http://127.0.0.1:8080；服务从仓根启动）
 const base = process.argv[2] || 'http://127.0.0.1:8080'
 
@@ -236,6 +237,36 @@ await expectErr('POST', `/api/requirements/${req}/comments/${cm1.id}/escalate`, 
 await call('DELETE', `/api/requirements/${req}/comments/${cm2.id}`)
 const list3 = await call('GET', `/api/requirements/${req}/comments`)
 check('删除单条', list3.comments.some(c => c.id === cm2.id), false)
+
+// ===== 8. 窗口 1 闭环（v4-10）：编辑 → 重排 → 重质检 → 产物锚定新块集 =====
+// 「重新质检」= 现有 quality_check 人工创建通道（无新端点）；LLM 分析环节真模型链路归 verify-agent，
+// 此处黑盒走机械闭环：编辑后重排质检任务可行、领取不被启动守卫堵、产物 anchor 锚编辑后块 ID。
+const rq = await call('POST', `/api/requirements/${req}/tasks`, { type: 'quality_check', note: '重新质检' })
+check('编辑后重质检通道开放（人工创建即重新质检）', rq.status, 'queued')
+// FIFO 队列可能先遇到 reqP 发布链 L2 自动排的任务（case_gen / 其遗留 source_import）——顺路 done 排空
+let rqClaimed = null
+for (let i = 0; i < 5; i++) {
+  const t = await call('POST', '/api/tasks/next?runner=verify-v4')
+  if (t.type === 'quality_check') { rqClaimed = t; break }
+  await call('POST', `/api/tasks/${t.id}/done`, { result: '{"drained":"verify-v4 自动任务排空"}' })
+}
+check('重质检正常领取（块表就位不触启动守卫）', [rqClaimed.type, rqClaimed.status], ['quality_check', 'running'])
+await call('POST', `/api/tasks/${rqClaimed.id}/done`, { result: '{"simulated":"verify-v4 闭环"}' })
+
+// 重推产物：anchor 锚编辑后的新块（第 6 段 insert 的 blk-<ulid>）——闭环判据「digest anchor ∈ 新块集」
+const doc3 = await call('GET', `/api/requirements/${req}/doc.json`)
+const blockIds = new Set(doc3.blocks.map(b => b.id))
+const pushed = await call('POST', `/api/requirements/${req}/artifacts`, {
+  digest: { md: '', summary: '重质检后摘要', roles: [], features: [], flows: [], states: [] },
+  audit: { md: '', red: 0, yellow: 0, blue: 0, items: [] },
+  items: [{ seq: 'P1', level: 'yellow', theme: 't', question: '编辑后新问题', anchor: newId }],
+})
+check('重推产物成功（编辑后的卡照常走质检→澄清流）', pushed.ok, true)
+const detailAfter = await call('GET', `/api/requirements/${req}`)
+const p1 = detailAfter.items.find(i => i.seq === 'P1')
+check('闭环判据：digest anchor ∈ 编辑后块集', [p1.anchor, blockIds.has(p1.anchor)], [newId, true])
+check('闭环判据：L 系行经重推仍幸存（v4-9 合并保护）',
+      detailAfter.items.filter(i => i.seq.startsWith('L')).length, 2)
 
 // 收尾清理：reqP 建卡自动排的 source_import 留在队列会干扰后续脚本，领走置 failed
 const leftover = await fetch(`${base}/api/tasks/next?runner=verify-v4`, { method: 'POST' })

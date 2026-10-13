@@ -64,6 +64,10 @@ server/src/platform_sdlc/
 | 质检启动守卫（块表空 failed 引导） | services/task.claim | test_v4_import / verify-v4 |
 | source_import 落库=文件字节（不经 LLM 上下文） | services/task.finish + block.import_from_output | test_v4_import / verify-v4 / verify-agent |
 | 模板三处一致性（prompts ∪ runner ∪ task_rules/DEFAULT_RULES） | scripts/check_task_templates.py（CI 第五门） | CI + test_v4_import |
+| 窗口 1 编辑守卫（v4 §1/§5.3：拒 published / 活跃质检互斥 / 块表空拒 / 软删复活拒） | services/block._guard_edit | test_v4_edit / verify-v4 |
+| 行内子块紧随父块（v4 §2.3 写入约束：seq 区间与 parent 递归答案一致） | services/block._parse_submitted | test_v4_edit |
+| 评论升级幂等 + L 系两族（v4 §4.1/§6.3：重复升级 409 / origin=local 回链） | services/comment.escalate | test_v4_comments / verify-v4 |
+| 推送按来源合并（v4 §6.3/§9：删 skill+incremental 保 local，L 系经重推不丢） | repositories/clarify_item.delete_machine_by_req | test_v4_comments / verify-m2 |
 
 ## 6. 数据与部署
 

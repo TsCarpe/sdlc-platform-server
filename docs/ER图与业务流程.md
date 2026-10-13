@@ -385,7 +385,7 @@ flowchart TD
 
 | type | 草稿类型（回传） | 前置守卫 |
 |---|---|---|
-| `quality_check` | `digest_bundle` | 非 published；同类型无 queued/running（count_active 防重） |
+| `quality_check` | `digest_bundle` | 非 published；同类型无 queued/running（count_active 防重）。**人工创建即「重新质检」**（v4-10：无专用端点——窗口 1 编辑后的重检走同一通道，编辑×活跃质检互斥见 §14-13） |
 | `standard_doc` | `standard` | **必须 clarifying 且澄清全部处置** |
 | `case_gen` | `cases` | 发布后流程（需 published） |
 | `design_gen` | `design` | 需 published；非 C 级；未声明轻量跳过；已配目标仓（`DesignService.assert_gen_allowed`） |
@@ -636,7 +636,7 @@ flowchart TD
 | 域 | 端点 |
 |---|---|
 | 健康 | `GET /api/health` |
-| 需求 | `POST /api/requirements` · `GET /api/requirements`（iter/status 过滤）· `GET /api/requirements/{id}` · `POST …/artifacts`（质检推送）· `GET …/answers` · `PUT …/answers/{seq}`（处置）· `POST …/publish` · `POST …/status` · `DELETE …/{id}`（软删）· `GET …/doc.json`（块表权威原文导出，curl 直落供质检管线；空表回退 doc artifact）· `GET …/comments.json`（resolve_anchors --comments 兼容格式）· `GET /api/fr-points?req_id=` |
+| 需求 | `POST /api/requirements` · `GET /api/requirements`（iter/status 过滤）· `GET /api/requirements/{id}` · `POST …/artifacts`（质检推送）· `GET …/answers` · `PUT …/answers/{seq}`（处置）· `POST …/publish` · `POST …/status` · `DELETE …/{id}`（软删）· `GET …/doc.json`（块表权威原文导出，curl 直落供质检管线；空表回退 doc artifact）· `GET …/comments.json`（resolve_anchors --comments 兼容格式）· `PUT …/blocks`（v4-7 窗口 1 块级直接编辑：全量块数组→服务端 diff LIS→事务应用）· `POST …/blocks/diff`（diff 预览 dry-run）· `POST/GET …/comments`（v4-8 评论 CRUD，GET 带 unresolvedCount）· `POST …/comments/{cid}/resolve`（线程级解决/重开）· `DELETE …/comments/{cid}` · `POST …/comments/{cid}/escalate`（升级澄清项 L 系，src_comment_id 回链）· `GET /api/fr-points?req_id=` |
 | 任务/草稿 | `POST …/tasks` · `GET /api/tasks`（过滤）· `POST /api/tasks/next?runner=`（原子领取，写语义纳入 X-Token，空 204）· `POST /api/tasks/recover-stale?runner=`（执行器崩溃恢复，按 runner 归属过滤）· `POST /api/tasks/{id}/done\|failed\|retry\|cancel` · `PUT/GET/DELETE …/drafts[/{type}]` · `POST …/drafts/{type}/approve` |
 | 用例 | `POST /api/cases`（skill 批量）· `POST /api/cases/form` · `GET /api/cases`（iter/reqId/status/tool/q）· `GET/PATCH /api/cases/{req}/{case}` · `POST …/comments` |
 | 设计 | `GET …/design` · `PUT …/target-repos` · `POST …/design/skip` |
@@ -650,7 +650,7 @@ flowchart TD
 
 ## 14. 业务红线索引（改代码前对照）
 
-1. **推送全量替换**；重推按 `seq+问题文本` 保留已答，P 编号漂移不携带。
+1. **推送按来源合并（v4 §6.3/§9）**：重推删机器行（origin=skill/incremental）、保留 local 行（评论升级 L 系经重推不丢）；已答按 `seq+问题文本` 保留，P 编号漂移不携带。
 2. **发布终态锁**：拒推 / 拒 digest·standard 草稿 / 拒质检·合成任务 / 拒作答；豁免面 = 用例/设计/修订/门禁（发布后合法类型，D36 统一口径）。
 3. **用例乐观锁**：409 + conflicts 明细，整批拒绝零写入。
 4. **sdlc-test 来源用例平台只读 + 评论**；表单来源可编辑。
@@ -662,6 +662,8 @@ flowchart TD
 10. 软删除行与子表保留，编号永不复用。
 11. **导入一次性封存（v4 §2.4）**：全量替换式重导在有平台数据后封存——text 源块表非空即封存（重跑 ID 全换族锚定下游全漂移）；feishu 源有平台编辑痕迹或平台评论即封存；失败重试块表空合法；对账式重导（变更单，三期）永远合法。
 12. **模板三处一致性（v4 §6.1）**：任务类型在 prompts.py 分支 ∪ runner.mjs promptFor ∪ task_rules/DEFAULT_RULES 三处同步，`scripts/check_task_templates.py` CI 守门，漏一处红。
+13. **窗口 1 编辑守卫（v4 §1 表/§5.3）**：块级直接编辑拒 published（终态锁）；保存时存在 queued/running 质检任务 → 409（防产物 anchor 基于编辑混合态）；块表空无基线拒；软删块复活拒（基线过期，复活是三期放弃变更语义）；diff 只在服务端一份（LIS 判 move），insert 服务端发 blk-<ulid>。
+14. **评论升级幂等（v4 §4.1）**：每条评论只可升级一次（重复 409）；已解决评论仍可升级；升级不改评论 resolved 态；L 系行仅人工删、计入发布守卫澄清全处置。
 
 ---
 
