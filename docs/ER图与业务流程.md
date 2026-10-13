@@ -83,7 +83,7 @@ flowchart LR
 
 ## 2. ER 图
 
-### 2.1 全量实体关系（13 张表）
+### 2.1 全量实体关系（15 张表，v4.1 增 req_block/req_comment）
 
 SQLite **不建外键**：实线表示服务层维护的逻辑归属；`iteration→requirement` 是弱引用（`requirement.iter` 指向迭代名，1:1 由服务层守卫 + 存活行检测保证）；`test_case.points` 对 `fr_point.id` 是 JSON 数组内的引用（RTM 覆盖率的计算依据，非 SQL 关系）。
 
@@ -240,6 +240,30 @@ erDiagram
         TEXT rev_location "落改落点（<文件+位置>）"
         TEXT rev_status "待执行 | 已执行"
     }
+    REQ_BLOCK["req_block 原文块（v4.1 块表权威）"] {
+        TEXT req_id PK "复合主键之一"
+        TEXT block_id PK "锚点即主键：导入沿用飞书块 ID；平台编辑新发 blk-<ulid>（禁内容哈希）"
+        INTEGER seq "文档序，间隔 1000（重排=整体重排属常规操作）"
+        TEXT type "title|heading|paragraph|list-item|table-row|image|attachment|whiteboard"
+        TEXT text
+        TEXT attrs_json "level/marker/depth/parent/media/head/cells 等（path/ordinal 派生读时推导）"
+        INTEGER version "块级版本（编辑 +1）"
+        TEXT updated_at
+        TEXT updated_by
+        TEXT deleted "软删：变更留痕"
+    }
+    REQ_COMMENT["req_comment 评论（v4.1）"] {
+        INTEGER id PK "AUTOINCREMENT"
+        TEXT req_id
+        TEXT block_id "空=卡片级；非空=锚定原文块（归属由本表承载，宿主 comment-refs 不落库）"
+        TEXT origin "platform | feishu（导入）"
+        TEXT external_id "飞书 comment-id：幂等重导唯一定位键"
+        TEXT author "手填身份（无登录约定）"
+        TEXT text
+        INTEGER reply_to "回复链"
+        INTEGER resolved "未解决→已解决（轻量两态）"
+        TEXT created_at
+    }
 
     ITERATION ||--o| REQUIREMENT : "iter 弱引用，存活 1:1"
     REQUIREMENT ||--o{ CLARIFY_ITEM : "澄清清单（重推全量替换）"
@@ -251,6 +275,8 @@ erDiagram
     REQUIREMENT ||--o{ TASK : "任务队列"
     REQUIREMENT ||--o{ DRAFT_ARTIFACT : "草稿（按 type）"
     TASK |o--o| DRAFT_ARTIFACT : "task_id 回传来源"
+    REQUIREMENT ||--o{ REQ_BLOCK : "原文块（块表权威，doc artifact 只读兜底）"
+    REQUIREMENT ||--o{ REQ_COMMENT : "评论（双 origin 同管道）"
     REQUIREMENT ||--o{ GATE_ROUND : "评审轮（旧轮只读归档）"
     GATE_ROUND ||--o{ GATE_ISSUE : "issue 清单"
     TEST_CASE }o--o{ FR_POINT : "points JSON 引用（RTM，读时聚合不落库）"
@@ -273,6 +299,8 @@ erDiagram
 | `iteration` | 迭代 | 名即主键；与需求 **1:1 = 存活需求按 iter 唯一**（软删自动释放迭代名）；仅空迭代可删（物理删除） |
 | `gate_round` | 评审轮 | 权威状态仅两值：pending→released；放行后轮只读；新轮=复审（GR-3），旧轮归档 |
 | `gate_issue` | 评审 issue 与裁决 | `merged_unit` 裁决单元：人裁决的是单元，同单元批量同裁；`filed=1` 备案区放行校验豁免；落改闭环 = 落点已填 ∧ `rev_status=done` |
+| `req_block` | v4.1 原文块（块表权威） | 复合主键 `(req_id,block_id)`，锚点即主键（导入沿用飞书块 ID，平台编辑新发 `blk-<ulid>` 禁内容哈希）；`seq` 间隔 1000，重排=事务内整体重排属常规操作；派生字段（path/ordinal）读时推导不落库；comment 不入块表（评论单一权威在 req_comment）；`deleted` 软删留痕 |
+| `req_comment` | v4.1 评论（双 origin） | `origin` 区分 platform/feishu；`external_id`=飞书 comment-id（幂等重导唯一定位键）；`block_id` 空=卡片级非空=锚定块；`reply_to` 回复链；导入幂等=替换 feishu 行、平台行不动 |
 
 > 模式备注：`schema.sql` 头注明结构以运行库为权威；schema 变更 = 建表加 `IF NOT EXISTS` + `migrations.py` 判列补列（幂等）。反向索引等**读时聚合不落库**。
 
@@ -363,6 +391,7 @@ flowchart TD
 | `design_gen` | `design` | 需 published；非 C 级；未声明轻量跳过；已配目标仓（`DesignService.assert_gen_allowed`） |
 | `design_rev` | `design` | 需 published；已有定稿设计（落改闭环用） |
 | `gate_review` | `gate_issues` | 需 published（与开闸同口径，堵"排队即被发布误作废"缝隙） |
+| `source_import`（v4.3） | **无草稿**（noDraftTypes） | 分源封存守卫（§2.4）：text 源块表非空拒；feishu 源有平台编辑痕迹/平台评论拒；产物 = `tasks/<task_id>/out/doc.json`（parse_doc 输出），落库走 `finish` 完成回调（服务端直读文件字节，不经 LLM 上下文） |
 
 ### 6.2 任务状态机
 
@@ -607,7 +636,7 @@ flowchart TD
 | 域 | 端点 |
 |---|---|
 | 健康 | `GET /api/health` |
-| 需求 | `POST /api/requirements` · `GET /api/requirements`（iter/status 过滤）· `GET /api/requirements/{id}` · `POST …/artifacts`（质检推送）· `GET …/answers` · `PUT …/answers/{seq}`（处置）· `POST …/publish` · `POST …/status` · `DELETE …/{id}`（软删）· `GET /api/fr-points?req_id=` |
+| 需求 | `POST /api/requirements` · `GET /api/requirements`（iter/status 过滤）· `GET /api/requirements/{id}` · `POST …/artifacts`（质检推送）· `GET …/answers` · `PUT …/answers/{seq}`（处置）· `POST …/publish` · `POST …/status` · `DELETE …/{id}`（软删）· `GET …/doc.json`（块表权威原文导出，curl 直落供质检管线；空表回退 doc artifact）· `GET …/comments.json`（resolve_anchors --comments 兼容格式）· `GET /api/fr-points?req_id=` |
 | 任务/草稿 | `POST …/tasks` · `GET /api/tasks`（过滤）· `POST /api/tasks/next?runner=`（原子领取，写语义纳入 X-Token，空 204）· `POST /api/tasks/recover-stale?runner=`（执行器崩溃恢复，按 runner 归属过滤）· `POST /api/tasks/{id}/done\|failed\|retry\|cancel` · `PUT/GET/DELETE …/drafts[/{type}]` · `POST …/drafts/{type}/approve` |
 | 用例 | `POST /api/cases`（skill 批量）· `POST /api/cases/form` · `GET /api/cases`（iter/reqId/status/tool/q）· `GET/PATCH /api/cases/{req}/{case}` · `POST …/comments` |
 | 设计 | `GET …/design` · `PUT …/target-repos` · `POST …/design/skip` |
@@ -627,10 +656,12 @@ flowchart TD
 4. **sdlc-test 来源用例平台只读 + 评论**；表单来源可编辑。
 5. **L2 编排只自动一次**（EXISTS 直查判据）；人取消即终局不复活；编排失败不连累主操作。
 6. **任务原子 claim**：双通道互斥只靠条件 UPDATE；finish 仅 running 可回报。
-7. **agent 工具面不存在正式产物写入通道**（写入仅 put_draft/upload_media）。
+7. **AI 生成/判断的内容不得直接成为正式产物**（必须草稿→采纳；写入仅 put_draft/upload_media）——唯一例外：服务端直读脚本输出的确定性管道（source_import 完成回调落库，内容不经 LLM 上下文，判据可验证）。
 8. **GR-2/3/4 平台机械校验 + 放行关卡互认**：三条件现算、落改闭环、变更基线比对、旧轮只读。
 9. 迭代与需求 1:1（存活行口径）；仅空迭代可删。
 10. 软删除行与子表保留，编号永不复用。
+11. **导入一次性封存（v4 §2.4）**：全量替换式重导在有平台数据后封存——text 源块表非空即封存（重跑 ID 全换族锚定下游全漂移）；feishu 源有平台编辑痕迹或平台评论即封存；失败重试块表空合法；对账式重导（变更单，三期）永远合法。
+12. **模板三处一致性（v4 §6.1）**：任务类型在 prompts.py 分支 ∪ runner.mjs promptFor ∪ task_rules/DEFAULT_RULES 三处同步，`scripts/check_task_templates.py` CI 守门，漏一处红。
 
 ---
 
@@ -640,7 +671,7 @@ flowchart TD
 |---|---|---|
 | `SDLC_PLATFORM_URL` | Runner 指向的平台地址 | `http://127.0.0.1:8080` |
 | `SDLC_RUNNER_NAME` / `SDLC_RUNNER_INTERVAL` / `SDLC_RUNNER_TIMEOUT_MIN` | Runner 名 / 轮询间隔 / 超时 | `local-<pid>` / 3000ms / 30min |
-| `SDLC_SKILLS_REPO` / `SDLC_CLAUDE_CLI` / `SDLC_WORKSPACE` | 技能源 / claude CLI 路径 / 工作区 | `~/IdeaProjects/claude-sdlc-skills` / `~/.local/bin/claude` / 仓根 |
+| `SDLC_SKILLS_REPO` / `SDLC_CLAUDE_CLI` / `SDLC_WORKSPACE` | 技能源 / claude CLI 路径 / 工作区根（v4.3 三级优先：env > 平台 meta 下发 workspaceRoot > 仓根——与服务端落库回调同源 ResolvedPaths.workspace_root） | `~/IdeaProjects/claude-sdlc-skills` / `~/.local/bin/claude` / 仓根 |
 | `SDLC_AGENT_ENABLED` | 进程内 AgentLoop 开关（lifespan 启动） | — |
 | `SDLC_AGENT_BASE_URL` / `SDLC_AGENT_API_KEY` / `SDLC_AGENT_MODEL` | OpenAI 兼容端点接线（三者齐备才可用） | — |
 | `SDLC_AGENT_SKILLS_REPO` / `SDLC_AGENT_WORKSPACE_ROOT` / `SDLC_AGENT_POLL_INTERVAL_MS` / `SDLC_AGENT_TIMEOUT_MIN` / `SDLC_AGENT_MAX_ITERS` | 进程内通道工作区与节奏 | — |

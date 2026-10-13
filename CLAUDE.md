@@ -6,8 +6,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 SDLC 产物协作平台后端（Python/FastAPI，v3.0 起自 Java 迁移）。单服务单库（SQLite 单连接单写者），
 任务队列 + 双执行通道（外置 runner.mjs spawn claude CLI / 进程内 openai-agents），产物走「草稿 → 人工采纳/发布」两态。
-前端在姊妹仓 `sdlc-platform-web`（构建产物拷入 `static/` 同源托管）。权威文档：`docs/DEV-PLAN.md`（API 契约）、
-`docs/DESIGN-v3-Python迁移.md`（映射 + 守卫对照）。环境变量（SDLC_AGENT_* / SDLC_WRITE_TOKEN 等）见 README。
+前端在姊妹仓 `sdlc-platform-web`（构建产物拷入 `static/` 同源托管）。权威文档：人读契约 = `docs/ER图与业务流程.md` §13、
+机器契约 = `docs/openapi.json`（CI 快照门）；`docs/DESIGN-v4-需求平台权威化.md`（v4 设计）与 `docs/EXEC-PLAN-v4.md`（实施计划）。
+环境变量（SDLC_AGENT_* / SDLC_WRITE_TOKEN 等）见 README。
+
+v4 起需求原文以块表为权威（`req_block` 一行一块锚点即主键，`req_comment` 双 origin 评论）：
+source_import 任务建卡自动排、完成回调服务端直读 `tasks/<task_id>/out/doc.json` 落库（不经 LLM 上下文）；
+质检纯分析读块模型（`GET …/doc.json` / `comments.json` curl 直落）；分源封存守卫管住全量重导。
+新增任务类型必须三处同步（prompts.py ∪ runner.mjs promptFor ∪ task_rules/DEFAULT_RULES），
+`scripts/check_task_templates.py` 为 CI 第五道门。
 
 ## 常用命令
 
@@ -58,8 +65,10 @@ IDE 断点：直接 Debug `debug_server.py`（单进程无 reload，等价 dev.s
 
 推送全量替换；重推按 seq+问题文本保留已答内容（P 编号漂移不携带）；发布终态锁（拒推/拒草稿/拒任务/拒作答）；
 用例乐观锁 409+conflicts；sdlc-test 来源用例平台只读+评论；L2 编排只自动一次（人取消即终局）；
-任务原子 claim 双通道互斥；agent 工具面不存在正式产物写入通道；GR-2/3/4 平台机械校验 + 放行关卡互认。
-细节见 docs/DESIGN-v3-Python迁移.md §5 守卫对照清单。
+任务原子 claim 双通道互斥；AI 生成内容不得直接成为正式产物（草稿→采纳两态不变）——唯一例外是
+服务端直读脚本输出的确定性管道（source_import 完成回调）；导入分源封存（全量重导有平台数据后拒绝）；
+GR-2/3/4 平台机械校验 + 放行关卡互认。
+细节见 docs/DESIGN-v3-Python迁移.md §5 守卫对照清单（含 v4 增补行）与 ER 图 §14 红线索引。
 
 ## Git 惯例
 

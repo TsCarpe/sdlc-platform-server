@@ -45,7 +45,7 @@ server/src/platform_sdlc/
 - runner.mjs 通道零改动（HTTP 面），双通道原子 claim 互斥语义不变。
 - P5 新增查询助理：只读工具面 + 自实现 Session（独立 assistant.db）+ SSE 流式（`POST /api/assistant/chat`）。
 
-## 5. 守卫对照清单（迁移验收 = 逐条打钩）
+## 5. 守卫对照清单（迁移验收 = 逐条打钩；v4 增补见尾四行，权威设计 = docs/DESIGN-v4-需求平台权威化.md、实施计划 = docs/EXEC-PLAN-v4.md）
 
 | 红线 | 落点 | 验收 |
 | :--- | :--- | :--- |
@@ -60,6 +60,10 @@ server/src/platform_sdlc/
 | 软删根过滤 / REQ 编号不复用 / 迭代名释放 | repositories/requirement | verify-delete |
 | 设计两值落库 / 门禁两值落库 / 六态推导 | services/design + gate | verify-design / verify-gate |
 | seq_case_no 单调账本（硬删不复用） | migrations + repositories/test_case | test_repos |
+| 导入分源封存（v4 §2.4：text 块表非空 / feishu 平台痕迹） | services/task._guard_import_sealed | test_v4_import / verify-v4 |
+| 质检启动守卫（块表空 failed 引导） | services/task.claim | test_v4_import / verify-v4 |
+| source_import 落库=文件字节（不经 LLM 上下文） | services/task.finish + block.import_from_output | test_v4_import / verify-v4 / verify-agent |
+| 模板三处一致性（prompts ∪ runner ∪ task_rules/DEFAULT_RULES） | scripts/check_task_templates.py（CI 第五门） | CI + test_v4_import |
 
 ## 6. 数据与部署
 
