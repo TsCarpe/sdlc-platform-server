@@ -89,6 +89,8 @@ class ChangeService:
             "proposedBy": c.proposed_by, "confirmedBy": c.confirmed_by, "status": c.status,
             "abortedBy": c.aborted_by, "createdAt": c.created_at,
             "confirmedAt": c.confirmed_at, "abortedAt": c.aborted_at,
+            # draft 重编辑数据源（blocks_json 留底原样带出；confirmed/aborted 为当时快照，只读呈现）
+            "blocks": _load_raw_list(c.blocks_json),
             "items": [{"blockId": i.block_id, "op": i.op, "oldText": i.old_text, "newText": i.new_text,
                        "oldAttrs": _load_or_none(i.old_attrs), "newAttrs": _load_or_none(i.new_attrs)}
                       for i in items],

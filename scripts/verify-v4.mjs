@@ -300,6 +300,8 @@ const saved = await call('PUT', `/api/requirements/${req}/changes/${draft.id}`, 
 })
 check('draft 反复保存：全量重算（相对块表基线：delete 回收，edit/insert 保持）',
       [saved.title, saved.counts], ['口径修订 v2', { edit: 1, insert: 1, delete: 0, move: 0 }])
+check('draft detail 带留底块数组（前端重编辑数据源，blocks_json 原样带出）',
+      saved.blocks.length, 4)
 
 // 影响面预览（保存后 items 已无 delete）：edit(v4-p1) 直接锚定；L01 锚 v4-p1 命中、P1 锚 newId 未动不进
 const impact = await call('GET', `/api/requirements/${req}/changes/${draft.id}/impact`)
