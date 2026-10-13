@@ -8,13 +8,14 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
 from platform_sdlc.common import ApiException, ConflictException
 from platform_sdlc.db import Database
 from platform_sdlc.migrations import run_migrations
-from platform_sdlc.models import ClarifyItem, DraftArtifact, FrPoint, Requirement, Task
+from platform_sdlc.models import ClarifyItem, DraftArtifact, FrPoint, MediaFile, Requirement, Task
 from platform_sdlc.repositories import Repos
 from platform_sdlc.services import Services
 
@@ -49,7 +50,7 @@ def test_push_artifacts_keeps_answers(env: tuple[Repos, Services]) -> None:
     """红线：重推产物按 seq+问题文本保留平台已答内容；问题文本已变（P 编号漂移）不携带。"""
     repos, services = env
     req_id = make_req(repos, services)
-    payload = {"digest": {"md": "# d", "risk_tier": "B", "fr_points": [
+    payload: dict[str, Any] = {"digest": {"md": "# d", "risk_tier": "B", "fr_points": [
         {"id": "需求.FR-01", "name": "登录"}]},
         "audit": {"md": "# a", "red": 0, "yellow": 1, "blue": 0, "items": []},
         "items": [
@@ -62,7 +63,7 @@ def test_push_artifacts_keeps_answers(env: tuple[Repos, Services]) -> None:
     services.requirements.set_answer(req_id, "P01", {"answer": "至少 8 位"})
     services.requirements.set_answer(req_id, "P02", {"answer": "6 位"})
     # 重推：P01 同文保留答复；P02 已处置且问题文本已变 → 漂移不携带（pending 纯净行不参与漂移检测）
-    payload2 = {**payload, "items": [
+    payload2: dict[str, Any] = {**payload, "items": [
         {"seq": "P01", "level": "red", "theme": "登录", "question": "密码规则？"},
         {"seq": "P02", "level": "yellow", "theme": "登录", "question": "验证码改成多少位？"},
     ]}
@@ -150,7 +151,7 @@ def test_publish_requires_all_disposed(env: tuple[Repos, Services]) -> None:
 # ---------- 用例域红线 ----------
 
 
-def _sync_body(req_id: str, items: list[dict]) -> dict:
+def _sync_body(req_id: str, items: list[dict[str, Any]]) -> dict[str, Any]:
     return {"reqId": req_id, "items": items}
 
 
@@ -248,8 +249,10 @@ def test_settle_terminal_cancels_queued(env: tuple[Repos, Services]) -> None:
     repos.task.claim("runner-x", NOW)  # t1 → running（先入队先领）
     cancelled = services.tasks.settle_terminal(req_id)
     assert cancelled == 1  # 只有 queued 的 t2 被取消
-    assert repos.task.find(t2).status == "failed"
-    assert repos.task.find(t1).status == "running"
+    t2r = repos.task.find(t2)
+    t1r = repos.task.find(t1)
+    assert t2r is not None and t2r.status == "failed"
+    assert t1r is not None and t1r.status == "running"
 
 
 # ---------- 门禁域红线 ----------
@@ -298,18 +301,22 @@ def test_gate_release_and_case_mutual_recognition(env: tuple[Repos, Services]) -
     assert d is not None
     d.content_json = '{"issues":[{"code":"A-01","sev":"mid","scene":"白话场景"}]}'
     repos.draft.upsert(d, NOW)
-    services.gate.ingest(req_id, round_row.id, None)
+    rid = round_row.id
+    assert rid is not None  # 开闸回填的轮 id（类型收窄）
+    services.gate.ingest(req_id, rid, None)
+    issue = repos.gate.list_issues(rid)[0]
+    iid = issue.id
+    assert iid is not None  # 入库回填（类型收窄；局部变量收窄不被调用边界打破）
     # 裁决落改：先缺落点应 400
     with pytest.raises(ApiException):
-        services.gate.verdict(repos.gate.list_issues(round_row.id)[0].id, {"verdict": "revise"})
-    issue = repos.gate.list_issues(round_row.id)[0]
-    services.gate.verdict(issue.id, {"verdict": "revise", "revLocation": "a.py:L1"})
+        services.gate.verdict(iid, {"verdict": "revise"})
+    services.gate.verdict(iid, {"verdict": "revise", "revLocation": "a.py:L1"})
     # 落改未执行 → 放行拒绝
     with pytest.raises(ApiException) as e:
-        services.gate.release(round_row.id, {"by": "qa"})
+        services.gate.release(rid, {"by": "qa"})
     assert "落改未闭环" in str(e.value)
-    services.gate.revision(issue.id, "a.py:L1", "done")
-    out = services.gate.release(round_row.id, {"by": "qa"})
+    services.gate.revision(iid, "a.py:L1", "done")
+    out = services.gate.release(rid, {"by": "qa"})
     # 用例在放行前已全部定稿 → 互认转换 0 条（互认是防御性兜底：draft sdlc-test 用例自动置 reviewed）
     assert out["ok"] is True and out["casesConfirmed"] == 0
     assert repos.test_case.find(req_id, "TC-1").status == "reviewed"  # type: ignore[union-attr]
@@ -503,28 +510,29 @@ def test_list_synced_at_null_before_push(env: tuple[Repos, Services]) -> None:
     assert isinstance(row2.synced_at, str) and row2.synced_at  # 推送后为时间串
 
 
-def test_workspace_escape_blocked(tmp_path: object) -> None:
+def test_workspace_escape_blocked(tmp_path: Path) -> None:
     """工作区越界：兄弟前缀目录（../ws-evil）必须被拦（原 startswith 前缀比较漏判）。"""
     from types import SimpleNamespace
 
+    from platform_sdlc.agent.context import TaskRunContext
     from platform_sdlc.agent.tools import _resolve_in_workspace
 
-    root = tmp_path / "ws"  # type: ignore[operator]
+    root = tmp_path / "ws"
     root.mkdir()
     (tmp_path / "ws-evil").mkdir()  # 共享前缀的兄弟目录
     (tmp_path / "ws-evil" / "f.txt").write_text("x")
-    ctx = SimpleNamespace(workspace=root)  # type: ignore[arg-type]
+    ctx = cast(TaskRunContext, SimpleNamespace(workspace=root))
     assert _resolve_in_workspace(ctx, "a/b.txt").is_relative_to(root.resolve())  # 正常相对路径
     for bad in ("../ws-evil/f.txt", "../../etc/passwd"):
         with pytest.raises(ValueError, match="路径越界"):
-            _resolve_in_workspace(ctx, bad)  # type: ignore[arg-type]
+            _resolve_in_workspace(ctx, bad)
 
 
-def test_safe_static_file_sibling_prefix(tmp_path: object) -> None:
+def test_safe_static_file_sibling_prefix(tmp_path: Path) -> None:
     """静态兜底路由：兄弟前缀目录文件不得命中（原 startswith 漏判）。"""
     from platform_sdlc.main import _safe_static_file
 
-    root = tmp_path / "static"  # type: ignore[operator]
+    root = tmp_path / "static"
     (root / "assets").mkdir(parents=True)
     (root / "favicon.svg").write_text("<svg/>")
     (tmp_path / "static-backup").mkdir()
@@ -585,9 +593,10 @@ def test_media_upload_same_id_concurrent_idempotent(env: tuple[Repos, Services])
     repos, services = env
     req_id = make_req(repos, services)
     payload = b"x" * 64
+    def _upload(_: int) -> MediaFile:
+        return services.media.upload(req_id, "a.png", "image/png", payload, explicit_id="m-000000000001")
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:
-        outs = list(pool.map(
-            lambda _: services.media.upload(req_id, "a.png", "image/png", payload, explicit_id="m-000000000001"),
-            range(6)))
+        outs = list(pool.map(_upload, range(6)))
     assert all(f.media_id == "m-000000000001" for f in outs)
     assert len(repos.media.list_by_req(req_id)) == 1  # 只落一行

@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from platform_sdlc.common import is_json_obj
 from platform_sdlc.models import Requirement
 
 
@@ -52,7 +53,7 @@ def sys_prompt(task_type: str, card: Requirement, skills_repo: Path, repos_of: l
                 "6. 输出 SDLC_TASK_RESULT 行（用例数/FR 覆盖数/verifyRefs 数）。")
     if task_type == "design_gen":
         tier = card.risk_tier or "A"
-        sb = []
+        sb: list[str] = []
         for i, b in enumerate(repos_of, 1):
             line = f"   {i}. [{b.get('role') or '未标注'}|{b.get('kind')}] {b.get('ref')}"
             if b.get("branch"):
@@ -107,7 +108,7 @@ def payload_note(payload_json: str) -> str:
     """任务 payload 里的 note（design_rev 的落改工作项）；坏值降级空串。"""
     try:
         v = json.loads(payload_json or "{}")
-        return str(v.get("note", "")) if isinstance(v, dict) else ""
+        return str(v.get("note", "")) if is_json_obj(v) else ""
     except Exception:
         return ""
 

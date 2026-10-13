@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import sqlite3
 import threading
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
@@ -72,7 +72,7 @@ class Database:
             self._conn.executescript(script)
 
     @contextmanager
-    def tx(self) -> Iterator[sqlite3.Connection]:
+    def tx(self) -> Generator[sqlite3.Connection, None, None]:
         """服务操作粒度事务：多步读-改-写全程持锁，任何异常回滚。
         可重入：嵌套调用加入外层事务，COMMIT/ROLLBACK 由最外层负责（RLock 同线程）。"""
         with self._lock:

@@ -13,7 +13,7 @@ from contextlib import suppress
 from datetime import datetime
 from typing import Any
 
-from platform_sdlc.common import ApiException, Times, jarray, jbool, jint, jrequired, jstrings, jtext
+from platform_sdlc.common import ApiException, Times, is_json_list, is_json_obj, jarray, jbool, jint, jrequired, jstrings, jtext
 from platform_sdlc.db import Database
 from platform_sdlc.models import Artifact, ClarifyItem, FrPoint, Requirement, string_list
 from platform_sdlc.repositories import Repos
@@ -111,9 +111,9 @@ class RequirementService:
             digest = body.get("digest")
             audit = body.get("audit")
             items = body.get("items") or _EMPTY_LIST
-            if not isinstance(digest, dict) or not isinstance(audit, dict):
+            if not is_json_obj(digest) or not is_json_obj(audit):
                 raise ApiException(400, "缺少 digest 或 audit")
-            if not isinstance(items, list):
+            if not is_json_list(items):
                 raise ApiException(400, "items 必须是数组")
             if not items:
                 raise ApiException(400, "澄清清单 items 不能为空")
@@ -182,7 +182,7 @@ class RequirementService:
 
             snapshot_updated = False
             snapshot = body.get("snapshot")
-            snap_md = jtext(snapshot, "md", "") if isinstance(snapshot, dict) else ""
+            snap_md = jtext(snapshot, "md", "") if is_json_obj(snapshot) else ""
             if snap_md.strip():
                 self.repos.artifact.upsert(req_id, "snapshot", snap_md, "", at)
                 snapshot_updated = True
@@ -190,7 +190,7 @@ class RequirementService:
             doc_updated = False
             missing_media = 0
             doc = body.get("doc")
-            if isinstance(doc, dict) and isinstance(doc.get("blocks"), list) and doc.get("blocks"):
+            if is_json_obj(doc) and is_json_list(doc.get("blocks")) and doc.get("blocks"):
                 doc_out: dict[str, Any] = {"blocks": doc.get("blocks"), "media": doc.get("media") or []}
                 if doc.get("source") is not None:
                     doc_out["source"] = doc.get("source")
@@ -231,7 +231,7 @@ class RequirementService:
 
     def answers(self, req_id: str) -> list[dict[str, Any]]:
         self.require(req_id)
-        out = []
+        out: list[dict[str, Any]] = []
         for c in self.repos.clarify_item.list_by_req(req_id):
             out.append({
                 "seq": c.seq, "level": c.level, "theme": c.theme, "question": c.question,
@@ -323,11 +323,11 @@ class RequirementService:
                     related_by.setdefault(ref, []).append(t.id)
 
         # 体检条目补 relatedCases（含空数组，形状稳定）；未推产物的卡无 audit 视图，跳过
-        if audit_view is not None and isinstance(audit_view.get("content"), dict):
+        if audit_view is not None and is_json_obj(audit_view.get("content")):
             audit_items = audit_view["content"].get("items")
-            if isinstance(audit_items, list):
+            if is_json_list(audit_items):
                 for it in audit_items:
-                    if isinstance(it, dict):
+                    if is_json_obj(it):
                         it["relatedCases"] = related_by.get(jtext(it, "id", ""), [])
 
         out: dict[str, Any] = {
@@ -342,7 +342,7 @@ class RequirementService:
         out["doc"] = self._artifact_view(req_id, "doc")
         out["domains"] = self._resolve_domains(req_id, audit_view, items)
 
-        fr_maps = []
+        fr_maps: list[dict[str, Any]] = []
         for p in frs:
             fr_maps.append({
                 "id": p.id, "name": p.name, "source": p.source, "group": p.group,
@@ -378,10 +378,10 @@ class RequirementService:
         if audit_view is None or not isinstance(audit_view.get("content"), dict):
             return None
         items = audit_view["content"].get("items")
-        if not isinstance(items, list) or not items:
+        if not is_json_list(items) or not items:
             return None
-        red = sum(1 for it in items if isinstance(it, dict) and jtext(it, "level", "") == "red")
-        yellow = sum(1 for it in items if isinstance(it, dict) and jtext(it, "level", "") == "yellow")
+        red = sum(1 for it in items if is_json_obj(it) and jtext(it, "level", "") == "red")
+        yellow = sum(1 for it in items if is_json_obj(it) and jtext(it, "level", "") == "yellow")
         if red == 0 and yellow == 0:
             stars = 5
         elif red == 0 and yellow <= 5:
@@ -417,9 +417,9 @@ class RequirementService:
         out = string_list(self.repos.requirement.get_domains(req_id))
         if out:
             return out
-        if audit_view is not None and isinstance(audit_view.get("content"), dict):
+        if audit_view is not None and is_json_obj(audit_view.get("content")):
             audit_items = audit_view["content"].get("items")
-            if isinstance(audit_items, list):
+            if is_json_list(audit_items):
                 for it in audit_items:
                     g = jtext(it, "group", "")
                     if g and g not in out:

@@ -13,7 +13,7 @@ import json
 import re
 from pathlib import Path
 
-from agents import RunContextWrapper, function_tool
+from agents import RunContextWrapper, Tool, function_tool
 
 from platform_sdlc.agent.context import TaskRunContext
 
@@ -294,5 +294,5 @@ async def run_command(wrapper: RunContextWrapper[TaskRunContext], command: str, 
         return _err(f"命令执行失败：{e}")
 
 
-ALL_TOOLS = [get_requirement_card, list_clarify_items, get_digest_bundle, get_design_doc,
+ALL_TOOLS: list[Tool] = [get_requirement_card, list_clarify_items, get_digest_bundle, get_design_doc,
              list_cases, put_draft, upload_media, read_file, write_file, run_command]

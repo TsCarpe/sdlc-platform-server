@@ -25,6 +25,26 @@
     }
    }
   },
+  "/api/meta/task-rules": {
+   "get": {
+    "summary": "Task Rules",
+    "operationId": "task_rules_api_meta_task_rules_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "type": "object",
+         "title": "Response Task Rules Api Meta Task Rules Get"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/requirements": {
    "post": {
     "summary": "Create",
@@ -824,6 +844,16 @@
         }
        ],
        "title": "Status"
+      }
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "default": 100,
+       "title": "Limit"
       }
      }
     ],

@@ -13,6 +13,8 @@ jobs:
       - uses: astral-sh/setup-uv@v5
       - run: uv sync
       - run: uv run ruff check src tests
+      # 类型门（AUDIT D8-4：存量 155 → 2026-10-13 清零，转阻塞）
+      - run: uv run pyright
       - run: uv run pytest -q
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
@@ -20,13 +22,3 @@ jobs:
       # 快照与代码不一致即红，防权威文档再漂移
       - run: node scripts/export-openapi.mjs
       - run: git diff --exit-code docs/openapi.json
-
-  # 存量清理中（AUDIT D8-4 补强：基线 155 → 清理进行时），清零后并入 check 转阻塞门
-  pyright:
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - run: uv sync
-      - run: uv run pyright

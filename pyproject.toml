@@ -33,6 +33,11 @@ typeCheckingMode = "strict"
 venvPath = "."
 venv = ".venv"
 
+# 测试白盒调私有（_RESULT_LINE/_resolve_in_workspace/_safe_static_file）是正当场景，仅 tests 放开
+[[tool.pyright.executionEnvironments]]
+root = "tests"
+reportPrivateUsage = false
+
 [tool.ruff]
 line-length = 140  # SQL 移植行较长（与 Java 逐行对应），放宽行宽而非打断 SQL
 src = ["src", "tests"]

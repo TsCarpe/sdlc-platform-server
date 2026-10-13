@@ -17,7 +17,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from agents import Agent, RunContextWrapper, function_tool, set_default_openai_api, set_default_openai_client, set_tracing_disabled
+from agents import (
+    Agent,
+    RunContextWrapper,
+    SessionSettings,
+    Tool,
+    function_tool,
+    set_default_openai_api,
+    set_default_openai_client,
+    set_tracing_disabled,
+)
 from openai import AsyncOpenAI
 
 from platform_sdlc.config import Settings
@@ -154,8 +163,8 @@ async def get_gate_status(wrapper: RunContextWrapper[AssistantContext], req_id: 
     """
     def impl() -> str:
         v = wrapper.context.services.gate.view(req_id)
-        rounds = v.get("rounds") or []
-        units = v.get("units") or []
+        rounds: list[Any] = v.get("rounds") or []
+        units: list[Any] = v.get("units") or []
         judged = sum(1 for u in units if u.get("verdict"))
         return json.dumps({"phase": v.get("phase"), "tier": v.get("tier"),
                            "checks": v.get("checks"), "rounds": rounds,
@@ -195,11 +204,13 @@ async def list_iterations(wrapper: RunContextWrapper[AssistantContext]) -> str:
     return await _read(impl)
 
 
-ASSISTANT_TOOLS = [search_requirements, get_requirement_summary, list_clarify_items,
+ASSISTANT_TOOLS: list[Tool] = [search_requirements, get_requirement_summary, list_clarify_items,
                    list_cases, get_gate_status, get_design_status, list_iterations]
 
 
 class SqliteChatSession:
+    session_settings: SessionSettings | None = None  # Session 协议成员：sqlite 会话无会话级设置
+
     """Session 协议的 sqlite 实现：独立文件，多轮记忆（对齐 SQLiteSession 接口面）。
 
     连接模型（AUDIT D5-1）：进程内共享单连接 + 模块级 RLock——原「每请求新连接且不关闭」在

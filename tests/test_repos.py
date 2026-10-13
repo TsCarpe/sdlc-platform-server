@@ -152,6 +152,7 @@ def test_media_iteration_comment_frpoint(repos: Repos) -> None:
 @pytest.mark.skipif(not (EXISTING_DB and EXISTING_DB.exists()), reason="无存量库（SDLC_EXISTING_DB 未配置）")
 def test_existing_db_smoke(tmp_path: Path) -> None:
     """存量库副本：迁移幂等 + 列表聚合可读（抽查真实数据形状）。"""
+    assert EXISTING_DB is not None  # skipif 已保证；此处仅为类型收窄
     work = tmp_path / "existing"
     work.mkdir()
     shutil.copy(EXISTING_DB, work / "platform.db")

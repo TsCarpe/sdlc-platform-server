@@ -10,6 +10,8 @@ import json
 from dataclasses import dataclass, field
 from typing import Any
 
+from platform_sdlc.common import is_json_list, is_json_obj
+
 Row = Any  # sqlite3.Row
 
 
@@ -35,7 +37,7 @@ def string_list(json_str: str | None) -> list[str]:
     """JSON 数组列行内反序列化；坏值回退空数组（对应 Java stringList 降级）。"""
     try:
         v = json.loads(json_str or "[]")
-        return [str(x) for x in v] if isinstance(v, list) else []
+        return [str(x) for x in v] if is_json_list(v) else []
     except Exception:
         return []
 
@@ -46,7 +48,7 @@ def parse_json_obj(json_str: str) -> dict[str, Any]:
     「content 键缺失」语义更严（suppress 不附加键），保留原地不强行统一。"""
     try:
         v = json.loads(json_str.strip() or "{}")
-        return v if isinstance(v, dict) else {}
+        return v if is_json_obj(v) else {}
     except Exception:
         return {}
 
@@ -257,8 +259,8 @@ class CaseListRow:
     tool: str
     version: int
     updated_at: str
-    verify_refs: list[str] = field(default_factory=list)
-    defect_refs: list[str] = field(default_factory=list)
+    verify_refs: list[str] = field(default_factory=list[str])
+    defect_refs: list[str] = field(default_factory=list[str])
     case_no: int | None = None
     iter: str = ""
     req_name: str = ""

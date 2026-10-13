@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
-from typing import Any
+from typing import Any, TypeGuard, overload
 
 from pydantic import BaseModel
 
@@ -54,9 +54,20 @@ class Times:
 
 def _jget(n: Any, field: str) -> Any:
     """dict 成员安全取值（非 dict 一律 None）。strict 下裸 dict 窄化产生的 Unknown 集中压制在此单点。"""
-    if isinstance(n, dict):
-        return n.get(field)  # pyright: ignore[reportUnknownMemberType]
+    if is_json_obj(n):
+        return n.get(field)
     return None
+
+
+def is_json_obj(v: Any) -> TypeGuard[dict[str, Any]]:
+    """JSON 对象判别：strict 下裸 isinstance(v, dict) 只能窄化到 dict[Unknown, Unknown]，
+    TypeGuard 显式收口到 dict[str, Any]，后续 .get() 链即为 Any（可传宽松绑定助手）。"""
+    return isinstance(v, dict)
+
+
+def is_json_list(v: Any) -> TypeGuard[list[Any]]:
+    """JSON 数组判别（同 is_json_obj）：Any 窄化收口 list[Any]，元素 Any 可直接进宽松绑定/推导。"""
+    return isinstance(v, list)
 
 
 def _as_text(v: Any) -> str:
@@ -106,6 +117,10 @@ def jint(n: Any, field: str, default: int) -> int:
     return default
 
 
+@overload
+def jint_or_400(n: Any, field: str, default: int) -> int: ...
+@overload
+def jint_or_400(n: Any, field: str, default: int | None = None) -> int | None: ...
 def jint_or_400(n: Any, field: str, default: int | None = None) -> int | None:
     """宽松整型绑定（入参面）：int / 整值 float / 纯数字串取整；存在但不可取整 → 400（对齐
     Java HttpMessageNotReadable 的绑定失败口径，替代服务层裸 int() 的 500）。缺失/None 给 default。"""
@@ -136,7 +151,7 @@ def jbool(n: Any, field: str, default: bool) -> bool:
 
 def jarray(n: Any, field: str) -> list[Any]:
     v = _jget(n, field)
-    return list(v) if isinstance(v, list) else []
+    return list(v) if is_json_list(v) else []
 
 
 def jstrings(n: Any, field: str) -> list[str]:

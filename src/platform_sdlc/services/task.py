@@ -10,7 +10,7 @@ import json
 import logging
 from typing import Any
 
-from platform_sdlc.common import ApiException, Times, jint_or_400, jrequired, jtext
+from platform_sdlc.common import ApiException, Times, is_json_obj, jint_or_400, jrequired, jtext
 from platform_sdlc.db import Database
 from platform_sdlc.models import DraftArtifact, Task
 from platform_sdlc.repositories import Repos
@@ -251,7 +251,7 @@ def _parse_object(content_json: str, label: str) -> dict[str, Any]:
         v = json.loads(content_json.strip() or "{}")
     except Exception as e:
         raise ApiException(400, f"草稿 contentJson 解析失败：{e}") from e
-    if not isinstance(v, dict):
+    if not is_json_obj(v):
         raise ApiException(400, "草稿 contentJson 必须是 JSON 对象")
     _ = label
     return v

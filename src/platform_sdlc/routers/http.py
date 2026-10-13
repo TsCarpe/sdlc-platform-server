@@ -7,7 +7,7 @@ from typing import Any
 
 from fastapi import Request
 
-from platform_sdlc.common import ApiException
+from platform_sdlc.common import ApiException, is_json_obj
 
 
 async def read_json(request: Request, required: bool = False) -> dict[str, Any]:
@@ -29,6 +29,6 @@ async def read_json(request: Request, required: bool = False) -> dict[str, Any]:
         v = json.loads(body)
     except Exception as e:
         raise ApiException(400, "请求体不是合法 JSON 或字段类型不符") from e
-    if not isinstance(v, dict):
+    if not is_json_obj(v):
         raise ApiException(400, "请求体不是合法 JSON 或字段类型不符")
     return v

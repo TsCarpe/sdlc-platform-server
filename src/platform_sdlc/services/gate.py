@@ -10,7 +10,7 @@ import json
 import re
 from typing import Any
 
-from platform_sdlc.common import ApiException, Times, jbool, jint_or_400, jrequired, jtext
+from platform_sdlc.common import ApiException, Times, is_json_list, is_json_obj, jbool, jint_or_400, jrequired, jtext
 from platform_sdlc.db import Database
 from platform_sdlc.models import GateIssue, GateRound, TestCase, string_list
 from platform_sdlc.models import parse_json_obj as _parse  # JSON 口径统一收口（AUDIT D2-5）
@@ -36,7 +36,7 @@ class GateService:
         phase = dv.get("phase")
         c1: dict[str, Any] = {"key": "design", "name": "设计已定稿 ∨ 轻量跳过", "ok": phase in ("final", "skipped")}
         if phase == "final":
-            f = dv.get("finalized") or {}
+            f: dict[str, Any] = dv.get("finalized") or {}
             c1["detail"] = f"已定稿 v{f.get('version')}（{f.get('by', '')}）"
         elif phase == "skipped":
             c1["detail"] = "已声明轻量跳过（自查档）"
@@ -146,7 +146,7 @@ class GateService:
             if not d.md.strip():
                 raise ApiException(400, "issues 草稿缺 md（issues 文件全文）")
             issues_raw = _parse(d.content_json).get("issues")
-            if not isinstance(issues_raw, list) or not issues_raw:
+            if not is_json_list(issues_raw) or not issues_raw:
                 raise ApiException(400, "issues 草稿 contentJson.issues 为空")
 
             codes: set[str] = set()
@@ -164,7 +164,7 @@ class GateService:
                 scene = jtext(n, "scene", "")
                 if not scene.strip():
                     raise ApiException(400, f"{code} 场景列为空（check_trace 检查5：白话场景必填）")
-                merged_unit = jint_or_400(n, "mergedUnit", 0) if isinstance(n, dict) else 0
+                merged_unit = jint_or_400(n, "mergedUnit", 0) if is_json_obj(n) else 0
                 max_unit = max(max_unit, merged_unit)
                 if code not in d.md:
                     raise ApiException(400, f"机械校验失败：md 中找不到 {code}（contentJson 与 issues 文件不同源）")
@@ -332,7 +332,8 @@ class GateService:
             return "released"
         if out.get("issues"):
             return "deciding"
-        ts = (out.get("activeTask") or {}).get("status", "")
+        at: dict[str, Any] = out.get("activeTask") or {}
+        ts = at.get("status", "")
         return "summary" if ts == "done" else "running"
 
     def _round_block(self, g: GateRound) -> dict[str, Any]:

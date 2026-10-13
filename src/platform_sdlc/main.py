@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
@@ -41,7 +41,7 @@ def create_app(settings: Settings | None = None, cwd: Path | None = None) -> Fas
     ctx = AppContext(settings=settings, paths=paths, db=db, repos=repos, services=services)
 
     @asynccontextmanager
-    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
         log.info("启动：db=%s media=%s static=%s", paths.db, paths.media_dir, settings.static_dir)
         if settings.agent_enabled:
             from platform_sdlc.agent.loop import AgentLoop

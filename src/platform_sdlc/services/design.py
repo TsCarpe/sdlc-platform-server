@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from platform_sdlc.common import ApiException, Times, jrequired, jtext
+from platform_sdlc.common import ApiException, Times, is_json_list, is_json_obj, jrequired, jtext
 from platform_sdlc.db import Database
 from platform_sdlc.models import DraftArtifact, Requirement
 from platform_sdlc.models import parse_json_obj as _parse  # JSON 口径统一收口（AUDIT D2-5）
@@ -37,7 +37,7 @@ class DesignService:
 
         fb: dict[str, Any] | None = None
         finalized = fin.get("finalized")
-        if isinstance(finalized, dict):
+        if is_json_obj(finalized):
             fb = {"by": _text(finalized.get("by")), "at": _text(finalized.get("at"))}
             a = self.repos.artifact.find(req_id, A_DESIGN)
             if a is not None:
@@ -51,9 +51,9 @@ class DesignService:
             out["draft"] = {"md": d.md, "taskId": d.task_id, "updatedAt": d.updated_at}
 
         proposal = fin.get("tierProposal")
-        if not isinstance(proposal, dict) and d is not None and d.content_json.strip():
+        if not is_json_obj(proposal) and d is not None and d.content_json.strip():
             dp = _parse(d.content_json).get("tierProposal")
-            if isinstance(dp, dict):
+            if is_json_obj(dp):
                 proposal = dp
         if isinstance(proposal, dict):
             out["tierProposal"] = proposal
@@ -81,7 +81,7 @@ class DesignService:
         items = None if body is None else body.get("repos")
         if items is None:
             raise ApiException(400, "缺少 repos 字段（空数组 = 清空配置）")
-        if not isinstance(items, list):
+        if not is_json_list(items):
             raise ApiException(400, "repos 必须是数组（空数组 = 清空配置）")
         if len(items) > 8:
             raise ApiException(400, f"目标仓最多 8 条（当前 {len(items)}）")
@@ -118,10 +118,10 @@ class DesignService:
         if raw.strip():
             try:
                 v = json.loads(raw)
-                if isinstance(v, list) and v:
+                if is_json_list(v) and v:
                     return [{"role": str(b.get("role", "")), "kind": str(b.get("kind", "")),
                              "ref": str(b.get("ref", "")), "branch": str(b.get("branch", ""))}
-                            for b in v if isinstance(b, dict)]
+                            for b in v if is_json_obj(b)]
             except Exception:
                 pass  # 坏值走回退
         legacy = self.repos.requirement.get_target_repo(req_id)
@@ -136,11 +136,11 @@ class DesignService:
         if r.risk_tier != "C":
             raise ApiException(409, f"仅 C 级需求可声明轻量跳过（当前分级：{r.risk_tier or '未分级，按 A'}）")
         fin = _parse(self.repos.requirement.get_design_final(req_id))
-        if isinstance(fin.get("skipDeclared"), dict):
+        if is_json_obj(fin.get("skipDeclared")):
             raise ApiException(409, "已声明轻量跳过，无需重复声明")
-        if isinstance(fin.get("finalized"), dict) or self.repos.draft.find(req_id, A_DESIGN) is not None:
+        if is_json_obj(fin.get("finalized")) or self.repos.draft.find(req_id, A_DESIGN) is not None:
             raise ApiException(409, "已存在设计草稿/终稿，与轻量跳过互斥")
-        nxt = dict(fin) if isinstance(fin, dict) else {}
+        nxt = dict(fin)
         nxt["skipDeclared"] = {"by": jtext(body or {}, "by", "").strip(), "at": Times.now()}
         self.repos.requirement.set_design_final(req_id, _json(nxt))
 
@@ -159,15 +159,15 @@ class DesignService:
         （version+1 承接落改修订）+ design_final_json.finalized 留痕。与轻量跳过互斥。"""
         self.require(req_id)
         fin = _parse(self.repos.requirement.get_design_final(req_id))
-        if isinstance(fin.get("skipDeclared"), dict):
+        if is_json_obj(fin.get("skipDeclared")):
             raise ApiException(409, "已声明轻量跳过，与设计定稿互斥")
         self.repos.artifact.upsert(req_id, A_DESIGN, d.md or "", d.content_json or "", Times.now())
         a = self.repos.artifact.find(req_id, A_DESIGN)
         ver = a.version if a is not None else 1
-        nxt = dict(fin) if isinstance(fin, dict) else {}
+        nxt = dict(fin)
         nxt["finalized"] = {"by": (by or "").strip(), "at": Times.now(), "ver": ver}
         proposal = _parse(d.content_json or "").get("tierProposal")
-        if isinstance(proposal, dict):
+        if is_json_obj(proposal):
             nxt["tierProposal"] = proposal
         self.repos.requirement.set_design_final(req_id, _json(nxt))
         return ver

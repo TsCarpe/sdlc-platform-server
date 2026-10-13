@@ -7,7 +7,7 @@ import logging
 import re
 from typing import Any
 
-from platform_sdlc.common import ApiException, ConflictException, Times, jint_or_400, jrequired, jrequired_non_blank, jtext
+from platform_sdlc.common import ApiException, ConflictException, Times, is_json_list, jint_or_400, jrequired, jrequired_non_blank, jtext
 from platform_sdlc.db import Database
 from platform_sdlc.models import CaseComment, TestCase, string_list
 from platform_sdlc.repositories import Repos
@@ -31,7 +31,7 @@ class CaseService:
         if self.repos.requirement.find(req_id) is None:
             raise ApiException(404, f"需求不存在：{req_id}")
         items: list[Any] = body.get("items") or []
-        if not isinstance(items, list):
+        if not is_json_list(items):
             raise ApiException(400, "items 必须是数组（空数组走删除语义请另走表单）")
         if not items:
             raise ApiException(400, "items 不能为空")
@@ -188,7 +188,7 @@ class CaseService:
 
     def list(self, iter_name: str | None, req_id: str | None, status: str | None,
              tool: str | None, q: str | None) -> list[dict[str, Any]]:
-        out = []
+        out: list[dict[str, Any]] = []
         for r in self.repos.test_case.list(iter_name, req_id, status, tool, q):
             out.append({
                 "reqId": r.req_id, "id": r.id, "title": r.title, "points": r.points, "priority": r.priority,
@@ -240,7 +240,7 @@ def _strings_json(points: Any) -> str:
     """可选字符串数组字段 → JSON 列值，缺省 []。"""
     if points is None:
         points = []
-    if not isinstance(points, list):
+    if not is_json_list(points):
         raise ApiException(400, "请求体不是合法 JSON 或字段类型不符")
     return json.dumps([str(x) for x in points], ensure_ascii=False)
 
