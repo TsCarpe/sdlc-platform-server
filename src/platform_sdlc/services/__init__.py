@@ -9,6 +9,7 @@ from platform_sdlc.db import Database
 from platform_sdlc.repositories import Repos
 from platform_sdlc.services.block import BlockService
 from platform_sdlc.services.case import CaseService
+from platform_sdlc.services.change import ChangeService
 from platform_sdlc.services.comment import CommentService
 from platform_sdlc.services.design import DesignService
 from platform_sdlc.services.gate import GateService
@@ -25,6 +26,7 @@ class Services:
     iterations: IterationService
     blocks: BlockService
     comments: CommentService
+    changes: ChangeService
     requirements: RequirementService
     cases: CaseService
     designs: DesignService
@@ -41,6 +43,7 @@ class Services:
         # 与进程内 executor、runner meta 下发三处同源此值——分叉则落库找不到文件）
         blocks = BlockService(db, repos, workspace_root)
         comments = CommentService(db, repos)
+        changes = ChangeService(db, repos, blocks)
         requirements = RequirementService(db, repos, blocks)
         cases = CaseService(db, repos)
         designs = DesignService(db, repos)
@@ -48,5 +51,5 @@ class Services:
         gate = GateService(db, repos, designs)
         orchestration = OrchestrationService(repos, tasks)
         return cls(media=media, iterations=iterations, blocks=blocks, comments=comments,
-                   requirements=requirements, cases=cases,
+                   changes=changes, requirements=requirements, cases=cases,
                    designs=designs, tasks=tasks, gate=gate, orchestration=orchestration)

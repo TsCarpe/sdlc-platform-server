@@ -58,6 +58,26 @@ _TABLES: list[str] = [
       bytes    INTEGER NOT NULL DEFAULT 0,
       created_at TEXT,
       PRIMARY KEY (req_id, media_id))""",
+    # v4.11（DESIGN-v4 §5.2）：变更单两表——新表无存量可搬，判表补表幂等即可
+    """CREATE TABLE IF NOT EXISTS req_change (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      req_id TEXT NOT NULL,
+      title TEXT DEFAULT '',
+      detail TEXT DEFAULT '',
+      proposed_by TEXT DEFAULT '',
+      confirmed_by TEXT DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'draft',
+      impact_json TEXT DEFAULT '',
+      created_at TEXT, confirmed_at TEXT)""",
+    """CREATE TABLE IF NOT EXISTS req_change_item (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      change_id INTEGER NOT NULL,
+      block_id TEXT NOT NULL,
+      op TEXT NOT NULL,
+      old_text TEXT DEFAULT '', new_text TEXT DEFAULT '',
+      old_attrs TEXT DEFAULT '', new_attrs TEXT DEFAULT '')""",
+    "CREATE INDEX IF NOT EXISTS idx_req_change_req ON req_change(req_id)",
+    "CREATE INDEX IF NOT EXISTS idx_req_change_item_change ON req_change_item(change_id)",
     """CREATE TABLE IF NOT EXISTS seq_case_no (
       id  INTEGER PRIMARY KEY CHECK (id = 1),
       val INTEGER NOT NULL DEFAULT 0)""",

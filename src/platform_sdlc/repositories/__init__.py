@@ -14,6 +14,7 @@ from platform_sdlc.repositories.gate_repo import GateRepo
 from platform_sdlc.repositories.iteration_repo import IterationRepo
 from platform_sdlc.repositories.media_repo import MediaRepo
 from platform_sdlc.repositories.req_block_repo import ReqBlockRepo
+from platform_sdlc.repositories.req_change_repo import ReqChangeRepo
 from platform_sdlc.repositories.req_comment_repo import ReqCommentRepo
 from platform_sdlc.repositories.requirement_repo import RequirementRepo
 from platform_sdlc.repositories.task_repo import TaskRepo
@@ -37,6 +38,7 @@ class Repos:
     gate: GateRepo
     req_block: ReqBlockRepo
     req_comment: ReqCommentRepo
+    req_change: ReqChangeRepo
 
     @classmethod
     def create(cls, db: Database) -> Repos:
@@ -54,4 +56,5 @@ class Repos:
             gate=GateRepo(db),
             req_block=ReqBlockRepo(db),
             req_comment=ReqCommentRepo(db),
+            req_change=ReqChangeRepo(db),
         )

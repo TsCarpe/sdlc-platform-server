@@ -339,6 +339,53 @@ class CaseListRow:
 
 
 @dataclass
+class ReqChange:
+    """v4.11 变更单（DESIGN-v4 §5.2）：draft 可反复保存（items 全量重算）/可直接删；confirmed 不作废
+    （放弃走 §5.6 逆向回滚置 aborted）；impact_json 仅 confirm 时冻结（draft 期预览现算不落）。"""
+
+    id: int | None
+    req_id: str
+    title: str = ""
+    detail: str = ""
+    proposed_by: str = ""
+    confirmed_by: str = ""
+    status: str = "draft"  # draft | confirmed | aborted
+    impact_json: str = ""
+    created_at: str | None = None
+    confirmed_at: str | None = None
+
+    @classmethod
+    def from_row(cls, row: Row) -> ReqChange:
+        return cls(
+            id=_i(row, "id"),
+            req_id=_s(row, "req_id"),
+            title=_s(row, "title"),
+            detail=_s(row, "detail"),
+            proposed_by=_s(row, "proposed_by"),
+            confirmed_by=_s(row, "confirmed_by"),
+            status=_s(row, "status"),
+            impact_json=_s(row, "impact_json"),
+            created_at=_sn(row, "created_at"),
+            confirmed_at=_sn(row, "confirmed_at"),
+        )
+
+
+@dataclass
+class ReqChangeItem:
+    """变更单项（§5.2 列语义对齐 BlockService._DiffItem——diff 只在服务端一份，v4-7 复用）：op 四态，
+    old/new_attrs 为 JSON 串（§5.4 impact 冻结章节一律 heading block_id，禁 seq 数值）。"""
+
+    id: int | None
+    change_id: int
+    block_id: str
+    op: str  # edit | insert | delete | move
+    old_text: str = ""
+    new_text: str = ""
+    old_attrs: str = ""
+    new_attrs: str = ""
+
+
+@dataclass
 class CaseComment:
     id: int
     req_id: str

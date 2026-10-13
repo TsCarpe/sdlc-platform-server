@@ -4,7 +4,8 @@
 // 分源封存守卫、块表空质检 failed 引导、块表就位后质检放行、
 // 块级编辑（diff 预览四态/PUT 应用 blk-ID/幂等/published 与活跃质检双守卫，v4-7）、
 // 评论（CRUD/线程级解决/升级 L 系带 quote·anchor·回链/幂等，v4-8）、
-// 窗口 1 闭环（编辑→重质检→产物 anchor ∈ 新块集 + L 系幸存，v4-9/10）。
+// 窗口 1 闭环（编辑→重质检→产物 anchor ∈ 新块集 + L 系幸存，v4-9/10）、
+// 变更单数据面（draft CRUD 四态重算/影响面预览 CTE，v4-11）。
 // 用法：node scripts/verify-v4.mjs [baseUrl]   （默认 http://127.0.0.1:8080；服务从仓根启动）
 const base = process.argv[2] || 'http://127.0.0.1:8080'
 
@@ -267,6 +268,47 @@ const p1 = detailAfter.items.find(i => i.seq === 'P1')
 check('闭环判据：digest anchor ∈ 编辑后块集', [p1.anchor, blockIds.has(p1.anchor)], [newId, true])
 check('闭环判据：L 系行经重推仍幸存（v4-9 合并保护）',
       detailAfter.items.filter(i => i.seq.startsWith('L')).length, 2)
+
+// ===== 9. 变更单数据面（v4-11：draft CRUD + 影响面预览） =====
+// published 语义下变更走变更单；此处用未发布卡验证 draft 数据面（draft 不碰块表、不限状态）。
+const draft = await call('POST', `/api/requirements/${req}/changes`, {
+  title: '口径修订', detail: '演练变更单数据面', proposedBy: '张三',
+  blocks: [
+    { id: 'v4-p1', type: 'paragraph', text: '原文（再次修订）。' },   // edit
+    { type: 'paragraph', text: '变更新增段' },                        // insert：草稿期即有平台 ID
+    { id: newId, type: 'paragraph', text: '补充说明' }                // 保留（第 6 段新块）
+  ]  // v4-li1 不提交 = delete
+})
+check('draft 建：四态 items + counts',
+      [draft.status, draft.counts, draft.items.filter(i => i.op === 'insert')[0].blockId.startsWith('blk-')],
+      ['draft', { edit: 1, insert: 1, delete: 1, move: 0 }, true])
+const draftInsertId = draft.items.filter(i => i.op === 'insert')[0].blockId
+check('draft 不碰块表（块表现值原样）',
+      (await call('GET', `/api/requirements/${req}/doc.json`)).blocks.filter(b => b.type !== 'comment').length,
+      3)
+
+const saved = await call('PUT', `/api/requirements/${req}/changes/${draft.id}`, {
+  title: '口径修订 v2',
+  blocks: [
+    { id: 'v4-li1', type: 'list-item', marker: '1. ', depth: 1, text: '项一' },
+    { id: 'v4-p1', type: 'paragraph', text: '原文（再次修订）。' },
+    { id: draftInsertId, type: 'paragraph', text: '变更新增段' },
+    { id: newId, type: 'paragraph', text: '补充说明' }
+  ]
+})
+check('draft 反复保存：全量重算（相对块表基线：delete 回收，edit/insert 保持）',
+      [saved.title, saved.counts], ['口径修订 v2', { edit: 1, insert: 1, delete: 0, move: 0 }])
+
+// 影响面预览（保存后 items 已无 delete）：edit(v4-p1) 直接锚定；L01 锚 v4-p1 命中、P1 锚 newId 未动不进
+const impact = await call('GET', `/api/requirements/${req}/changes/${draft.id}/impact`)
+check('影响面预览：块集 = edit 直接 ∪ delete 子孙 CTE', impact.blocks, ['v4-p1'])
+check('影响面预览：clarify 锚定 join（L01 命中，P1 锚未动块不进）',
+      impact.clarifyItems.map(c => c.seq), ['L01'])
+check('影响面预览：预览不冻结（无 impact 写入面）', impact.counts.clarify, 1)
+
+check('draft 可直接删', (await call('DELETE', `/api/requirements/${req}/changes/${draft.id}`)).ok, true)
+check('删除后 404', await call('GET', `/api/requirements/${req}/changes/${draft.id}`)
+  .then(() => 0).catch(e => e.status), 404)
 
 // 收尾清理：reqP 建卡自动排的 source_import 留在队列会干扰后续脚本，领走置 failed
 const leftover = await fetch(`${base}/api/tasks/next?runner=verify-v4`, { method: 'POST' })

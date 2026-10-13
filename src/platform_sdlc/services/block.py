@@ -209,9 +209,9 @@ class BlockService:
         with self.db.tx():
             self._guard_edit(req_id)
             updated_by = jrequired(body, "updatedBy")  # 手填身份必填（§9：全量留痕，防误操作不防故意）
-            submitted = self._parse_submitted(body)
+            submitted = self.parse_blocks(body)
             current = self.repos.req_block.list_by_req(req_id)
-            items = self._diff(req_id, submitted, current)
+            items = self.diff_blocks(req_id, submitted, current)
             self._apply_edits(req_id, submitted, current, updated_by)
         log.info("块级直接编辑 %s（by=%s）：%s", req_id, updated_by, _counts_of(items))
         return self._diff_view(items)
@@ -220,9 +220,9 @@ class BlockService:
         """diff 预览（dry-run）：同守卫同 diff 不落库——前端保存前四态预览（三期变更单 diff 视图
         复用同形态）；insert 项 blockId 为提交临时 id（正式提交时服务端才发 blk-）。"""
         self._guard_edit(req_id)
-        submitted = self._parse_submitted(body)
+        submitted = self.parse_blocks(body)
         current = self.repos.req_block.list_by_req(req_id)
-        return self._diff_view(self._diff(req_id, submitted, current))
+        return self._diff_view(self.diff_blocks(req_id, submitted, current))
 
     def _guard_edit(self, req_id: str) -> None:
         """窗口 1 编辑守卫（§1 表）：published 终态锁拒（直接编辑是新写入口，继承的只有该谓词）；
@@ -238,7 +238,7 @@ class BlockService:
         if self.repos.req_block.empty(req_id):
             raise ApiException(409, "原文未导入（块表空，无编辑基线）：先完成 source_import")
 
-    def _parse_submitted(self, body: dict[str, Any]) -> list[_SubBlock]:
+    def parse_blocks(self, body: dict[str, Any]) -> list[_SubBlock]:
         """提交面校验：非空数组、类型白名单（comment 不入块表——评论走 req_comment 通道）、id 去重、
         parent 拓扑（§2.3：parent 必须在本批之前出现；行内子块（parent 指向 table-row）必须紧跟
         父块或前一个同父子块——保证 seq 区间与 parent 递归两套机制答案一致，不产区间外孤儿）。"""
@@ -284,7 +284,7 @@ class BlockService:
             prev_id = sb.block_id
         return out
 
-    def _diff(self, req_id: str, submitted: list[_SubBlock], current: list[ReqBlock]) -> list[_DiffItem]:
+    def diff_blocks(self, req_id: str, submitted: list[_SubBlock], current: list[ReqBlock]) -> list[_DiffItem]:
         """全量块数组 vs 块表（未软删基线）→ 四态 items：同 ID 文本/属性变 = edit；不在基线 = insert
         （服务端发新 ID，提交临时 id 亦然）；基线消失 = delete；顺序变 = move。move 判定 LIS：新序列中
         保持旧 seq 相对顺序的最大子集为未动，其余才是 move——朴素逐位对比会把一次挪动判成 N 个 move，
@@ -314,8 +314,10 @@ class BlockService:
             sb.changed = sb.text != cur.text or sb.attrs != old_attrs
             sb.moved = i not in stable
             if sb.changed:
-                items.append(_DiffItem(block_id=sb.block_id, op="edit", old_text=cur.text, new_text=sb.text,
-                                       old_attrs=old_attrs, new_attrs=dict(sb.attrs), moved=sb.moved))
+                it = _DiffItem(block_id=sb.block_id, op="edit", old_text=cur.text, new_text=sb.text,
+                               old_attrs=old_attrs, new_attrs=dict(sb.attrs), moved=sb.moved)
+                sb.item = it  # 挂引用：insert id/parent 改写后刷新 newAttrs（assign_insert_ids）
+                items.append(it)
             elif sb.moved:
                 items.append(_DiffItem(block_id=sb.block_id, op="move", old_text=cur.text, new_text=sb.text))
         sub_ids = {sb.block_id for sb in submitted if sb.block_id}
@@ -331,21 +333,7 @@ class BlockService:
         blk-<ulid> 新行（version=1，updated_by 记创建人）、delete 软删（deleted=时间戳）、存留块按
         提交序整体重排 seq=(i+1)*1000（§2.2 重排常规化；软删行不动——冻结面不引用 seq 数值因此无害）。"""
         at = Times.now()
-        id_map: dict[str, str] = {}
-        for sb in submitted:
-            if not sb.is_new:
-                continue
-            new_id = self._new_block_id(req_id)
-            if sb.block_id:
-                id_map[sb.block_id] = new_id  # 临时 id → 正式 id（同批行内子块 parent 引用改写）
-            sb.block_id = new_id
-            if sb.item is not None:
-                sb.item.block_id = new_id  # 出参带正式锚点（前端刷新引用）
-        if id_map:
-            for sb in submitted:
-                parent = str(sb.attrs.get("parent") or "")
-                if parent in id_map:
-                    sb.attrs["parent"] = id_map[parent]
+        self.assign_insert_ids(req_id, submitted)
         edit_rows = [(sb.text, _dumps(sb.attrs), at, updated_by, req_id, sb.block_id)
                      for sb in submitted if sb.changed]
         if edit_rows:
@@ -376,7 +364,29 @@ class BlockService:
         if seq_rows:
             self.db.executemany("UPDATE req_block SET seq=? WHERE req_id=? AND block_id=?", seq_rows)
 
-    def _new_block_id(self, req_id: str) -> str:
+    def assign_insert_ids(self, req_id: str, submitted: list[_SubBlock]) -> None:
+        """insert 块发平台 ID：已带 blk- 前缀的沿用（变更单 draft 期前端持有的平台 ID，§5.2「新块在
+        草稿期即有平台 ID」——反复保存不漂移），其余临时 id/空 id 重发 blk-<ulid>；同批临时 id 的
+        行内子块 parent 引用按映射改写；item 的 blockId/newAttrs 同步刷新（编辑出参与变更单 items 共用）。"""
+        id_map: dict[str, str] = {}
+        for sb in submitted:
+            if not sb.is_new or sb.block_id.startswith("blk-"):
+                continue
+            new_id = self.new_block_id(req_id)
+            if sb.block_id:
+                id_map[sb.block_id] = new_id
+            sb.block_id = new_id
+        if id_map:
+            for sb in submitted:
+                parent = str(sb.attrs.get("parent") or "")
+                if parent in id_map:
+                    sb.attrs["parent"] = id_map[parent]
+        for sb in submitted:
+            if sb.item is not None:
+                sb.item.block_id = sb.block_id
+                sb.item.new_attrs = dict(sb.attrs)
+
+    def new_block_id(self, req_id: str) -> str:
         """blk-<ulid>（§2.2：随机派生禁内容哈希——重复文本是常态，内容哈希即主键冲突）；
         碰撞即重抽（单写者事务内 EXISTS 检查无竞态）。"""
         while True:
