@@ -47,6 +47,13 @@ class Database:
             cur = self._conn.execute(sql, params)
             return int(cur.lastrowid or 0)
 
+    def executemany(self, sql: str, seq: list[tuple[Any, ...]]) -> None:
+        """批量写（AUDIT D2-4）：空批次直通；单语句批量，须在服务层 tx 事务边界内使用。"""
+        if not seq:
+            return
+        with self._lock:
+            self._conn.executemany(sql, seq)
+
     def query_all(self, sql: str, params: tuple[Any, ...] | list[Any] = ()) -> Rows:
         with self._lock:
             return list(self._conn.execute(sql, params).fetchall())

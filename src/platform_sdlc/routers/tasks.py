@@ -25,8 +25,9 @@ def router(ctx: AppContext) -> APIRouter:
         return wire(await asyncio.to_thread(svc.create, req_id, body))
 
     @r.get("/api/tasks", response_model=list[TaskOut])
-    async def list_tasks(req_id: str | None = None, status: str | None = None) -> list[dict[str, Any]]:
-        return [wire(t) for t in await asyncio.to_thread(svc.list, req_id, status)]
+    async def list_tasks(req_id: str | None = None, status: str | None = None,
+                         limit: int = 100) -> list[dict[str, Any]]:
+        return [wire(t) for t in await asyncio.to_thread(svc.list, req_id, status, limit)]
 
     @r.post("/api/tasks/next")
     async def next_task(runner: str = "runner") -> Response:

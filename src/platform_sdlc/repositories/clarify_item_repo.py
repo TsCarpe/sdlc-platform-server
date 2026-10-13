@@ -33,6 +33,17 @@ class ClarifyItemRepo:
             (c.req_id, c.seq, c.level, c.theme, c.question, c.ctx, c.answer, c.answered_at, c.quote, c.anchor, c.status, c.note),
         )
 
+    def insert_many(self, items: list[ClarifyItem]) -> None:
+        """批量插入（AUDIT D2-4：重推重建清单的循环逐条消除；调用方事务内）。"""
+        if not items:
+            return
+        self.db.executemany(
+            "INSERT INTO clarify_item(req_id,seq,level,theme,question,ctx,answer,answered_at,quote,anchor,status,note)"
+            " VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+            [(c.req_id, c.seq, c.level, c.theme, c.question, c.ctx, c.answer, c.answered_at, c.quote, c.anchor, c.status, c.note)
+             for c in items],
+        )
+
     def set_disposition(self, req_id: str, seq: str, answer: str, status: str, note: str, at: str) -> int:
         return self.db.execute(
             "UPDATE clarify_item SET answer=?, status=?, note=?, answered_at=? WHERE req_id=? AND seq=?",

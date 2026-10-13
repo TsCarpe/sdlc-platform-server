@@ -23,3 +23,10 @@ CREATE TABLE IF NOT EXISTS gate_issue ( id INTEGER PRIMARY KEY AUTOINCREMENT, ro
 CREATE INDEX IF NOT EXISTS idx_gate_issue_round ON gate_issue(round_id);
 
 -- 反向索引等读时聚合不落库；存量库补列逻辑见 SchemaMigrator
+
+-- 批次6（AUDIT D2-1）：列表聚合高频谓词的支撑索引——澄清计数（answered IN 过滤）、
+-- 任务状态扫描（claim/exists/expire）、门禁轮次读取（iteration 行级 gate_stage 子查询）。
+-- 置于全部建表之后（executescript 顺序执行，索引先于建表会 no such table）。
+CREATE INDEX IF NOT EXISTS idx_clarify_req_status ON clarify_item(req_id, status);
+CREATE INDEX IF NOT EXISTS idx_task_status ON task(status);
+CREATE INDEX IF NOT EXISTS idx_gate_round_req ON gate_round(req_id);

@@ -172,8 +172,7 @@ class RequirementService:
                     c.status = "answered"
 
             self.repos.clarify_item.delete_by_req(req_id)
-            for c in parsed:
-                self.repos.clarify_item.insert(c)
+            self.repos.clarify_item.insert_many(parsed)  # 批量重建（AUDIT D2-4：循环逐条消除）
 
             at = Times.now()
             self.repos.artifact.upsert(req_id, "digest", jtext(digest, "md", ""), _json(self._digest_view(digest)), at)
@@ -196,9 +195,9 @@ class RequirementService:
                     doc_out["source"] = doc.get("source")
                 if doc.get("generator") is not None:
                     doc_out["generator"] = doc.get("generator")
-                missing = [mid for mid in (jtext(mf, "id", "") for mf in doc_out["media"])
-                           if mid and not self.repos.media.exists(req_id, mid)]
-                missing_media = len(missing)
+                wanted = [mid for mid in (jtext(mf, "id", "") for mf in doc_out["media"]) if mid]
+                present = set(self.repos.media.ids_of(req_id, wanted))  # 一次 IN 查询（AUDIT D2-4）
+                missing_media = len([mid for mid in wanted if mid not in present])
                 # 宽松策略：doc 始终落库（缺失媒体由 missingMedia 如实计数，前端渲染占位）
                 self.repos.artifact.upsert(req_id, "doc", "", _json(doc_out), at)
                 doc_updated = True

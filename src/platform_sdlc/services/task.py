@@ -168,8 +168,8 @@ class TaskService:
         assert out is not None
         return out
 
-    def list(self, req_id: str | None, status: str | None) -> list[Task]:
-        return self.repos.task.list(req_id, status)
+    def list(self, req_id: str | None, status: str | None, limit: int = 100) -> list[Task]:
+        return self.repos.task.list(req_id, status, limit)
 
     def expire_stale(self, older_than_minutes: int, runner: str | None = None) -> int:
         """执行器启动恢复：超时 running 置 failed，返回处理条数。

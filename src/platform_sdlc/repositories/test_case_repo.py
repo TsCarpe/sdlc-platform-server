@@ -169,3 +169,10 @@ class TestCaseRepo:
 
     def delete(self, req_id: str, case_id: str) -> None:
         self.db.execute("DELETE FROM test_case WHERE req_id=? AND id=?", (req_id, case_id))
+
+    def delete_many(self, req_id: str, case_ids: list[str]) -> None:
+        """批量删除（AUDIT D2-4：全量替换补齐的同步删除，单语句替代循环逐条）。"""
+        if not case_ids:
+            return
+        marks = ",".join("?" * len(case_ids))
+        self.db.execute(f"DELETE FROM test_case WHERE req_id=? AND id IN ({marks})", [req_id, *case_ids])

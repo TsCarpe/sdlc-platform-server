@@ -70,7 +70,9 @@ class IterationRepo:
         return Iteration.from_row(row) if row else None
 
     def list_all(self) -> list[IterationListRow]:
-        return [_row_to_list_row(r) for r in self.db.query_all(_ROW_SELECT + " ORDER BY i.created_at DESC, i.name DESC")]
+        # LIMIT 200 防御上限（AUDIT D2-1）：行级子查询密集（每行 5+），无界列表在数据量增长后线性劣化
+        return [_row_to_list_row(r) for r in self.db.query_all(
+            _ROW_SELECT + " ORDER BY i.created_at DESC, i.name DESC LIMIT 200")]
 
     def find_row(self, name: str) -> IterationListRow | None:
         row = self.db.query_one(_ROW_SELECT + " WHERE i.name=?", (name,))

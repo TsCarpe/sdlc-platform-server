@@ -22,7 +22,9 @@ class TaskRepo:
         row = self.db.query_one("SELECT * FROM task WHERE id=?", (task_id,))
         return Task.from_row(row) if row else None
 
-    def list(self, req_id: str | None, status: str | None) -> list[Task]:
+    def list(self, req_id: str | None, status: str | None, limit: int = 100) -> list[Task]:
+        """任务历史读面（AUDIT D7-7）：limit 参数化（默认 100 保持既有行为，上限 500）——
+        原硬 LIMIT 100 使单需求最早失败记录静默滑出窗口（exists_by_type 已为写面打过补丁）。"""
         sql = "SELECT * FROM task WHERE 1=1"
         args: list[object] = []
         if req_id:
@@ -31,7 +33,8 @@ class TaskRepo:
         if status:
             sql += " AND status=?"
             args.append(status)
-        sql += " ORDER BY id DESC LIMIT 100"
+        sql += " ORDER BY id DESC LIMIT ?"
+        args.append(max(1, min(limit, 500)))
         return [Task.from_row(r) for r in self.db.query_all(sql, tuple(args))]
 
     def count_active(self, req_id: str, type_: str) -> int:

@@ -100,13 +100,11 @@ class CaseService:
                             "expectedVersion": found_versions[i]}])
                     updated += 1
 
-            # 全量替换补齐（A1）：skill 来源、不在 payload 的用例 = 本地已删除 → 平台同步删除，评论级联清理
+            # 全量替换补齐（A1）：skill 来源、不在 payload 的用例 = 本地已删除 → 平台同步删除，评论批量级联清理（AUDIT D2-4）
             keep_ids = {t.id for t in parsed}
-            removed_ids: list[str] = []
-            for cid in self.repos.test_case.stale_sync_ids(req_id, keep_ids):
-                self.repos.test_case.delete(req_id, cid)
-                self.repos.comment.delete_by_case(req_id, cid)
-                removed_ids.append(cid)
+            removed_ids = self.repos.test_case.stale_sync_ids(req_id, keep_ids)
+            self.repos.test_case.delete_many(req_id, removed_ids)
+            self.repos.comment.delete_by_cases(req_id, removed_ids)
 
             id_warnings = self._id_ambiguity_warnings(req_id, parsed)
             self.repos.requirement.touch_synced(req_id, at)

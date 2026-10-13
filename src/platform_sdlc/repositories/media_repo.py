@@ -14,6 +14,13 @@ class MediaRepo:
         n = self.db.query_scalar("SELECT COUNT(*) FROM media WHERE req_id=? AND media_id=?", (req_id, media_id))
         return int(n or 0) > 0
 
+    def ids_of(self, req_id: str, media_ids: list[str]) -> list[str]:
+        """批量存在性：一次 IN 查询替代循环内逐个 exists（AUDIT D2-4）。"""
+        if not media_ids:
+            return []
+        sql = f"SELECT media_id FROM media WHERE req_id=? AND media_id IN ({','.join('?' * len(media_ids))})"
+        return [str(r["media_id"]) for r in self.db.query_all(sql, [req_id, *media_ids])]
+
     def find(self, req_id: str, media_id: str) -> MediaFile | None:
         row = self.db.query_one("SELECT * FROM media WHERE req_id=? AND media_id=?", (req_id, media_id))
         return MediaFile.from_row(row) if row else None

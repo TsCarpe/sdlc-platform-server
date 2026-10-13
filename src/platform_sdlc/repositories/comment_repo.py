@@ -25,3 +25,10 @@ class CommentRepo:
     def delete_by_case(self, req_id: str, case_id: str) -> None:
         """用例被同步删除时清理其评论（孤儿评论不留）。"""
         self.db.execute("DELETE FROM case_comment WHERE req_id=? AND case_id=?", (req_id, case_id))
+
+    def delete_by_cases(self, req_id: str, case_ids: list[str]) -> None:
+        """批量级联清理（与 TestCaseRepo.delete_many 配套，AUDIT D2-4）。"""
+        if not case_ids:
+            return
+        marks = ",".join("?" * len(case_ids))
+        self.db.execute(f"DELETE FROM case_comment WHERE req_id=? AND case_id IN ({marks})", [req_id, *case_ids])

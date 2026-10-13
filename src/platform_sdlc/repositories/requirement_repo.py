@@ -70,7 +70,7 @@ class RequirementRepo:
         if status:
             sql += " AND r.status=?"
             args.append(status)
-        sql += " ORDER BY r.created_at DESC, r.id DESC"
+        sql += " ORDER BY r.created_at DESC, r.id DESC LIMIT 200"  # 防御上限（AUDIT D2-1：无界列表）
         out: list[RequirementListRow] = []
         for row in self.db.query_all(sql, tuple(args)):
             out.append(
