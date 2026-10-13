@@ -110,6 +110,12 @@ class RequirementService:
                 raise ApiException(404, f"需求不存在：{req_id}")
             if r.status == "published":
                 raise ApiException(409, "该需求已发布标准文档；实质变更请新开一轮流程")
+            if r.status == "changed":
+                # v4-15（§5.1 矩阵）：changed 拒全量重推——既会被隐式推进吞掉 changed 态，又会按
+                # 来源删除丢掉 incremental 接编的已答澄清项；原文消化只走增量通道（回 published
+                # 后全量通道重新开放；增量不可行的兜底 = 放弃变更 §5.6）
+                raise ApiException(409, "该需求处于变更中（changed），全量重推已关闭——原文消化走增量"
+                                        "质检合并，或放弃变更后重新开放")
 
             digest = body.get("digest")
             audit = body.get("audit")
@@ -248,8 +254,9 @@ class RequirementService:
     def set_answer(self, req_id: str, seq: str, body: dict[str, Any]) -> None:
         """澄清项处置统一入口（D21/D2=A）：作答/驳回/挂起/重开共用；answered_at = 最近处置时间。"""
         r = self.require(req_id)
-        if r.status != "clarifying":
-            raise ApiException(409, f"仅待澄清状态可作答（当前：{r.status}）")
+        if r.status not in ("clarifying", "changed"):
+            # v4-15（§5.1 矩阵）：changed 下允许作答——只面对重开+新增项，未受影响项保留已答
+            raise ApiException(409, f"仅待澄清/变更中状态可作答（当前：{r.status}）")
         ans = jtext(body, "answer", "")
         st = jtext(body, "status", "").strip()
         note = jtext(body, "note", "").strip()
@@ -272,13 +279,38 @@ class RequirementService:
         with self.db.tx():
             # 发布原子性：状态检查、artifact 写、置 published、清草稿同事务（原三语句间可交错出半发布态）
             r = self.require(req_id)
-            if r.status != "clarifying":
-                raise ApiException(409, f"仅待澄清状态可发布（当前：{r.status}）")
+            if r.status not in ("clarifying", "changed"):
+                # v4-15（§5.1）：发布入口扩 clarifying ∨ changed；changed 分支双重守卫在下方
+                raise ApiException(409, f"仅待澄清/变更中状态可发布（当前：{r.status}）")
             counts = self.repos.clarify_item.counts(req_id)
             total, answered = counts["total"], counts["answered"]
-            if total == 0 or answered < total:
+            if (total == 0 or answered < total) and r.status == "clarifying":
                 raise ApiException(400, f"存在未处置问题（{answered}/{total}），全部问题答复/驳回/挂起后才可发布（DESIGN-v2.2 D21）")
+            if total != 0 and answered < total:
+                # v4-15：changed 分支 0 问 = 全处置（纯 digest/FR 变更无澄清重开面——on_merged 的
+                # 重合成断链正是为此类变更补的，发布守卫不能反过来堵死）
+                raise ApiException(400, f"存在未处置问题（{answered}/{total}），全部问题答复/驳回/挂起后才可发布")
             md = jrequired(body, "standardMd")
+            if r.status == "changed":
+                # v4-15（§5.1 发布双重守卫，仅 changed 分支——clarifying 零新增校验保 verify-m2 契约）：
+                # ①影响面已消化：不存在「影响面 digest/FR 非空 ∧ digest.pushed_at < confirmed_at」的
+                #   confirmed 单（串行 confirm 保证同时至多一张未消化单，此式即全量校验）——否则人可在
+                #   confirm 后不等增量质检直接发布未合并旧 digest；
+                # ②重合成已发生：changed 下必须存在 standard 草稿且提交内容与其一致（哈希比对）——
+                #   堵旧草稿趁增量刚合并发布过时文档（发布内容取自 body，平台校验其来源）
+                _dg = self.repos.artifact.find(req_id, "digest")
+                undigested = self.repos.req_change.confirmed_undigested(req_id, _dg.pushed_at if _dg else None)
+                if undigested:
+                    raise ApiException(409, f"变更单 #{undigested[0]} 影响面未消化（先完成增量质检与合并）")
+                draft = self.repos.draft.find(req_id, "standard")
+                if draft is None:
+                    raise ApiException(409, "变更中发布前必须先重合成标准文档（L2 自动排 standard_doc，"
+                                            "取消后可手动补建）")
+                import hashlib
+                if hashlib.sha256(md.encode("utf-8")).hexdigest() != hashlib.sha256(
+                        draft.md.encode("utf-8")).hexdigest():
+                    raise ApiException(409, "发布内容与最新草稿不符（body.standardMd 哈希 ≠ standard 草稿），"
+                                            "请以草稿预览后发布")
             at = Times.now()
             self.repos.artifact.upsert(req_id, "standard", md, "", at)
             self.repos.requirement.set_standard(req_id, md, at)

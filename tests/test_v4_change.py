@@ -410,10 +410,8 @@ def test_abort_full_rollback(env: tuple[TestClient, Database, Repos]) -> None:
     insert_id = next(i["blockId"] for i in
                      client.get(f"/api/requirements/{req_id}/changes/{cid}").json()["items"]
                      if i["op"] == "insert")
-    # changed 期间：被重开的 P1 有人再处置（保留新答复场景——作答通道扩 changed 随 v4-15，
-    # 此处以 db 直改模拟处置时点状态）；P4 保持 pending（恢复场景）
-    db.execute("UPDATE clarify_item SET answer='放弃前的新作答', status='answered'"
-               " WHERE req_id=? AND seq='P1'", (req_id,))
+    # changed 期间：被重开的 P1 有人再处置（保留新答复场景——v4-15 set_answer 已扩 changed）；P4 保持 pending
+    client.put(f"/api/requirements/{req_id}/answers/P1", json={"answer": "放弃前的新作答"})
 
     out = client.post(f"/api/requirements/{req_id}/changes/{cid}/abort",
                       json={"abortedBy": "王五"}).json()
@@ -598,3 +596,96 @@ def test_incremental_task_and_merge(env: tuple[TestClient, Database, Repos]) -> 
 def _dumps_py(o: object) -> str:
     import json
     return json.dumps(o, ensure_ascii=False)
+
+
+# ---------- v4-15：changed 守卫矩阵 + 发布双重守卫 + on_answered 窗口化 ----------
+
+def test_changed_guard_matrix(env: tuple[TestClient, Database, Repos]) -> None:
+    client, db, repos = env
+    req_id = _mk_card(client)
+    _seed(repos, req_id)
+    _publish_card(client, repos, req_id)
+    _confirm_first(client, req_id)
+    _cancel_auto_incremental(client, req_id)
+
+    # 作答 ✓（重开行可答）
+    assert client.put(f"/api/requirements/{req_id}/answers/P1",
+                      json={"answer": "变更中作答"}).status_code == 200
+    # 拒全量：质检任务 / digest 草稿 / 全量重推 / 窗口 1 编辑
+    assert client.post(f"/api/requirements/{req_id}/tasks",
+                       json={"type": "quality_check"}).status_code == 409
+    assert client.put(f"/api/requirements/{req_id}/drafts/digest_bundle",
+                      json={"contentJson": "{}"}).status_code == 409
+    assert client.post(f"/api/requirements/{req_id}/artifacts", json={
+        "digest": {"md": "", "summary": "s", "roles": [], "features": [], "flows": [], "states": []},
+        "audit": {"md": "", "red": 0, "yellow": 0, "blue": 0, "items": []},
+        "items": [{"seq": "P9", "level": "yellow", "theme": "t", "question": "q"}]}).status_code == 409
+    assert client.put(f"/api/requirements/{req_id}/blocks", json={
+        "updatedBy": "x", "blocks": [{"id": "p1", "type": "paragraph", "text": "改"}]}).status_code == 409
+    # 许可面：standard_doc 任务（澄清全处置后——守卫链其余部分照常）/ standard 草稿 / 变更单 draft
+    for seq in ("P2", "P4"):  # P2 未受影响已答；P4 重开待处置
+        row = next((a for a in client.get(f"/api/requirements/{req_id}/answers").json()
+                    if a["seq"] == seq), None)
+        if row is not None and row["status"] == "pending":
+            client.put(f"/api/requirements/{req_id}/answers/{seq}", json={"answer": f"答 {seq}"})
+    for t in client.get(f"/api/tasks?req_id={req_id}").json():  # 发布链 L2 已自动排过——先取消防重
+        if t["type"] == "standard_doc" and t["status"] == "queued":
+            client.post(f"/api/tasks/{t['id']}/cancel")
+    assert client.post(f"/api/requirements/{req_id}/tasks",
+                       json={"type": "standard_doc"}).status_code == 200
+    assert client.put(f"/api/requirements/{req_id}/drafts/standard",
+                      json={"md": "# 草稿"}).status_code == 200
+
+    # 发布双重守卫：未消化拒 → 无草稿拒（消化后）→ 草稿不符拒 → 一致过 → published 全量恢复
+    db.execute("UPDATE artifact SET pushed_at='2099-01-01 00:00:00' WHERE req_id=? AND type='digest'",
+               (req_id,))  # 消化（增量合并的真实语义）
+    for seq in ("P1", "P2", "P3", "P4"):
+        cur = client.get(f"/api/requirements/{req_id}/answers").json()
+        row = next((a for a in cur if a["seq"] == seq), None)
+        if row is not None and row["status"] == "pending":
+            client.put(f"/api/requirements/{req_id}/answers/{seq}", json={"answer": f"答 {seq}"})
+    r0 = client.post(f"/api/requirements/{req_id}/publish", json={"standardMd": "# 与草稿不符"})
+    assert r0.status_code == 409 and "不符" in r0.json()["error"]
+    pub = client.post(f"/api/requirements/{req_id}/publish", json={"standardMd": "# 草稿"})
+    assert pub.status_code == 200
+    card = client.get(f"/api/requirements/{req_id}").json()["card"]
+    assert card["status"] == "published"
+    # 回 published 后全量通道恢复（push 不再被 changed 守卫拒——走正常终态锁外的重建语义）
+    r_push = client.post(f"/api/requirements/{req_id}/artifacts", json={
+        "digest": {"md": "", "summary": "s2", "roles": [], "features": [], "flows": [], "states": []},
+        "audit": {"md": "", "red": 0, "yellow": 0, "blue": 0, "items": []},
+        "items": [{"seq": "P1", "level": "yellow", "theme": "t", "question": "q1"}]})
+    assert r_push.status_code == 409 and "已发布标准文档" in r_push.json()["error"]  # 挡推的是常规终态锁（changed 守卫已不挡——文案可区分）
+
+
+def test_on_answered_windowed_after_change(env: tuple[TestClient, Database, Repos]) -> None:
+    """窗口化：首发轮取消的 standard_doc 不复活；变更 confirm 开新窗口后澄清全处置重新点火。"""
+    client, db, repos = env
+    req_id = _mk_card(client)
+    _seed(repos, req_id)
+    # 首发轮：取消 L2 自动排的 standard_doc（人取消即窗口内终局）
+    _publish_card(client, repos, req_id)
+    tasks = client.get(f"/api/tasks?req_id={req_id}").json()
+    std = next(t for t in tasks if t["type"] == "standard_doc")
+    client.post(f"/api/tasks/{std['id']}/cancel")
+    # 答案已全处置（发布链答过）→ on_answered 不复活（同窗口内已有任务行）
+    client.put(f"/api/requirements/{req_id}/answers/P1", json={"answer": "再答"})  # 触发钩子路径
+    tasks2 = client.get(f"/api/tasks?req_id={req_id}").json()
+    assert len([t for t in tasks2 if t["type"] == "standard_doc"]) == 1
+
+    # 变更 confirm 开新窗口：重开行再答完 → 自动重新点火
+    db.execute("UPDATE requirement SET status='published' WHERE id=?", (req_id,))  # 发布态（真实链等价）
+    cid = _draft_edit_p1(client, req_id)["id"]
+    db.execute("UPDATE artifact SET pushed_at='2026-10-13 00:00:00' WHERE req_id=? AND type='digest'",
+               (req_id,))
+    assert client.post(f"/api/requirements/{req_id}/changes/{cid}/confirm",
+                       json={"confirmedBy": "李四"}).status_code == 200
+    _cancel_auto_incremental(client, req_id)
+    for seq in ("P1", "P2", "P4"):  # P3 空 anchor 未重开保持已答
+        row = next((a for a in client.get(f"/api/requirements/{req_id}/answers").json()
+                    if a["seq"] == seq), None)
+        if row is not None and row["status"] == "pending":
+            client.put(f"/api/requirements/{req_id}/answers/{seq}", json={"answer": f"新答 {seq}"})
+    tasks3 = client.get(f"/api/tasks?req_id={req_id}").json()
+    stds = [t for t in tasks3 if t["type"] == "standard_doc"]
+    assert len(stds) == 2 and stds[0]["createdBy"] == "auto:clarify-complete"  # 新窗口重排

@@ -98,10 +98,16 @@ class TaskRepo:
             args.extend(sorted(exclude_types))
         return self.db.execute(sql, tuple(args))
 
-    def exists_by_type(self, req_id: str, type_: str) -> bool:
-        """该需求是否建过某类型任务（不限状态）——无 LIMIT 的存在性直查（L2 只自动一次的判断依据）。"""
+    def exists_by_type(self, req_id: str, type_: str, since: str | None = None) -> bool:
+        """该需求是否建过某类型任务（不限状态）——无 LIMIT 的存在性直查（L2 只自动一次的判断依据）。
+        v4-15（§8 窗口化）：since 非空时只看该时点之后创建的任务（澄清完备窗口起点——
+        变更 confirm 开新窗口后自动合成重新获得机会，旧取消不再是永久终局）。"""
+        if since is None:
+            return bool(self.db.query_scalar(
+                "SELECT EXISTS(SELECT 1 FROM task WHERE req_id=? AND type=?)", (req_id, type_)))
         return bool(self.db.query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM task WHERE req_id=? AND type=?)", (req_id, type_)))
+            "SELECT EXISTS(SELECT 1 FROM task WHERE req_id=? AND type=? AND created_at>?)",
+            (req_id, type_, since)))
 
     def expire_stale_running(self, cutoff: str, fail_result: str, at: str, runner: str | None = None) -> int:
         """执行器启动恢复：把超时仍 running 的任务置 failed（执行器崩溃遗留）。

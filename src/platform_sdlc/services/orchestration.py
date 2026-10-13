@@ -35,13 +35,31 @@ class OrchestrationService:
         self.repos = repos
         self.tasks = tasks
 
+    def _clarify_window_start(self, req_id: str) -> str | None:
+        """澄清完备窗口起点（§8）：max(standard artifact pushed_at, 最新 confirmed 变更单
+        confirmed_at)——两者均有现成存储；均无（首发轮）返回 None 即不限。"""
+        marks: list[str] = []
+        std = self.repos.artifact.find(req_id, "standard")
+        if std is not None and std.pushed_at:
+            marks.append(std.pushed_at)
+        changes = [c for c in self.repos.req_change.list_by_req(req_id) if c.status == "confirmed"]
+        if changes and changes[0].confirmed_at:
+            marks.append(changes[0].confirmed_at)
+        return max(marks) if marks else None
+
     def on_answered(self, req_id: str) -> None:
-        """澄清作答后：全部答完且从未建过 standard_doc 任务 → 自动排队标准文档合成。"""
+        """澄清作答后：全部答完且本窗口内从未建过 standard_doc 任务 → 自动排队标准文档合成。
+
+        v4-15（§8 显式重新裁决）：「只自动一次」精确化为「每个澄清完备窗口只自动一次」——
+        取消语义从「永久不再自动排」收窄为「窗口内终局」：变更 confirm 开新窗口后自动合成
+        重新获得机会（新内容使旧取消意图失效）。窗口起点 = max(standard pushed_at, 最新
+        confirmed_at)，见 _clarify_window_start。"""
         try:
             counts = self.repos.clarify_item.counts(req_id)
             if counts["total"] == 0 or counts["answered"] < counts["total"]:
                 return
-            if self.tasks.any_task_of_type(req_id, task_mod.T_STANDARD):
+            if self.tasks.any_task_of_type(req_id, task_mod.T_STANDARD,
+                                           since=self._clarify_window_start(req_id)):
                 return
             t = self.tasks.create_auto(req_id, task_mod.T_STANDARD, "auto:clarify-complete", "澄清全部答完，L2 自动排队")
             log.info("[L2] %s 澄清全部答完 → 自动创建 #%s standard_doc", req_id, t.id)
@@ -114,9 +132,11 @@ class OrchestrationService:
             if r is None or r.status != "changed":
                 return
             counts = self.repos.clarify_item.counts(req_id)
-            if counts["total"] == 0 or counts["answered"] < counts["total"]:
+            # total==0 视为全处置：本钩子正是为「纯 digest/FR 变更无人作答」补的重合成断链（§8）
+            if counts["total"] != 0 and counts["answered"] < counts["total"]:
                 return
-            if self.tasks.any_task_of_type(req_id, task_mod.T_STANDARD):
+            if self.tasks.any_task_of_type(req_id, task_mod.T_STANDARD,
+                                           since=self._clarify_window_start(req_id)):
                 return
             t = self.tasks.create_auto(req_id, task_mod.T_STANDARD, "auto:incremental-merged",
                                        "增量已合并且澄清全处置，L2 自动排队重合成")

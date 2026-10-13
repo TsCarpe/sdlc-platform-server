@@ -214,8 +214,41 @@ const c4 = await call('POST', `/api/requirements/${req}/changes`, {
     { id: 'ch-trc1', type: 'paragraph', parent: 'ch-tr1', text: '行内块' },
     { id: 'ch-li1', type: 'list-item', marker: '1. ', depth: 1, text: '列表项一' },
     { id: 'ch-li2', type: 'list-item', marker: 'a. ', depth: 2, parent: 'ch-li1', text: '子项 a' }] })
+// 秒级时间戳：c4 confirm 与 4.6 合并同秒会命中「已消化」边界（§5.1 严格小于口径）——隔秒确认
+await new Promise(r => setTimeout(r, 1100))
 const c4c = await call('POST', `/api/requirements/${req}/changes/${c4.id}/confirm`, { confirmedBy: '钱七' })
 check('合并消化串行锁解除（第三单 confirm）', c4c.status, 'confirmed')
+
+// ===== 4.7 changed 守卫矩阵（v4-15） =====
+// c4 confirm 后卡处于 changed：全量通道关闭、许可面开放、发布双重守卫
+await expectErr('POST', `/api/requirements/${req}/tasks`, { type: 'quality_check' }, 409,
+                'changed 拒全量质检任务：409')
+await expectErr('PUT', `/api/requirements/${req}/drafts/digest_bundle`, { contentJson: '{}' }, 409,
+                'changed 拒全量质检草稿：409')
+await expectErr('POST', `/api/requirements/${req}/artifacts`, {
+  digest: { summary: '', roles: [], features: [], flows: [], states: [] },
+  audit: { red: 0, yellow: 0, blue: 0, items: [] },
+  items: [{ seq: 'P9', level: 'yellow', theme: 't', question: 'q' }]
+}, 409, 'changed 拒全量重推（隐式推进吞态收口）：409')
+await expectErr('PUT', `/api/requirements/${req}/blocks`, {
+  updatedBy: 'x', blocks: [{ id: 'ch-t1', type: 'title', text: '标题' }]
+}, 409, 'changed 关闭窗口 1 编辑：409')
+// 许可面：standard 草稿可写 + 变更单 draft 可提（编辑入口）
+const okDraft = await call('POST', `/api/requirements/${req}/changes`, {
+  title: '矩阵期单', proposedBy: '张三',
+  blocks: [{ id: 'ch-t1', type: 'title', text: '标题' },
+    { id: 'ch-h1', type: 'heading', level: 2, text: '背景' },
+    { id: 'ch-p1', type: 'paragraph', text: '一段说明（三修）' },
+    { id: 'ch-tr1', type: 'table-row', head: ['列A'], cells: [['v1']] },
+    { id: 'ch-trc1', type: 'paragraph', parent: 'ch-tr1', text: '行内块' },
+    { id: 'ch-li1', type: 'list-item', marker: '1. ', depth: 1, text: '列表项一' },
+    { id: 'ch-li2', type: 'list-item', marker: 'a. ', depth: 2, parent: 'ch-li1', text: '子项 a' }] })
+check('changed 许可面：变更单 draft 可提（编辑入口）', okDraft.status, 'draft')
+await call('DELETE', `/api/requirements/${req}/changes/${okDraft.id}`)
+await call('PUT', `/api/requirements/${req}/drafts/standard`, { md: '# 重合成草稿' })
+// 发布双重守卫：未消化拒（c4 影响面未消化）→ 消化后草稿不符拒 → 一致过 → published
+await expectErr('POST', `/api/requirements/${req}/publish`, { standardMd: '# 重合成草稿' }, 409,
+                '发布守卫①：影响面未消化 409')
 
 // ===== 5. 未发布卡守卫（建卡走窗口 1 语义） =====
 const { id: reqU } = await call('POST', '/api/requirements', {

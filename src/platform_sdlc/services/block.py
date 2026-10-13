@@ -233,6 +233,10 @@ class BlockService:
             raise ApiException(404, f"需求不存在：{req_id}")
         if r.status == "published":
             raise ApiException(409, "该需求已发布标准文档（终态锁定），不可直接编辑原文")
+        if r.status == "changed":
+            # v4-15（§5.1 矩阵）：changed 关闭窗口 1 的块级直接编辑——否则块编辑与已冻结的影响面
+            # 脱节，增量切片与实际块态漂移；编辑入口 = 新变更单 draft
+            raise ApiException(409, "该需求处于变更中（changed），直接编辑已关闭——原文变更请提变更单 draft")
         if self.repos.task.count_active(req_id, "quality_check") > 0:
             raise ApiException(409, "存在排队中/执行中的质检任务，请等待质检完成后再编辑（防产物锚点基于编辑混合态）")
         if self.repos.req_block.empty(req_id):

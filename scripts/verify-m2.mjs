@@ -137,7 +137,7 @@ let locked = false
 try {
   await call('PUT', `/api/requirements/${created.id}/answers/P07`, { answer: '发布后不应可改' })
 } catch (e) {
-  locked = e.message.includes('仅待澄清状态')
+  locked = e.message.includes('仅待澄清') /* v4-15 文案扩为「仅待澄清/变更中状态可作答」 */
 }
 check('发布后答复锁定', locked, true)
 

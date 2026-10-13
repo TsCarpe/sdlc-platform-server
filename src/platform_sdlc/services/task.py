@@ -69,12 +69,14 @@ class TaskService:
         created_by 记录自动来源，前端据此展示「自动」标记，人可 cancel（仅 queued）。"""
         return self.create_guarded(req_id, type_, note, created_by)
 
-    def any_task_of_type(self, req_id: str, type_: str) -> bool:
-        """该需求是否曾建过某类型任务（不限状态）——L2 钩子「只自动一次」判断。
+    def any_task_of_type(self, req_id: str, type_: str, since: str | None = None) -> bool:
+        """该需求是否曾建过某类型任务（不限状态）——L2 钩子「只自动一次」判断（v4-15 窗口化：
+        since 非空 = 只看澄清完备窗口起点之后——变更 confirm 开新窗口，旧取消不再是永久终局，
+        「人取消即终局」收窄为「窗口内终局」，显式重新裁决见 DESIGN-v4 §8）。
 
         走 EXISTS 直查而非 list()：task.list 带 LIMIT 100，任务行溢出窗口后最早记录滑出，
-        已取消的自动任务会被 L2 误判为「从未建过」而复活（红线：人取消即终局）。"""
-        return self.repos.task.exists_by_type(req_id, type_)
+        已取消的自动任务会被 L2 误判为「从未建过」而复活。"""
+        return self.repos.task.exists_by_type(req_id, type_, since)
 
     def create_guarded(self, req_id: str, type_: str, note: str, created_by: str) -> Task:
         with self.db.tx():
@@ -87,9 +89,15 @@ class TaskService:
                 # 终态锁定只约束质检与标准文档；用例/设计/修订本来就是发布后的正常动作
                 log.warning("建任务被终态锁拒绝：%s %s（已发布，非发布后类型）", req_id, type_)
                 raise ApiException(409, f"该需求已发布标准文档（终态锁定），不能新建{type_}任务")
+            if r.status == "changed" and type_ == T_QUALITY:
+                # v4-15（§5.1 矩阵）：changed 拒全量质检——原文消化只走增量通道（回 published 后
+                # 重新开放；增量不可行的兜底 = 放弃变更）
+                raise ApiException(409, "该需求处于变更中（changed），全量质检已关闭——走增量质检合并")
             if type_ in (T_DESIGN, T_DESIGN_REV):
-                # 设计 lane 前置（D34）：发布后才可生成；C 级/已跳过/未配仓守卫收敛在 DesignService
-                if r.status != "published":
+                # 设计 lane 前置（D34）：发布后才可生成；C 级/已跳过/未配仓守卫收敛在 DesignService。
+                # v4-15（§5.1 矩阵）：changed 是发布后状态的合法变体——in-review 落改通道（design_rev）
+                # 依赖此行，否则变更单一生效落改即被堵死、流程顺序倒挂
+                if r.status not in ("published", "changed"):
                     raise ApiException(409, f"设计 lane 属发布后流程：先完成澄清并发布（当前：{r.status}）")
                 if type_ == T_DESIGN:
                     self.designs.assert_gen_allowed(r)
@@ -99,8 +107,9 @@ class TaskService:
                 # 门禁 lane 前置（与 gate.open 同口径）：排队与开闸同一守卫面，堵「排队即被发布误作废」的口径缝隙
                 raise ApiException(409, f"门禁属发布后流程：先完成澄清并发布（当前：{r.status}）")
             if type_ == T_STANDARD:
-                if r.status != "clarifying":
-                    raise ApiException(409, f"仅待澄清状态可生成标准文档（当前：{r.status}）")
+                if r.status not in ("clarifying", "changed"):
+                    # v4-15（§5.1 矩阵）：changed 下 L2 可排重合成（on_merged/on_answered 点火）
+                    raise ApiException(409, f"仅待澄清/变更中状态可生成标准文档（当前：{r.status}）")
                 # D21 处置口径：驳回/挂起计入已处置（不作答也可关闭问题）
                 counts = self.repos.clarify_item.counts(req_id)
                 if counts["total"] == 0 or counts["answered"] < counts["total"]:
@@ -244,6 +253,10 @@ class TaskService:
             if r.status == "published" and not post_publish:
                 # 终态锁不约束用例/设计草稿：两者都是发布后的正常动作（与 create 的豁免口径一致）
                 raise ApiException(409, "该需求已发布（终态锁定），不能写草稿")
+            if r.status == "changed" and type_ == D_DIGEST:
+                # v4-15（§5.1 草稿面矩阵）：changed 下许可面 = incremental_bundle + standard
+                raise ApiException(409, "该需求处于变更中（changed），全量质检草稿已关闭（许可面："
+                                        "incremental_bundle + standard）")
             d = DraftArtifact(
                 req_id=req_id, type=type_, md=jtext(body, "md", ""), content_json=jtext(body, "contentJson", ""),
                 task_id=jint_or_400(body, "taskId"), updated_at=Times.now(),
