@@ -165,10 +165,10 @@ async def list_cases(wrapper: RunContextWrapper[TaskRunContext]) -> str:
 @function_tool
 async def put_draft(wrapper: RunContextWrapper[TaskRunContext], type: str, md: str = "",
                     contentJson: str = "", mdPath: str = "", contentJsonPath: str = "") -> str:
-    """写草稿——唯一合法的产物回传通道。type=digest_bundle|standard|cases|design|gate_issues。大内容优先走文件路径（磁盘中介，防上下文膨胀）：contentJsonPath/mdPath 指工作区内文件；inline 参数仅在内容很小时使用。
+    """写草稿——唯一合法的产物回传通道。type=digest_bundle|standard|cases|design|gate_issues|incremental_bundle。大内容优先走文件路径（磁盘中介，防上下文膨胀）：contentJsonPath/mdPath 指工作区内文件；inline 参数仅在内容很小时使用。
 
     Args:
-        type: digest_bundle | standard | cases | design | gate_issues
+        type: digest_bundle | standard | cases | design | gate_issues | incremental_bundle
         md: markdown 正文内联值（standard 用；给了 mdPath 则忽略）
         contentJson: payload JSON 内联值（digest_bundle/cases 用；给了 contentJsonPath 则忽略）
         mdPath: 工作区内 markdown 文件相对路径（可选）

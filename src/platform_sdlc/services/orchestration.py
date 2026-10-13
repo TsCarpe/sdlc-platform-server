@@ -105,6 +105,27 @@ class OrchestrationService:
         except Exception as e:  # noqa: BLE001  # 编排失败不连累 confirm 主操作
             log.warning("[L2] %s 变更单 #%s 自动排增量质检失败（不影响确认）：%s", req_id, change_id, e)
 
+    def on_merged(self, req_id: str) -> None:
+        """增量合并采纳后（v4-14，DESIGN-v4 §8）：changed ∧ 澄清全处置 → 自动排 standard_doc
+        （重合成点火点——补断链：影响面不含澄清项的纯 digest/FR 变更无人作答、on_answered 永不
+        触发）。窗口判重本批用「只自动一次」基线；on_answered 窗口化（时间下界）随 v4-15 精确化。"""
+        try:
+            r = self.repos.requirement.find(req_id)
+            if r is None or r.status != "changed":
+                return
+            counts = self.repos.clarify_item.counts(req_id)
+            if counts["total"] == 0 or counts["answered"] < counts["total"]:
+                return
+            if self.tasks.any_task_of_type(req_id, task_mod.T_STANDARD):
+                return
+            t = self.tasks.create_auto(req_id, task_mod.T_STANDARD, "auto:incremental-merged",
+                                       "增量已合并且澄清全处置，L2 自动排队重合成")
+            log.info("[L2] %s 增量合并完成 → 自动创建 #%s standard_doc", req_id, t.id)
+        except ApiException as e:
+            log.info("[L2] %s 合并后排 standard_doc 跳过：%s", req_id, e)
+        except Exception as e:  # noqa: BLE001  # 编排失败不连累采纳主操作
+            log.warning("[L2] %s 合成后自动排 standard_doc 失败（不影响采纳）：%s", req_id, e)
+
     def on_gate_opened(self, req_id: str, round_no: int) -> None:
         """开闸建轮后：自动排队 gate_review（收敛自 gate.open 事务内 create_auto——批次7，AUDIT D1-4）。
 

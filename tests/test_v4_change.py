@@ -359,6 +359,7 @@ def test_confirm_guards_serial(env: tuple[TestClient, Database, Repos]) -> None:
     db.execute("UPDATE artifact SET pushed_at='2026-10-13 00:00:00'"
                " WHERE req_id=? AND type='digest'", (req_id,))
     assert client.post(f"/api/requirements/{req_id}/changes/{c1}/confirm", json={"confirmedBy": "李四"}).status_code == 200
+    _cancel_auto_incremental(client, req_id)  # L2 自动排的增量任务置 cancel（v4-14 钩子生效）
 
     # 串行守卫：前序 confirmed 单影响面未消化（digest.pushed_at < confirmed_at）拒第二单
     c2 = client.post(f"/api/requirements/{req_id}/changes", json={
@@ -455,6 +456,7 @@ def test_abort_guards_and_optimistic_lock(env: tuple[TestClient, Database, Repos
                        json={"abortedBy": "x"}).status_code == 409
 
     cid = _confirm_first(client, req_id)
+    _cancel_auto_incremental(client, req_id)  # L2 自动排的增量任务置 cancel（守卫面干净）
     # 块乐观锁：confirm 后块被改（db 直改模拟）→ 409 且零写入
     db.execute("UPDATE req_block SET text='放弃前被改' WHERE req_id=? AND block_id='p1'", (req_id,))
     r = client.post(f"/api/requirements/{req_id}/changes/{cid}/abort", json={"abortedBy": "王五"})
@@ -478,3 +480,121 @@ def test_abort_guards_and_optimistic_lock(env: tuple[TestClient, Database, Repos
                        json={"confirmedBy": "赵六"}).status_code == 200
     r2 = client.post(f"/api/requirements/{req_id}/changes/{cid}/abort", json={"abortedBy": "王五"})
     assert r2.status_code == 409 and "LIFO" in r2.json()["error"]
+def _cancel_auto_incremental(client: TestClient, req_id: str) -> None:
+    """confirm 后 L2 自动排的 incremental_test 任务置 cancel（人取消即终局——增量人工逃生门
+    允许重建；测试需要干净的守卫面）。"""
+    tasks = client.get(f"/api/tasks?req_id={req_id}").json()
+    for t in tasks:
+        if t["type"] == "incremental_check" and t["status"] == "queued":
+            client.post(f"/api/tasks/{t['id']}/cancel")
+
+
+# ---------- v4-14：增量任务 + 机械校验 + 章节级合并 ----------
+
+def _bundle(change_id: int, section: str, p1_anchor: str,
+            extra: dict[str, Any] | None = None) -> dict[str, Any]:
+    b: dict[str, Any] = {
+        "changeId": change_id, "sections": [section],
+        "digestRows": {
+            "features": [{"role": "用户", "m": "注册", "func": "邮箱注册（增量）", "anchor": p1_anchor}],
+            "flows": [], "states": [],
+            "auditItems": [{"id": "A-1", "level": "yellow", "title": "口径已改需复核",
+                            "where": "背景", "go": "确认新口径", "anchor": p1_anchor}],
+            "frUpserts": [{"id": "需求.FR-1", "name": "注册（增量）", "anchor": p1_anchor}],
+            "frRemoves": [],
+        },
+        "invalidate": {"digestAnchors": [], "auditIds": []},
+        "clarify": {"items": [{"level": "yellow", "theme": "t", "question": "增量新问题",
+                               "anchor": p1_anchor}]},
+        "summary": "增量后摘要", "riskTier": "A",
+    }
+    if extra:
+        b.update(extra)
+    return b
+
+
+def test_incremental_task_and_merge(env: tuple[TestClient, Database, Repos]) -> None:
+    client, db, repos = env
+    req_id = _mk_card(client)
+    _seed(repos, req_id)
+    _publish_card(client, repos, req_id)
+    cid = _draft_edit_p1(client, req_id)["id"]
+    db.execute("UPDATE artifact SET pushed_at='2026-10-13 00:00:00' WHERE req_id=? AND type='digest'",
+               (req_id,))
+    assert client.post(f"/api/requirements/{req_id}/changes/{cid}/confirm",
+                       json={"confirmedBy": "李四"}).status_code == 200
+    card = client.get(f"/api/requirements/{req_id}").json()["card"]
+    assert card["status"] == "changed"
+
+    # L2 钩子已自动排增量任务（on_change_confirmed 生效——影响面 digest/FR 非空）
+    tasks = client.get(f"/api/tasks?req_id={req_id}").json()
+    auto_inc = [t for t in tasks if t["type"] == "incremental_check"]
+    assert len(auto_inc) == 1 and auto_inc[0]["status"] == "queued"
+    assert auto_inc[0]["createdBy"] == "auto:change-confirmed"
+
+    # 守卫：同类型防重 + 非 changed 拒
+    assert client.post(f"/api/requirements/{req_id}/tasks",
+                       json={"type": "incremental_check"}).status_code == 409
+    client.post(f"/api/tasks/{auto_inc[0]['id']}/cancel")
+
+    # put_draft 机械校验：sections 禁 seq 数值；anchor 越界拒；作废清单须真实存在
+    bad1 = _bundle(cid, "3000", "p1")
+    r1 = client.put(f"/api/requirements/{req_id}/drafts/incremental_bundle",
+                    json={"contentJson": _dumps_py(bad1)})
+    assert r1.status_code == 400 and "禁 seq 数值" in r1.json()["error"]
+    bad2 = _bundle(cid, "h1", "li2")  # li2 不在受影响块集
+    r2 = client.put(f"/api/requirements/{req_id}/drafts/incremental_bundle",
+                    json={"contentJson": _dumps_py(bad2)})
+    assert r2.status_code == 400 and "越界" in r2.json()["error"]
+    bad3 = _bundle(cid, "h1", "p1", extra={"invalidate": {"digestAnchors": ["GHOST"], "auditIds": []}})
+    r3 = client.put(f"/api/requirements/{req_id}/drafts/incremental_bundle",
+                    json={"contentJson": _dumps_py(bad3)})
+    assert r3.status_code == 400 and "真实存在" in r3.json()["error"]
+
+    # 正常落草稿 → 采纳合并
+    good = _bundle(cid, "h1", "p1")
+    r4 = client.put(f"/api/requirements/{req_id}/drafts/incremental_bundle",
+                    json={"contentJson": _dumps_py(good)})
+    assert r4.status_code == 200
+    appr = client.post(f"/api/requirements/{req_id}/drafts/incremental_bundle/approve",
+                       json={"by": "采纳人"}).json()
+    assert appr["ok"] is True and appr["removedRows"] >= 1 and appr["newRows"] >= 3
+
+    detail = client.get(f"/api/requirements/{req_id}").json()
+    feats = detail["digest"]["content"]["features"]
+    assert [f["func"] for f in feats] == ["邮箱注册（增量）"]  # 区间内旧行（p1 锚）整组替换
+    frs = client.get(f"/api/fr-points?req_id={req_id}").json()["points"]
+    assert frs == ["需求.FR-1"]  # 区间覆盖全文：FR-2（li2 锚）删、FR-1 upsert
+    answers = {a["seq"]: a for a in client.get(f"/api/requirements/{req_id}/answers").json()}
+    # 机器澄清按区间替换：唯一章节 h1 的区间覆盖全文——P1/P2/P4（区间内机器行）全删；
+    # P3（空 anchor）永不触碰（§6.2）；新行 P 系接 max+1（删后存量 max=3 → 新行 P4，编号复用合法）
+    assert "P1" not in answers and "P2" not in answers and "P3" in answers
+    assert all(not (a["seq"] == "P4" and a["question"] == "q4") for a in answers.values())  # 旧 P4 已删
+    new_p = [a for a in answers.values() if a["origin"] == "incremental"]
+    assert len(new_p) == 1 and new_p[0]["question"] == "增量新问题"
+    max_seq = max(int(a["seq"][1:]) for a in answers.values() if a["seq"].startswith("P"))
+    assert new_p[0]["seq"] == f"P{max_seq}"
+    assert detail["card"]["riskTier"] == "A"  # 覆写
+    # digest pushed_at 刷新（发布守卫依赖）+ md 重渲染
+    dg = db.query_one("SELECT version, pushed_at, markdown FROM artifact WHERE req_id=? AND type='digest'",
+                      (req_id,))
+    # version：seed 落库 v1 → 发布链 push v2 → 合并 upsert v3（每次内容变更 version+1 且 pushed_at 刷新）
+    assert dg is not None and dg["version"] == 3 and "邮箱注册（增量）" in dg["markdown"]
+    assert dg["pushed_at"] >= card["createdAt"] or dg["pushed_at"] > "2026-10-13"
+
+    # 合并消化串行锁：第二单 confirm 放行（digest.pushed_at 已 > confirmed_at）
+    c2 = client.post(f"/api/requirements/{req_id}/changes", json={
+        "title": "第二单", "proposedBy": "张三", "blocks": [
+            {"id": "t1", "type": "title", "text": "标题"},
+            {"id": "h1", "type": "heading", "level": 2, "text": "背景"},
+            {"id": "p1", "type": "paragraph", "text": "一段说明（再修订）"},
+            {"id": "li1", "type": "list-item", "marker": "1. ", "depth": 1, "text": "列表项一"},
+            {"id": "li2", "type": "list-item", "marker": "a. ", "depth": 2, "parent": "li1", "text": "子项 a"},
+        ]}).json()["id"]
+    r5 = client.post(f"/api/requirements/{req_id}/changes/{c2}/confirm", json={"confirmedBy": "赵六"})
+    assert r5.status_code == 200
+
+
+def _dumps_py(o: object) -> str:
+    import json
+    return json.dumps(o, ensure_ascii=False)

@@ -13,7 +13,7 @@ import json
 import logging
 from typing import Any
 
-from platform_sdlc.common import ApiException, Times, is_json_list, is_json_obj, jrequired, jtext
+from platform_sdlc.common import ApiException, Times, is_json_list, is_json_obj, jint_or_400, jrequired, jtext
 from platform_sdlc.db import Database
 from platform_sdlc.models import ReqChange, ReqChangeItem, TestCase
 from platform_sdlc.repositories import Repos
@@ -179,6 +179,214 @@ class ChangeService:
         after = self.repos.requirement.find(req_id)
         out["contentRev"] = after.content_rev if after is not None else 0
         return out
+
+    # ---------- v4-14（DESIGN-v4 §6）：增量质检守卫 / selfCheck 机械校验 / 章节级机械合并 ----------
+
+    def guard_incremental(self, r: Any) -> None:
+        """incremental_check 创建守卫（§5.5 第 6 步人工逃生门）：changed ∧ 存在 confirmed 单 ∧
+        影响面非空（无影响面的单没有可增量处理的面）。"""
+        confirmed = [x for x in self.repos.req_change.list_by_req(r.id) if x.status == "confirmed"]
+        if not confirmed:
+            raise ApiException(409, "无 confirmed 变更单，增量质检无从取影响面（先确认变更单）")
+        c = confirmed[0]
+        impact_v = _load_or_none(c.impact_json)
+        counts_v: Any = impact_v.get("counts") if is_json_obj(impact_v) else None
+        counts: dict[str, Any] = dict(counts_v) if is_json_obj(counts_v) else {}
+        n = sum(int(counts.get(k) or 0) for k in ("blocks", "digestRows", "frPoints", "clarify", "cases"))
+        if n == 0:
+            raise ApiException(409, f"变更单 #{c.id} 影响面为空，无增量质检面（走全量或放弃变更）")
+
+    def validate_bundle(self, req_id: str, content_json: str) -> dict[str, Any]:
+        """incremental_bundle 的 selfCheck 机械校验（§6.1，put_draft 服务端单点——runner/进程内
+        两通道的草稿都经此处）：①章节区间 = heading 的 block_id，禁 seq 数值（纯数字/非 heading 集
+        即拒——整体重排会改写全表 seq，冻结数值即失真）；②新行 anchor 全部 ∈ 受影响块集
+        （防 LLM 越界重写）；③作废清单的行真实存在（digest 行按 anchor、audit 条目按 id）。"""
+        try:
+            bundle: Any = json.loads(content_json)
+        except json.JSONDecodeError as e:
+            raise ApiException(400, f"incremental_bundle 不是合法 JSON：{e}") from e
+        if not is_json_obj(bundle):
+            raise ApiException(400, "incremental_bundle 必须是 JSON 对象")
+        change_id = jint_or_400(bundle, "changeId", None)
+        if change_id is None:
+            raise ApiException(400, "缺少必填字段：changeId")
+        c = self.repos.req_change.find(req_id, change_id)
+        if c is None or c.status != "confirmed":
+            raise ApiException(400, f"changeId={change_id} 不是本卡 confirmed 变更单")
+        impact = _load_or_none(c.impact_json)
+        impact_d: dict[str, Any] = dict(impact) if is_json_obj(impact) else {}
+        target = {str(b) for b in _arr(impact_d.get("blocks"))}
+        if not target:
+            raise ApiException(400, "变更单影响面为空，无增量面")
+
+        blocks = self.repos.req_block.list_by_req(req_id)
+        heading_ids = {b.block_id for b in blocks if b.type == "heading"}
+        sections = [str(x) for x in _arr(bundle.get("sections"))]
+        if not sections:
+            raise ApiException(400, "sections 不能为空（受影响章节，heading block_id 表示）")
+        for sec in sections:
+            if sec not in heading_ids:
+                raise ApiException(400, f"sections 值 {sec} 不是块表 heading 的 block_id"
+                                        "（区间表示禁 seq 数值，须用 heading block_id）")
+
+        rows_v = bundle.get("digestRows")
+        rows: dict[str, Any] = dict(rows_v) if is_json_obj(rows_v) else {}
+        anchors: set[str] = set()
+        for key in ("features", "flows", "states", "auditItems", "frUpserts"):
+            for f in _arr(rows.get(key)):
+                if is_json_obj(f):
+                    anchors.add(jtext(f, "anchor", ""))
+        cl_v = bundle.get("clarify")
+        for it in _arr(cl_v.get("items")) if is_json_obj(cl_v) else []:
+            if is_json_obj(it):
+                anchors.add(jtext(it, "anchor", ""))
+        out_of_range = sorted(a for a in anchors if a and a not in target)
+        if out_of_range:
+            raise ApiException(400, f"新行 anchor 越界（不在受影响块集）：{out_of_range[:5]}"
+                                    f"（共 {len(out_of_range)} 个，防越界重写）")
+
+        inv_v = bundle.get("invalidate")
+        inv: dict[str, Any] = dict(inv_v) if is_json_obj(inv_v) else {}
+        digest = self.repos.artifact.find(req_id, "digest")
+        digest_anchors: set[str] = set()
+        if digest is not None and digest.content_json:
+            dv_v = _load_or_none(digest.content_json)
+            dv: dict[str, Any] = dict(dv_v) if is_json_obj(dv_v) else {}
+            for key in ("features", "flows", "states"):
+                for f in _arr(dv.get(key)):
+                    if is_json_obj(f):
+                        digest_anchors.add(jtext(f, "anchor", ""))
+        for a in _arr(inv.get("digestAnchors")):
+            if str(a) not in digest_anchors:
+                raise ApiException(400, f"作废清单 anchor 无对应 digest 行：{a}（清单里的行必须真实存在）")
+        audit = self.repos.artifact.find(req_id, "audit")
+        audit_ids: set[str] = set()
+        if audit is not None and audit.content_json:
+            av_v = _load_or_none(audit.content_json)
+            av: dict[str, Any] = dict(av_v) if is_json_obj(av_v) else {}
+            for it in _arr(av.get("items")):
+                if is_json_obj(it):
+                    audit_ids.add(jtext(it, "id", ""))
+        for i in _arr(inv.get("auditIds")):
+            if str(i) not in audit_ids:
+                raise ApiException(400, f"作废清单 audit 条目不存在：{i}（清单里的行必须真实存在）")
+        return dict(bundle)
+
+    def merge_incremental(self, req_id: str, d: Any, by: str) -> dict[str, Any]:
+        """采纳 = 服务端纯机械合并一个事务（§6.2）：区间整组替换（anchor 落区间的旧行删、新行写入；
+        空 anchor/global 行永不触碰）、FR 区间 upsert+remove、机器澄清按区间替换（local 永不动）、
+        audit 同 digest 规则、md 整篇重渲染（md 退化为展示物，权威在结构行）、summary/riskTier 覆写、
+        artifact.upsert version+1 且 pushed_at 刷新（§5.1 发布守卫「合并也是一次推送」依赖此语义）。
+        LLM 产物不直接进正式面——本合并是人审采纳后的机械执行，草稿先行红线原样。"""
+        with self.db.tx():
+            r = self.repos.requirement.find(req_id)
+            if r is None:
+                raise ApiException(404, f"需求不存在：{req_id}")
+            if r.status != "changed":
+                raise ApiException(409, f"增量合并属变更后流程（当前：{r.status}）")
+            bundle: dict[str, Any] = self.validate_bundle(req_id, d.content_json)
+            change_id = int(bundle["changeId"])
+            blocks = self.repos.req_block.list_by_req(req_id)
+            section_ids = _section_block_ids(blocks, [str(x) for x in _arr(bundle.get("sections"))])
+            # 锚定已删块的行（change confirm 软删，活块集区间扫描不可见）并入替换域——否则永无
+            # 消化通道；判定来源 = 冻结影响面块集 - 活块集
+            change_row = self.repos.req_change.find(req_id, change_id)
+            impact_raw_v = _load_or_none(change_row.impact_json) if change_row is not None else None
+            frozen_blocks: set[str] = ({str(b) for b in _arr(impact_raw_v.get("blocks"))}
+                                       if is_json_obj(impact_raw_v) else set())
+            live_ids = {b.block_id for b in blocks}
+            section_ids |= {b for b in frozen_blocks if b not in live_ids}  # noqa: C405 – 集合推导保持显式
+            rows_v = bundle.get("digestRows")
+            rows: dict[str, Any] = dict(rows_v) if is_json_obj(rows_v) else {}
+            inv_v = bundle.get("invalidate")
+            inv: dict[str, Any] = dict(inv_v) if is_json_obj(inv_v) else {}
+            inv_anchors = {str(x) for x in _arr(inv.get("digestAnchors"))}
+            inv_audit = {str(x) for x in _arr(inv.get("auditIds"))}
+
+            digest = self.repos.artifact.find(req_id, "digest")
+            dv_raw = _load_or_none(digest.content_json) if digest is not None else None
+            dv: dict[str, Any] = dict(dv_raw) if is_json_obj(dv_raw) else {
+                "summary": "", "roles": [], "features": [], "flows": [], "states": []}
+            stats = {"removedRows": 0, "newRows": 0}
+            for key in ("features", "flows", "states"):
+                kept = _merge_rows(_arr(dv.get(key)), _arr(rows.get(key)), section_ids, inv_anchors, stats)
+                dv[key] = kept
+            if jtext(bundle, "summary", ""):
+                dv["summary"] = jtext(bundle, "summary", "")
+
+            audit = self.repos.artifact.find(req_id, "audit")
+            av_raw = _load_or_none(audit.content_json) if audit is not None else None
+            av: dict[str, Any] = dict(av_raw) if is_json_obj(av_raw) else {
+                "red": 0, "yellow": 0, "blue": 0, "items": []}
+            kept_items: list[dict[str, Any]] = []
+            for it_raw in _arr(av.get("items")):
+                if not is_json_obj(it_raw):
+                    continue
+                a = jtext(it_raw, "anchor", "")
+                iid = jtext(it_raw, "id", "")
+                if a and a in section_ids:
+                    stats["removedRows"] += 1
+                    continue
+                if iid and iid in inv_audit:
+                    stats["removedRows"] += 1
+                    continue
+                kept_items.append(it_raw)
+            new_audit = [x for x in _arr(rows.get("auditItems")) if is_json_obj(x)]
+            av["items"] = [*kept_items, *new_audit]
+            stats["newRows"] += len(new_audit)
+            av["yellow"] = sum(1 for x in _arr(av.get("items"))
+                               if is_json_obj(x) and jtext(x, "level", "yellow") == "yellow")
+            av["red"] = sum(1 for x in _arr(av.get("items"))
+                            if is_json_obj(x) and jtext(x, "level", "") == "red")
+
+            frs = self.repos.fr_point.list_by_req(req_id)
+            fp_v = bundle.get("frPoints")
+            remove_ids: set[str] = {str(x) for x in _arr(fp_v.get("remove"))} if is_json_obj(fp_v) else set()
+            kept_frs: list[Any] = []
+            for fp in frs:
+                if fp.anchor and fp.anchor in section_ids:
+                    stats["removedRows"] += 1
+                    continue
+                if fp.id in remove_ids:
+                    stats["removedRows"] += 1
+                    continue
+                kept_frs.append(fp)
+            from platform_sdlc.models import FrPoint
+            new_frs = [FrPoint(req_id=req_id, id=jtext(f, "id", ""), name=jtext(f, "name", ""),
+                               source=jtext(f, "source", ""), group=jtext(f, "group", ""),
+                               module=jtext(f, "module", ""), anchor=jtext(f, "anchor", ""))
+                       for f in _arr(rows.get("frUpserts")) if is_json_obj(f) and jtext(f, "id", "")]
+
+            clarify_kept: list[Any] = []
+            for item in self.repos.clarify_item.list_by_req(req_id):
+                if item.anchor and item.anchor in section_ids and item.origin in ("skill", "incremental"):
+                    stats["removedRows"] += 1
+                    continue
+                clarify_kept.append(item)
+            new_clarify: list[Any] = []
+            cl_v = bundle.get("clarify")
+            for it_raw in _arr(cl_v.get("items")) if is_json_obj(cl_v) else []:
+                if not is_json_obj(it_raw):
+                    continue
+                new_clarify.append(_machine_clarify(req_id, it_raw))
+            stats["newRows"] += len(new_clarify)
+
+            at = Times.now()
+            self.repos.artifact.upsert(req_id, "digest", _render_digest_md(dv), _json_compact(dv), at)
+            self.repos.artifact.upsert(req_id, "audit", _render_audit_md(av), _json_compact(av), at)
+            self.repos.fr_point.replace_all(req_id, [*kept_frs, *new_frs])
+            self.repos.clarify_item.delete_machine_by_req(req_id)
+            kept_seqs = {x.seq for x in clarify_kept}
+            for item in new_clarify:
+                item.seq = self.repos.clarify_item.next_machine_seq(req_id, kept_seqs)
+                kept_seqs.add(item.seq)
+            self.repos.clarify_item.insert_many([*clarify_kept, *new_clarify])
+            tier = jtext(bundle, "riskTier", "").strip()
+            if tier and tier in ("A", "B", "C"):
+                self.repos.requirement.set_risk_tier(req_id, tier)
+            self.repos.requirement.touch_synced(req_id, at)
+        log.info("增量合并 %s（变更单 #%s，by=%s）：%s", req_id, change_id, by, stats)
+        return {"ok": True, "changeId": change_id, "mergedBy": by, **stats}
 
     # ---------- 放弃变更（§5.6：changed 态的受控逃生门——增量通道死锁时的出口） ----------
 
@@ -488,6 +696,91 @@ def _load_raw_list(raw: str) -> list[Any]:
     except json.JSONDecodeError:
         return []
     return list(v) if is_json_list(v) else []
+
+
+def _section_block_ids(blocks_all: list[Any], heading_ids: list[str]) -> set[str]:
+    """章节区间读时解析（§6.2：区间 = 目标 heading 的 seq 到下一个 level ≤ 它的 heading）——
+    返回区间内块 ID 全集（含 heading 自身）。"""
+    targets = set(heading_ids)
+    out: set[str] = set()
+    active: list[int] = []  # 活动区间的 heading level 栈
+    for b in blocks_all:
+        if b.type == "heading":
+            level = _level_of(b.attrs_json)
+            while active and active[-1] >= level:
+                active.pop()
+            if b.block_id in targets:
+                active.append(level)
+        if active:
+            out.add(b.block_id)
+    return out
+
+
+def _merge_rows(old_rows: list[Any], new_rows: list[Any], section_ids: set[str],
+                inv_anchors: set[str], stats: dict[str, int]) -> list[Any]:
+    """§6.2 行合并：区间内旧行删（anchor 落区间）；作废清单删；区间外原样；空 anchor/global 行
+    永不触碰；新行追加（同 anchor 多行整组重写——行无稳定 ID，按 anchor 定位）。"""
+    kept: list[Any] = []
+    for f in old_rows:
+        if not is_json_obj(f):
+            continue
+        a = jtext(f, "anchor", "")
+        if not a:
+            kept.append(f)  # 空 anchor/global 行：不属任何章节，增量合并永不触碰
+            continue
+        if a in section_ids or a in inv_anchors:
+            stats["removedRows"] += 1
+            continue
+        kept.append(f)
+    new = [f for f in new_rows if is_json_obj(f)]
+    stats["newRows"] += len(new)
+    return [*kept, *new]
+
+
+def _machine_clarify(req_id: str, it: dict[str, Any]) -> Any:
+    """增量新澄清行（§6.3：origin='incremental'，P 系编号由平台分配接 max+1——seq 平台权威）。"""
+    from platform_sdlc.models import ClarifyItem
+    return ClarifyItem(id=0, req_id=req_id, seq="__PENDING__", level=jtext(it, "level", "yellow"),
+                       theme=jtext(it, "theme", "") or "增量质检", question=jrequired(it, "question"),
+                       ctx=jtext(it, "ctx", ""), quote=jtext(it, "quote", ""),
+                       anchor=jtext(it, "anchor", ""), status="pending", origin="incremental")
+
+
+def _json_compact(o: Any) -> str:
+    return json.dumps(o, ensure_ascii=False, separators=(",", ":"))
+
+
+def _render_digest_md(dv: dict[str, Any]) -> str:
+    """md 整篇重渲染（§6.2：md 正式退化为展示物，权威在结构行）——结构行的机械文本化。"""
+    lines: list[str] = ["## 需求梳理（digest）", "", f"- 摘要：{jtext(dv, 'summary', '')}", ""]
+    roles = _arr(dv.get("roles"))
+    if roles:
+        lines += ["### 角色", "", *[f"- {str(r)}" for r in roles], ""]
+    feats = [f for f in _arr(dv.get("features")) if is_json_obj(f)]
+    if feats:
+        lines += ["### 功能点", "", "| 角色 | 模块 | 功能 | 锚点 |", "| --- | --- | --- | --- |",
+                  *[f"| {jtext(f, 'role', '')} | {jtext(f, 'm', '')} | {jtext(f, 'func', '')} | "
+                    f"{jtext(f, 'anchor', '')} |" for f in feats], ""]
+    flows = [f for f in _arr(dv.get("flows")) if is_json_obj(f)]
+    if flows:
+        lines += ["### 主流程", "", "| 角色 | 步骤 | 下一 | 锚点 |", "| --- | --- | --- | --- |",
+                  *[f"| {jtext(f, 'role', '')} | {jtext(f, 'step', '')} | {jtext(f, 'next', '')} | "
+                    f"{jtext(f, 'anchor', '')} |" for f in flows], ""]
+    states = [f for f in _arr(dv.get("states")) if is_json_obj(f)]
+    if states:
+        lines += ["### 状态机", "", "| 对象 | 起 | 事件 | 止 | 锚点 |", "| --- | --- | --- | --- | --- |",
+                  *[f"| {jtext(f, 'obj', '')} | {jtext(f, 'from', '')} | {jtext(f, 'on', '')} | "
+                    f"{jtext(f, 'to', '')} | {jtext(f, 'anchor', '')} |" for f in states], ""]
+    return "\n".join(lines)
+
+
+def _render_audit_md(av: dict[str, Any]) -> str:
+    lines = ["## 需求体检（audit）", "",
+             f"- 红 {av.get('red', 0)} / 严重 {av.get('yellow', 0)} / 观察 {av.get('blue', 0)}", ""]
+    for it in [x for x in _arr(av.get("items")) if is_json_obj(x)]:
+        lines.append(f"- [{jtext(it, 'level', 'yellow')}] {jtext(it, 'title', '')}"
+                     f"（{jtext(it, 'where', '')}）→ {jtext(it, 'go', '')}")
+    return "\n".join(lines)
 
 
 def _load_snapshot(raw: str) -> dict[str, Any] | None:

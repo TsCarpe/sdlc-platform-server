@@ -24,14 +24,17 @@ T_DESIGN = "design_gen"
 T_DESIGN_REV = "design_rev"
 T_GATE = "gate_review"
 T_SOURCE_IMPORT = "source_import"  # v4-3（DESIGN-v4 §3）：原文导入——拉取+解析+评论导入，落库走完成回调
+T_INCREMENTAL = "incremental_check"  # v4-14（DESIGN-v4 §6）：变更后局部质检——受影响章节切片增量梳理
 
 D_DIGEST = "digest_bundle"
+D_INCREMENTAL = "incremental_bundle"
 D_STANDARD = "standard"
 D_CASES = "cases"
 D_DESIGN = "design"
 D_GATE_ISSUES = "gate_issues"
 
-_TASK_TYPES = {T_QUALITY, T_STANDARD, T_CASES, T_DESIGN, T_DESIGN_REV, T_GATE, T_SOURCE_IMPORT}
+_TASK_TYPES = {T_QUALITY, T_STANDARD, T_CASES, T_DESIGN, T_DESIGN_REV, T_GATE, T_SOURCE_IMPORT,
+                T_INCREMENTAL}
 
 
 # 发布后合法的任务类型（终态锁/发布收尾的统一豁免面，D36）：用例/设计/修订/门禁评审
@@ -45,13 +48,14 @@ def _post_publish_task(type_: str) -> bool:
 
 class TaskService:
     def __init__(self, db: Database, repos: Repos, requirement_service: Any, case_service: Any,
-                 design_service: Any, block_service: Any) -> None:
+                 design_service: Any, block_service: Any, change_service: Any = None) -> None:
         # 服务依赖（对应 Java TaskService 注入 Requirement/Case/DesignService）
         self.db = db
         self.repos = repos
         self.requirements = requirement_service
         self.cases = case_service
         self.designs = design_service
+        self.changes = change_service
         self.blocks = block_service  # v4-3：source_import 完成回调落库（§3 挂点 = finish）
 
     # ---------- 任务 ----------
@@ -104,6 +108,12 @@ class TaskService:
                                             "全部问题答复/驳回/挂起后才可生成标准文档")
             if type_ == T_SOURCE_IMPORT:
                 self._guard_import_sealed(r)
+            if type_ == T_INCREMENTAL:
+                # v4-14（§5.5 第 6 步）：人工逃生门——L2 排不上时人可手动补建，不能让需求停在
+                # changed + 影响面冻结 + 增量无人排的中间态。守卫 = changed ∧ 存在 confirmed 单 ∧ 影响面非空。
+                if r.status != "changed":
+                    raise ApiException(409, f"增量质检属变更后流程：需求处于 changed 才可（当前：{r.status}）")
+                self.changes.guard_incremental(r)
             if self.repos.task.count_active(req_id, type_) > 0:
                 raise ApiException(409, "该需求已有同类型任务在排队或执行中，请等待完成")
             t = Task(id=0, req_id=req_id, type=type_, status="queued",
@@ -223,7 +233,7 @@ class TaskService:
     # ---------- 草稿 ----------
 
     def put_draft(self, req_id: str, type_: str, body: dict[str, Any]) -> DraftArtifact:
-        if type_ not in (D_DIGEST, D_STANDARD, D_CASES, D_DESIGN, D_GATE_ISSUES):
+        if type_ not in (D_DIGEST, D_STANDARD, D_CASES, D_DESIGN, D_GATE_ISSUES, D_INCREMENTAL):
             raise ApiException(400, f"非法草稿类型：{type_}")
         with self.db.tx():
             # 终态检查与写同事务：堵「检查后发布、发布后落草稿」的拒草稿终态锁 TOCTOU 窗口
@@ -240,6 +250,12 @@ class TaskService:
             )
             if type_ == D_DIGEST and not d.content_json.strip():
                 raise ApiException(400, "digest_bundle 草稿必须携带 contentJson（完整推送 payload）")
+            if type_ == D_INCREMENTAL:
+                if not d.content_json.strip():
+                    raise ApiException(400, "incremental_bundle 草稿必须携带 contentJson（增量包结构）")
+                # v4-14（§6.1 selfCheck 机械校验，服务端单点）：章节区间 = heading block_id 禁 seq
+                # 数值、新行 anchor ∈ 受影响块集（防 LLM 越界重写）、作废清单行真实存在
+                self.changes.validate_bundle(req_id, d.content_json)
             self.repos.draft.upsert(d, d.updated_at or "")
             out = self.repos.draft.find(req_id, type_)
             assert out is not None
@@ -278,6 +294,9 @@ class TaskService:
                 out = self.cases.sync_upsert(req_id, _parse_object(d.content_json, "cases 推送"))
             elif type_ == D_DESIGN:
                 out = {"finalizedVersion": self.designs.finalize(req_id, d, by)}
+            elif type_ == D_INCREMENTAL:
+                # v4-14（§6.2）：采纳 = 服务端纯机械合并一个事务（章节级整组替换，人审关口放行）
+                out = self.changes.merge_incremental(req_id, d, by)
             else:
                 raise ApiException(400, "标准文档草稿无采纳动作，请在预览后直接发布（终态）")
             self.repos.draft.delete(req_id, type_)

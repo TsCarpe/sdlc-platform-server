@@ -94,6 +94,9 @@ def router(ctx: AppContext) -> APIRouter:
     async def approve(req_id: str, type: str, request: Request) -> dict[str, Any]:
         # body 可选携带 by（design 定稿人；digest/cases 采纳不记名，历史契约不变）
         body = await read_json(request)
-        return await asyncio.to_thread(svc.approve, req_id, type, str(body.get("by") or ""))
+        out = await asyncio.to_thread(svc.approve, req_id, type, str(body.get("by") or ""))
+        if type == "incremental_bundle":  # v4-14（§8）：合并采纳后 changed+澄清全处置 → 排重合成
+            await asyncio.to_thread(ctx.services.orchestration.on_merged, req_id)
+        return out
 
     return r

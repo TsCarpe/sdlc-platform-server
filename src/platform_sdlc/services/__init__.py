@@ -47,7 +47,7 @@ class Services:
         requirements = RequirementService(db, repos, blocks)
         cases = CaseService(db, repos)
         designs = DesignService(db, repos)
-        tasks = TaskService(db, repos, requirements, cases, designs, blocks)
+        tasks = TaskService(db, repos, requirements, cases, designs, blocks, changes)
         gate = GateService(db, repos, designs)
         orchestration = OrchestrationService(repos, tasks)
         return cls(media=media, iterations=iterations, blocks=blocks, comments=comments,

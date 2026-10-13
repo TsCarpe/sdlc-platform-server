@@ -149,6 +149,11 @@ await expectErr('POST', `/api/requirements/${req}/changes/${draft.id}/abort`, { 
 await expectErr('POST', `/api/requirements/${req}/changes/${draft.id}/confirm`, { confirmedBy: 'x' }, 409,
                 'aborted 不可 confirm：409')
 
+// 第 3 段 confirm 自动排的增量任务：先取消（人取消即终局；增量人工逃生门可重建）
+for (const t of (await call('GET', `/api/tasks?req_id=${req}`)).filter(
+    x => x.type === 'incremental_check' && x.status === 'queued')) {
+  await call('POST', `/api/tasks/${t.id}/cancel`)
+}
 // 弃后通道恢复：新 draft → confirm 再次可行（串行锁随 aborted 单解除）
 const c3 = await call('POST', `/api/requirements/${req}/changes`, {
   title: '弃后再变', proposedBy: '张三', blocks: [
@@ -162,6 +167,55 @@ const c3 = await call('POST', `/api/requirements/${req}/changes`, {
 const c3c = await call('POST', `/api/requirements/${req}/changes/${c3.id}/confirm`, { confirmedBy: '赵六' })
 check('弃后再变更可行（串行锁解除 + rev 继续）', [c3c.status, c3c.contentRev], ['confirmed', 2])
 await call('DELETE', `/api/requirements/${req}/changes/${c2.id}`)  // draft 可直接删（收尾清理）
+
+// ===== 4.6 增量链（v4-14）：confirm 自动排增量 → 落草稿（机械校验）→ 采纳合并 → 串行解除 =====
+const incTasks = (await call('GET', `/api/tasks?req_id=${req}`)).filter(
+    t => t.type === 'incremental_check' && t.status === 'queued')
+check('confirm 自动排 incremental_check（on_change_confirmed 钩子生效；前序已人取消）',
+      [incTasks.length, incTasks[0].createdBy], [1, 'auto:change-confirmed'])
+let incClaimed = null
+for (let i = 0; i < 5; i++) {  // FIFO 顺路排空他卡遗留任务
+  const t = await call('POST', '/api/tasks/next?runner=verify-change')
+  if (t.type === 'incremental_check') { incClaimed = t; break }
+  await call('POST', `/api/tasks/${t.id}/done`, { result: '{"drained":"verify-change-inc"}' })
+}
+check('增量任务正常领取', [incClaimed.type, incClaimed.status], ['incremental_check', 'running'])
+await call('POST', `/api/tasks/${incClaimed.id}/done`, { result: '{"sim":"verify-change"}' })
+
+const bundle = JSON.stringify({
+  changeId: c3.id, sections: ['ch-h1'],
+  digestRows: {
+    features: [{ role: '用户', m: '注册', func: '邮箱注册（增量黑盒）', anchor: 'ch-p1' }],
+    flows: [], states: [],
+    auditItems: [], frUpserts: [], frRemoves: []
+  },
+  invalidate: { digestAnchors: [], auditIds: [] },
+  clarify: { items: [] }, summary: '增量后摘要', riskTier: 'B'
+})
+// 机械校验负例：sections 禁 seq 数值
+const badBundle = JSON.stringify({ ...JSON.parse(bundle), sections: ['2000'] })
+await expectErr('PUT', `/api/requirements/${req}/drafts/incremental_bundle`, { contentJson: badBundle },
+                400, '机械校验：sections 禁 seq 数值 400')
+const putDraft = await call('PUT', `/api/requirements/${req}/drafts/incremental_bundle`, { contentJson: bundle })
+check('增量包落草稿（机械校验通过）', putDraft.type, 'incremental_bundle')
+const merged = await call('POST', `/api/requirements/${req}/drafts/incremental_bundle/approve`, { by: '采纳人' })
+check('采纳合并：区间整组替换统计', [merged.ok, merged.removedRows >= 1, merged.newRows >= 1], [true, true, true])
+const detailM = await call('GET', `/api/requirements/${req}`)
+check('合并后 digest 区间替换 + riskTier 覆写',
+      [detailM.digest.content.features.map(f => f.func), detailM.card.riskTier],
+      [['邮箱注册（增量黑盒）'], 'B'])
+// 合并即推送：串行锁解除（digest.pushed_at > c3.confirmed_at）→ 第三单可 confirm
+const c4 = await call('POST', `/api/requirements/${req}/changes`, {
+  title: '第三单', proposedBy: '张三', blocks: [
+    { id: 'ch-t1', type: 'title', text: '标题' },
+    { id: 'ch-h1', type: 'heading', level: 2, text: '背景' },
+    { id: 'ch-p1', type: 'paragraph', text: '一段说明（三修）' },
+    { id: 'ch-tr1', type: 'table-row', head: ['列A'], cells: [['v1']] },
+    { id: 'ch-trc1', type: 'paragraph', parent: 'ch-tr1', text: '行内块' },
+    { id: 'ch-li1', type: 'list-item', marker: '1. ', depth: 1, text: '列表项一' },
+    { id: 'ch-li2', type: 'list-item', marker: 'a. ', depth: 2, parent: 'ch-li1', text: '子项 a' }] })
+const c4c = await call('POST', `/api/requirements/${req}/changes/${c4.id}/confirm`, { confirmedBy: '钱七' })
+check('合并消化串行锁解除（第三单 confirm）', c4c.status, 'confirmed')
 
 // ===== 5. 未发布卡守卫（建卡走窗口 1 语义） =====
 const { id: reqU } = await call('POST', '/api/requirements', {

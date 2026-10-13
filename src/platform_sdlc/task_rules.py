@@ -15,6 +15,7 @@ DRAFT_TYPES: dict[str, str] = {
     "design_rev": "design",
     "gate_review": "gate_issues",
     "case_gen": "cases",
+    "incremental_check": "incremental_bundle",  # v4-14（DESIGN-v4 §6.1）
 }
 
 # 不产草稿的任务类型（v4-3，DESIGN-v4 §3）：source_import 产物 = parse_doc 输出文件，由任务完成
@@ -29,6 +30,10 @@ SELF_CHECK: dict[str, dict[str, object]] = {
     "gate_issues": {"minMd": 100, "issuesNonEmpty": True},
     "digest_bundle": {"structure": ("digest", "audit", "items"), "itemsNonEmpty": True},
     "cases": {"structure": ("items",), "itemsNonEmpty": True},
+    # v4-14（§6.1）：机械校验主体在服务端 put_draft 单点（anchor/作废清单/区间表示需查库），
+    # 此处只登记齐套下限；结构键 = 增量包骨架
+    "incremental_bundle": {"structure": ("changeId", "sections", "digestRows", "invalidate"),
+                           "sectionsNonEmpty": True},
 }
 
 # 结果行判据（SDLC_TASK_RESULT {json} 收尾行；两端均不强制——进程内有续跑强化，runner 仅警示）

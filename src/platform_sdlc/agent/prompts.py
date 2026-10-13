@@ -36,6 +36,21 @@ def sys_prompt(task_type: str, card: Requirement, skills_repo: Path, repos_of: l
         return _source_import_steps(common, card, repo, import_out_dir)
     if task_type == "quality_check":
         return f"{common}\n{_quality_check_steps(repo, card)}\n{_quality_quick_ref()}"
+    if task_type == "incremental_check":
+        return (f"{common}\n执行变更后局部质检（受影响章节切片增量梳理，v4 DESIGN §6）：\n"
+                f"1. read_file 读取增量规范：{repo}/skills/sdlc-intent/references/incremental-guide.md"
+                "（受影响章节重梳理、作废行清单、anchor 越界纪律）。\n"
+                "2. get_requirement_card（编辑后块模型 doc）+ get_digest_bundle（digest/audit 结构行 + 保留澄清）"
+                "+ 只读评论工具取评论；变更单冻结面（impact 的 blocks/sections/四类清单）从任务 payload 的"
+                " note 说明经 GET /changes 与 /changes/{id}/impact 获取（run_command curl 直落 raw/）。\n"
+                "3. 只重梳理受影响章节：新版本 digest 行/audit 条目/FR 点 + 作废行清单 + 新澄清（P 系编号"
+                "由平台合并时分配，items 不携带 seq）。\n"
+                "4. 组装增量包 {changeId, sections:[heading block_id 禁 seq 数值], digestRows:{features,"
+                "flows,states,auditItems,frUpserts,frRemoves}, invalidate:{digestAnchors,auditIds}, "
+                "clarify:{items}, summary, riskTier}——新行 anchor 必须 ∈ impact.blocks（越界即拒），"
+                "空 anchor/global 行不产不废。\n"
+                "5. put_draft(type=incremental_bundle, contentJson=增量包)。\n"
+                "6. 输出 SDLC_TASK_RESULT 行（受影响章节数/新行数/作废数/新澄清数）。")
     if task_type == "standard_doc":
         return (f"{common}\n执行标准需求文档合成（重写版）。平台已有该需求的全部澄清答复：\n"
                 "1. get_requirement_card + list_clarify_items 获取卡、原文与逐问答复；get_digest_bundle 获取 digest/audit。\n"
@@ -146,6 +161,8 @@ def goal_prompt(task_type: str) -> str:
         return "开始执行原文导入，按系统指令拉取解析并产出 out/doc.json，平台完成回调自动落库（无草稿回传）。"
     if task_type == "quality_check":
         return "开始执行需求质检，按系统指令的步骤完成并回传 digest_bundle 草稿。"
+    if task_type == "incremental_check":
+        return "开始执行变更后局部质检，按系统指令的步骤完成并回传 incremental_bundle 草稿。"
     if task_type == "standard_doc":
         return "开始执行标准需求文档合成，按系统指令的步骤完成并回传 standard 草稿。"
     if task_type == "design_gen":

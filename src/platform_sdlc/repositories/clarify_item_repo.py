@@ -85,6 +85,20 @@ class ClarifyItemRepo:
             "SELECT EXISTS(SELECT 1 FROM clarify_item WHERE req_id=? AND src_comment_id=?)",
             (req_id, comment_id)))
 
+    def next_machine_seq(self, req_id: str, extra: set[str] | None = None) -> str:
+        """P 系下一编号（§6.3：incremental 行 P 系接 max+1——机器产物统一 P 系对 PM 呈现无差别；
+        extra = 本批已分配的 seq（连续分配去重）。"""
+        nums: list[int] = []
+        for row in self.db.query_all(
+                "SELECT seq FROM clarify_item WHERE req_id=? AND seq LIKE 'P%'", (req_id,)):
+            tail = str(row[0])[1:]
+            if tail.isdigit():
+                nums.append(int(tail))
+        for seq in extra or set():
+            if seq[1:].isdigit():
+                nums.append(int(seq[1:]))
+        return f"P{max(nums, default=0) + 1}"
+
     def next_local_seq(self, req_id: str) -> str:
         """L 系下一编号（§6.3：L<两位> 从 L01 起，与 P 系两族在 UNIQUE(req_id,seq) 下天然不冲突）。
         一次查询取全部 L 行，Python 侧按数值聚合——字典序 MAX 在两位补零之外（L100+）会乱序。"""
