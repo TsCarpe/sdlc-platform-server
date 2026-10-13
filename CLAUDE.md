@@ -48,7 +48,9 @@ IDE 断点：直接 Debug `debug_server.py`（单进程无 reload，等价 dev.s
 - Python 3.12+ / uv；类型全量 strict（pyright）+ ruff；pytest 为单元回归，verify-*.mjs 为黑盒验收主力。
 - SQLite 单连接 + RLock：`db.tx()` = 服务操作粒度事务（可重入 = 嵌套加入外层）；循环体内无数据库查询；SQL 全参数化 + 显式排序。
 - schema 变更：schema.sql 加 `IF NOT EXISTS` 建表 + `migrations.py` 判列补列（幂等，八步惯例）。
-- 分层单向：main → routers → services → repositories → models；routers 不碰仓储；services 不互调（跨域流程在 orchestration.py，挂在作答/发布入口之后）。
+- 分层单向：main → routers → services → repositories → models；routers 不碰仓储。跨域流程汇聚点 =
+  `orchestration.py`（作答/发布/开闸三钩子，挂路由成功后）+ `task.approve`（草稿采纳分流）；
+  保留互调：`task.create_guarded → designs.assert_gen_allowed`（写面守卫）、`gate.checks → designs.view`（读面）。
 - 出参 camelCase（键序 = 契约序，见 schemas.py）；入参宽松绑定（dict + 服务层校验，文案与 Java 版逐字）；错误统一 `{error}`，乐观锁 409 带 conflicts。
 - 前端产物 `static/` 为部署物不入库；数据 `data/` 不入库。
 

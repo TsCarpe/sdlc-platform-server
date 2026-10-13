@@ -14,6 +14,7 @@ from platform_sdlc.runtime import AppContext
 def router(ctx: AppContext) -> APIRouter:
     r = APIRouter()
     svc = ctx.services.gate
+    orch = ctx.services.orchestration
 
     @r.get("/api/requirements/{req_id}/gate")
     async def view(req_id: str) -> dict[str, Any]:
@@ -21,9 +22,12 @@ def router(ctx: AppContext) -> APIRouter:
 
     @r.post("/api/requirements/{req_id}/gate/open")
     async def open(req_id: str, request: Request) -> dict[str, Any]:
-        # 开闸（GR-2 三条件机械校验不过 409 带明细；通过 → 建轮 + 排 gate_review）
+        # 开闸（GR-2 三条件机械校验不过 409 带明细；通过 → 建轮；评审任务经 L2 钩子排队，批次7 收敛）
         body = await read_json(request)
-        return await asyncio.to_thread(svc.open, req_id, body)
+        out = await asyncio.to_thread(svc.open, req_id, body)
+        await asyncio.to_thread(orch.on_gate_opened, req_id, out["round"]["roundNo"])
+        # 重取 view：activeTask 需包含钩子刚排的 gate_review（与原事务内实现的出参一致）
+        return await asyncio.to_thread(svc.view, req_id)
 
     @r.post("/api/requirements/{req_id}/gate/rounds/{round_id}/ingest")
     async def ingest(req_id: str, round_id: int, request: Request) -> dict[str, Any]:

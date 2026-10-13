@@ -47,6 +47,28 @@ async function api(method, p, body) {
   return data
 }
 
+// ---------- 任务通道共享规则（AUDIT D1-5）：启动从平台拉单一来源（draftTypes 映射 + selfCheck 阈值），
+// 拉取失败回退内置同款默认——阈值/映射变更只改平台 task_rules.py，双通道不再各自漂移 ----------
+const DEFAULT_RULES = {
+  draftTypes: { quality_check: 'digest_bundle', standard_doc: 'standard', design_gen: 'design', design_rev: 'design', gate_review: 'gate_issues', case_gen: 'cases' },
+  selfCheck: {
+    standard: { minMd: 200 },
+    design: { minMd: 200, requireHeading: '§0' },
+    gate_issues: { minMd: 100 },
+    digest_bundle: {},
+    cases: {}
+  }
+}
+let RULES = DEFAULT_RULES
+async function loadRules() {
+  try {
+    const r = await api('GET', '/api/meta/task-rules')
+    RULES = { draftTypes: { ...DEFAULT_RULES.draftTypes, ...(r.draftTypes || {}) },
+              selfCheck: { ...DEFAULT_RULES.selfCheck, ...(r.selfCheck || {}) } }
+    log(`任务规则已从平台加载（${Object.keys(RULES.draftTypes).length} 类任务）`)
+  } catch (e) { log('任务规则拉取失败，使用内置默认：', e.message) }
+}
+
 // ---------- 任务指令模板（按任务类型） ----------
 
 const SYNC_CONTRACT = `${REPO}/skills/sdlc-sync/references/payload-schema.md`
@@ -185,19 +207,19 @@ function extractResult(claudeJson) {
 
 /** 机械自查：草稿真的回传了、结构合法，才允许记 done */
 async function selfCheck(task) {
-  const draftType = task.type === 'quality_check' ? 'digest_bundle'
-    : task.type === 'standard_doc' ? 'standard'
-    : (task.type === 'design_gen' || task.type === 'design_rev') ? 'design'
-    : task.type === 'gate_review' ? 'gate_issues' : 'cases'
+  const draftType = RULES.draftTypes[task.type] || 'cases'
+  const rule = RULES.selfCheck[draftType] || {}
+  const minMd = rule.minMd || 200
+  const heading = rule.requireHeading || '§0'
   let d
   try { d = await api('GET', `/api/requirements/${task.reqId}/drafts/${draftType}`) } catch { return { ok: false, error: `草稿未回传（${draftType}）` } }
   if (draftType === 'standard') {
-    if (!d.md || d.md.trim().length < 200) return { ok: false, error: 'standard 草稿为空或过短' }
+    if (!d.md || d.md.trim().length < minMd) return { ok: false, error: 'standard 草稿为空或过短' }
   } else if (draftType === 'design') {
-    if (!d.md || d.md.trim().length < 200) return { ok: false, error: 'design 草稿为空或过短' }
-    if (!d.md.includes('§0')) return { ok: false, error: 'design 草稿缺 §0–§8 结构标头（design-template 九节）' }
+    if (!d.md || d.md.trim().length < minMd) return { ok: false, error: 'design 草稿为空或过短' }
+    if (!d.md.includes(heading)) return { ok: false, error: 'design 草稿缺 §0–§8 结构标头（design-template 九节）' }
   } else if (draftType === 'gate_issues') {
-    if (!d.md || d.md.trim().length < 100) return { ok: false, error: 'gate_issues 草稿缺 issues 文件全文（md）' }
+    if (!d.md || d.md.trim().length < (rule.minMd || 100)) return { ok: false, error: 'gate_issues 草稿缺 issues 文件全文（md）' }
     try {
       const p = JSON.parse(d.contentJson || '{}')
       if (!Array.isArray(p.issues) || p.issues.length === 0) return { ok: false, error: 'gate_issues 草稿 contentJson.issues 为空' }
@@ -226,6 +248,7 @@ async function handle(task) {
   const { summary, isError, subtype } = extractResult(out)
   const chk = await selfCheck(task)
   if (code === 0 && chk.ok && !isError) {
+    if (!summary) log(`#${task.id} 注意：输出无 SDLC_TASK_RESULT 结果行（草稿自查已过仍记 done；进程内通道此场景会续跑一轮）`)
     const result = summary || JSON.stringify({ draft: chk.draftType })
     await api('POST', `/api/tasks/${task.id}/done`, { result })
     log(`#${task.id} 完成：${result.slice(0, 160)}`)
@@ -251,6 +274,7 @@ async function recoverStale() {
 async function main() {
   if (!existsSync(CLI)) { console.error(`CLI 不存在：${CLI}`); process.exit(1) }
   log(`启动。平台=${PLATFORM} 工作区=${WORKSPACE} 技能源=${REPO}`)
+  await loadRules()
   await recoverStale().catch(e => log('启动恢复失败：', e.message))
   for (;;) {
     try {

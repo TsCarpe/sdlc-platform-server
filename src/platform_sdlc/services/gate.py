@@ -17,7 +17,6 @@ from platform_sdlc.models import parse_json_obj as _parse  # JSON 口径统一�
 from platform_sdlc.repositories import Repos
 from platform_sdlc.services import task as task_mod
 from platform_sdlc.services.design import A_DESIGN, DesignService
-from platform_sdlc.services.task import TaskService
 
 _CODE_P = re.compile(r"^[DAST]-\d{2}$")
 _SEVS = {"high", "mid", "low"}
@@ -25,11 +24,10 @@ _VERDICTS = {"revise", "reject", "query"}  # 落改/驳回/存疑（中文口径
 
 
 class GateService:
-    def __init__(self, db: Database, repos: Repos, designs: DesignService, tasks: TaskService) -> None:
+    def __init__(self, db: Database, repos: Repos, designs: DesignService) -> None:
         self.db = db
         self.repos = repos
         self.designs = designs
-        self.tasks = tasks
 
     # ---------- GR-2 开闸三条件（现算） ----------
 
@@ -88,6 +86,10 @@ class GateService:
             latest = rounds[-1] if rounds else None
             if latest is not None and latest.status == "pending":
                 raise ApiException(409, f"已有进行中的评审轮 r{latest.round_no}（待裁决），先完成裁决或放行")
+            if self.repos.task.count_active(req_id, task_mod.T_GATE) > 0:
+                # 原语义保持（AUDIT D1-4 / 对抗审查 M1）：建轮与排评审任务曾同事务，排不上则整个
+                # 开闸回滚——排布挪入 orchestration.on_gate_opened 后，此预判承担同等守卫
+                raise ApiException(409, "该需求已有同类型任务在排队或执行中，请等待完成")
             self._create_round(req_id, len(rounds) + 1, cs, (body or {}).get("by"))
         return self.view(req_id)
 
@@ -109,8 +111,7 @@ class GateService:
         rnd = GateRound(id=None, req_id=req_id, round_no=round_no, status="pending",
                         checks_json=_json(cs), baseline_json=self._baseline_json(req_id),
                         created_by=(by or "") if isinstance(by, str) else "", opened_at=Times.now())
-        self.repos.gate.insert_round(rnd)
-        self.tasks.create_auto(req_id, task_mod.T_GATE, "gate:open", f"评审轮 r{round_no}（开闸三条件全绿）")
+        self.repos.gate.insert_round(rnd)  # 评审任务排布在 orchestration.on_gate_opened（路由成功后）
 
     def _baseline_json(self, req_id: str) -> str:
         """GR-3 基线：设计终稿全文（内容变更检测，非 hash）+ 用例最新更新时间。"""

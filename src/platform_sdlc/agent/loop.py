@@ -185,15 +185,9 @@ class AgentLoop:
 
     @staticmethod
     def _draft_type_of(task_type: str) -> str:
-        if task_type == "quality_check":
-            return "digest_bundle"
-        if task_type == "standard_doc":
-            return "standard"
-        if task_type in ("design_gen", "design_rev"):
-            return "design"
-        if task_type == "gate_review":
-            return "gate_issues"
-        return "cases"
+        from platform_sdlc.task_rules import DRAFT_TYPES
+
+        return DRAFT_TYPES.get(task_type, "cases")  # 映射单一来源（AUDIT D1-5），与 runner 同源
 
     @staticmethod
     def _diag_text(res: Any) -> str:

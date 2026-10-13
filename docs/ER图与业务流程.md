@@ -72,7 +72,10 @@ flowchart LR
 
 硬规矩（CLAUDE.md）：
 
-- 分层单向：main → routers → services → repositories → models；routers 不碰仓储；**services 不互调**（跨域流程只在 `orchestration.py`，且挂在作答/发布路由成功之后）。
+- 分层单向：main → routers → services → repositories → models；routers 不碰仓储。跨域流程汇聚点 =
+  `orchestration.py`（作答/发布/开闸三钩子，挂路由成功后）+ `task.approve`（草稿采纳分流）；
+  保留互调：`task.create_guarded → designs.assert_gen_allowed`（写面守卫）、`gate.checks → designs.view`（读面）；
+  `gate.open` 事务内保留 `count_active` 预判承担「建轮与排评审任务」的原子性守卫（对抗审查 M1）。
 - async 路由里的同步服务调用一律 `asyncio.to_thread(...)`——SQLite/文件 IO 不冻结事件循环（进程内 agent 轮询、助理 SSE 与请求共享同一循环）。
 - 循环体内无数据库查询（如 `sync_upsert` 的 case_no 批量预分配、`next_id` 一次性取号）。
 
