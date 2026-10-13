@@ -13,7 +13,8 @@ from platform_sdlc.models import MediaFile
 from platform_sdlc.repositories import Repos
 
 _MEDIA_ID = re.compile(r"^m-[0-9a-f]{12}$")
-_REQ_ID = re.compile(r"^REQ-[0-9]{4}-[0-9]{3}$")
+# 序号位数不设上限（next_id 过 999 后是 4 位起，{3} 定长会把新卡媒体读写全拒——verify-m4 实测踩中）
+_REQ_ID = re.compile(r"^REQ-[0-9]{4}-[0-9]{3,}$")
 # 可执行/可脚本内容拒绝入库（防存储型同源 XSS：响应端只对图片白名单内联，双防线）
 _DANGEROUS_MIME = {"text/html", "image/svg+xml", "application/xhtml+xml", "text/xml", "application/xml"}
 _DEFAULT_MAX_BYTES = 20 * 1024 * 1024
