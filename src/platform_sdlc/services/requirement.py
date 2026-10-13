@@ -29,10 +29,12 @@ _EMPTY_LIST: list[Any] = []
 
 
 class RequirementService:
-    def __init__(self, db: Database, repos: Repos, blocks: BlockService) -> None:
+    def __init__(self, db: Database, repos: Repos, blocks: BlockService,
+                 changes: Any = None) -> None:
         self.db = db
         self.repos = repos
         self.blocks = blocks  # v4.2：detail.doc 读面切源块表（空表回退 doc artifact）
+        self.changes = changes  # v4.17：rebaseline 放行一次全量的豁免判定（§10）
 
     def list_all(self, iter_name: str | None, status: str | None) -> list[dict[str, Any]]:
         return [self._list_row_dict(r) for r in self.repos.requirement.list_all(iter_name, status)]
@@ -110,12 +112,13 @@ class RequirementService:
                 raise ApiException(404, f"需求不存在：{req_id}")
             if r.status == "published":
                 raise ApiException(409, "该需求已发布标准文档；实质变更请新开一轮流程")
-            if r.status == "changed":
+            if r.status == "changed" and not (self.changes and self.changes.rebaseline_open(req_id)):
                 # v4-15（§5.1 矩阵）：changed 拒全量重推——既会被隐式推进吞掉 changed 态，又会按
                 # 来源删除丢掉 incremental 接编的已答澄清项；原文消化只走增量通道（回 published
-                # 后全量通道重新开放；增量不可行的兜底 = 放弃变更 §5.6）
+                # 后全量通道重新开放；增量不可行的兜底 = 放弃变更 §5.6）。v4-17 豁免：rebaseline
+                # 单放行一次全量重推（§10——采纳即消化，重走全量流后重新发布回 published）
                 raise ApiException(409, "该需求处于变更中（changed），全量重推已关闭——原文消化走增量"
-                                        "质检合并，或放弃变更后重新开放")
+                                        "质检合并，或放弃变更后重新开放（rebaseline 变更单例外）")
 
             digest = body.get("digest")
             audit = body.get("audit")

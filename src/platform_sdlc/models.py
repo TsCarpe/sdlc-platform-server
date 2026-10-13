@@ -350,6 +350,7 @@ class ReqChange:
     title: str = ""
     detail: str = ""
     proposed_by: str = ""
+    kind: str = "change"  # v4.17（§10）：change | reconcile（迁移对账）| rebaseline（放行一次全量）
     confirmed_by: str = ""
     status: str = "draft"  # draft | confirmed | aborted
     impact_json: str = ""
@@ -365,6 +366,7 @@ class ReqChange:
         return cls(
             id=_i(row, "id"),
             req_id=_s(row, "req_id"),
+            kind=_s(row, "kind"),
             title=_s(row, "title"),
             detail=_s(row, "detail"),
             proposed_by=_s(row, "proposed_by"),

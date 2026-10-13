@@ -44,7 +44,7 @@ class Services:
         blocks = BlockService(db, repos, workspace_root)
         comments = CommentService(db, repos)
         changes = ChangeService(db, repos, blocks)
-        requirements = RequirementService(db, repos, blocks)
+        requirements = RequirementService(db, repos, blocks, changes)
         cases = CaseService(db, repos)
         designs = DesignService(db, repos)
         tasks = TaskService(db, repos, requirements, cases, designs, blocks, changes)

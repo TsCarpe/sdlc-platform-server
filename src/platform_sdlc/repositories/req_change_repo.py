@@ -16,9 +16,9 @@ class ReqChangeRepo:
 
     def insert(self, c: ReqChange) -> int:
         return self.db.insert(
-            "INSERT INTO req_change(req_id,title,detail,proposed_by,confirmed_by,status,impact_json,"
-            "blocks_json,created_at,confirmed_at) VALUES(?,?,?,?,?,?,?,?,?,?)",
-            (c.req_id, c.title, c.detail, c.proposed_by, c.confirmed_by, c.status, c.impact_json,
+            "INSERT INTO req_change(req_id,kind,title,detail,proposed_by,confirmed_by,status,impact_json,"
+            "blocks_json,created_at,confirmed_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+            (c.req_id, c.kind, c.title, c.detail, c.proposed_by, c.confirmed_by, c.status, c.impact_json,
              c.blocks_json, c.created_at, c.confirmed_at),
         )
 

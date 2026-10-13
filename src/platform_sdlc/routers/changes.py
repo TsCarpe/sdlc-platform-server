@@ -26,6 +26,13 @@ def router(ctx: AppContext) -> APIRouter:
         body = await read_json(request, required=True)
         return await asyncio.to_thread(svc.create, req_id, body)
 
+    @r.post("/api/requirements/{req_id}/changes/reconcile")
+    async def create_reconcile(req_id: str, request: Request) -> dict[str, Any]:
+        """对账重导入口（§10）：新解析结果 → 服务端 diff 机械生成系统 draft（reconcile/rebaseline），
+        不覆盖平台数据；人过 diff 后走 confirm（reconcile 未发布卡 = 应用+保持原状态）。"""
+        body = await read_json(request, required=True)
+        return await asyncio.to_thread(svc.create_reconcile, req_id, body)
+
     @r.get("/api/requirements/{req_id}/changes")
     async def list_changes(req_id: str) -> list[dict[str, Any]]:
         return await asyncio.to_thread(svc.list, req_id)

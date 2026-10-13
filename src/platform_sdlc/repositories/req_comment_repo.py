@@ -29,6 +29,23 @@ class ReqCommentRepo:
              for c in comments],
         )
 
+    def upsert_feishu(self, req_id: str, external_id: str, block_id: str, author: str,
+                      text: str, at: str) -> None:
+        """幂等 upsert（v4.17 §10）：external_id 唯一定位——已有行保原 id/reply_to/resolved/
+        created_at（对账重导不重置平台态），只刷内容面；新行插入。"""
+        row = self.db.query_one(
+            "SELECT id FROM req_comment WHERE req_id=? AND origin='feishu' AND external_id=?",
+            (req_id, external_id))
+        if row is not None:
+            self.db.execute(
+                "UPDATE req_comment SET block_id=?, author=?, text=? WHERE id=?",
+                (block_id, author, text, int(row["id"])))
+            return
+        self.db.execute(
+            "INSERT INTO req_comment(req_id,block_id,origin,external_id,author,text,reply_to,resolved,"
+            "created_at) VALUES(?,?, 'feishu',?,?,?,NULL,0,?)",
+            (req_id, block_id, external_id, author, text, at))
+
     def list_by_req(self, req_id: str) -> list[ReqComment]:
         return [ReqComment.from_row(r) for r in self.db.query_all(
             "SELECT * FROM req_comment WHERE req_id=? ORDER BY id", (req_id,))]

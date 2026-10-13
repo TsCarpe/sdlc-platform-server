@@ -729,3 +729,100 @@ def test_gr3_change_status_by_change_order(env: tuple[TestClient, Database, Repo
     row = db.query_one("SELECT baseline_json FROM gate_round WHERE id=?", (rnd,))
     import json as _j
     assert row is not None and _j.loads(row["baseline_json"])["reqRev"] == 0
+
+
+# ---------- v4-17：存量对账重导（reconcile 状态域豁免 / rebaseline 放行一次全量 / 评论幂等） ----------
+
+def test_reconcile_unpublished_keeps_status(env: tuple[TestClient, Database, Repos]) -> None:
+    """reconcile 对账单：未发布卡 confirm = 应用 + 保持原状态（§5.1/§10 状态域豁免）；
+    评论按 external_id 幂等 upsert；diff 为空拒。"""
+    client, _, repos = env
+    req_id = _mk_card(client)
+    _seed(repos, req_id)
+    client.post(f"/api/requirements/{req_id}/artifacts", json={
+        "digest": {"md": "", "summary": "s", "roles": [], "features": [], "flows": [], "states": []},
+        "audit": {"md": "", "red": 0, "yellow": 0, "blue": 0, "items": []},
+        "items": [{"seq": "P1", "level": "yellow", "theme": "t", "question": "q"}]})
+    rec_blocks = [
+        {"id": "t1", "type": "title", "text": "标题"},
+        {"id": "h1", "type": "heading", "level": 2, "text": "背景"},
+        {"id": "p1", "type": "paragraph", "text": "对账后的新文本"},
+        {"id": "tr1", "type": "table-row", "head": ["列A"], "cells": [["v1"]]},
+        {"id": "trc1", "type": "paragraph", "parent": "tr1", "text": "行内块"},
+        {"id": "li1", "type": "list-item", "marker": "1. ", "depth": 1, "text": "列表项一"},
+        {"id": "li2", "type": "list-item", "marker": "a. ", "depth": 2, "parent": "li1", "text": "子项 a"},
+    ]
+    # 建对账单（改 p1 文本 + 评论）
+    rec = client.post(f"/api/requirements/{req_id}/changes/reconcile", json={
+        "blocks": rec_blocks,
+        "comments": [{"externalId": "cm-1", "blockId": "p1", "author": "张三", "text": "对账评论"}]})
+    assert rec.status_code == 200
+    out = rec.json()
+    assert out["kind"] == "reconcile" and out["proposedBy"] == "迁移对账" and out["counts"]["edit"] == 1
+    cms = repos.req_comment.list_by_req(req_id)
+    assert [c.external_id for c in cms] == ["cm-1"]
+    # 评论幂等 upsert：再建一单（p1 换版本保 diff 非空）带同 external_id 评论 → 原行保 id 只刷文本
+    rec_blocks[2] = {"id": "p1", "type": "paragraph", "text": "对账后的新文本 v2"}
+    rec2 = client.post(f"/api/requirements/{req_id}/changes/reconcile", json={
+        "blocks": rec_blocks,
+        "comments": [{"externalId": "cm-1", "blockId": "p1", "author": "张三", "text": "对账评论（改）"}]})
+    assert rec2.status_code == 200
+    cms2 = repos.req_comment.list_by_req(req_id)
+    assert [c.id for c in cms2] == [c.id for c in cms] and cms2[0].text == "对账评论（改）"
+    client.delete(f"/api/requirements/{req_id}/changes/{rec2.json()['id']}")  # 留第一张
+
+    # confirm：应用 + 保持 clarifying（状态域豁免）+ rev+1（applied = 第一张单的数组）
+    applied = [dict(b) for b in rec_blocks]
+    applied[2] = {"id": "p1", "type": "paragraph", "text": "对账后的新文本"}
+    cid = out["id"]
+    conf = client.post(f"/api/requirements/{req_id}/changes/{cid}/confirm", json={"confirmedBy": "对账人"})
+    assert conf.status_code == 200, conf.json()
+    card = client.get(f"/api/requirements/{req_id}").json()["card"]
+    assert card["status"] == "clarifying" and card["contentRev"] == 1  # 保持原状态
+    assert repos.req_block.list_by_req(req_id)[2].text == "对账后的新文本"  # 应用
+    # 应用后同数组再对账 → diff 为空拒
+    r0 = client.post(f"/api/requirements/{req_id}/changes/reconcile", json={"blocks": applied})
+    assert r0.status_code == 409 and "一致" in r0.json()["error"]
+
+
+def test_rebaseline_grants_full_quality_once(env: tuple[TestClient, Database, Repos]) -> None:
+    """rebaseline：已发布卡 confirm → changed 且放行一次全量（质检/草稿/推）；push 即消化。"""
+    client, db, repos = env
+    req_id = _mk_card(client)
+    _seed(repos, req_id)
+    _publish_card(client, repos, req_id)
+    db.execute("UPDATE requirement SET source_type='text' WHERE id=?", (req_id,))
+    db.execute("UPDATE artifact SET pushed_at='2026-10-13 00:00:00' WHERE req_id=? AND type='digest'",
+               (req_id,))  # 同秒边界（严格小于口径）
+    rec = client.post(f"/api/requirements/{req_id}/changes/reconcile", json={
+        "kind": "rebaseline",
+        "blocks": [
+            {"id": "t1", "type": "title", "text": "标题"},
+            {"id": "h1", "type": "heading", "level": 2, "text": "背景"},
+            {"id": "p1", "type": "paragraph", "text": "rebaseline 后文本"},
+            {"id": "tr1", "type": "table-row", "head": ["列A"], "cells": [["v1"]]},
+            {"id": "trc1", "type": "paragraph", "parent": "tr1", "text": "行内块"},
+            {"id": "li1", "type": "list-item", "marker": "1. ", "depth": 1, "text": "列表项一"},
+            {"id": "li2", "type": "list-item", "marker": "a. ", "depth": 2, "parent": "li1", "text": "子项 a"},
+        ]})
+    assert rec.status_code == 200 and rec.json()["kind"] == "rebaseline"
+    cid = rec.json()["id"]
+    conf = client.post(f"/api/requirements/{req_id}/changes/{cid}/confirm", json={"confirmedBy": "对账人"})
+    assert conf.status_code == 200
+    assert client.get(f"/api/requirements/{req_id}").json()["card"]["status"] == "changed"
+    # 豁免面：全量质检任务 / digest 草稿 / 全量重推均放行一次
+    assert client.post(f"/api/requirements/{req_id}/tasks",
+                       json={"type": "quality_check"}).status_code == 200
+    assert client.put(f"/api/requirements/{req_id}/drafts/digest_bundle",
+                      json={"contentJson": "{}"}).status_code == 200
+    push = client.post(f"/api/requirements/{req_id}/artifacts", json={
+        "digest": {"md": "", "summary": "重建", "roles": [], "features": [], "flows": [], "states": []},
+        "audit": {"md": "", "red": 0, "yellow": 0, "blue": 0, "items": []},
+        "items": [{"seq": "P1", "level": "yellow", "theme": "t", "question": "重建问题"}]})
+    assert push.status_code == 200
+    # 影响面 = 全卡（rebaseline 冻结面）
+    import json as _json
+    imp_row = db.query_one("SELECT impact_json FROM req_change WHERE id=?", (cid,))
+    assert imp_row is not None
+    imp = _json.loads(imp_row["impact_json"])
+    assert imp["counts"]["blocks"] >= 7 and imp["counts"].get("rebaseline") is True

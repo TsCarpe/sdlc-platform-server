@@ -957,6 +957,48 @@
     }
    }
   },
+  "/api/requirements/{req_id}/changes/reconcile": {
+   "post": {
+    "summary": "Create Reconcile",
+    "description": "对账重导入口（§10）：新解析结果 → 服务端 diff 机械生成系统 draft（reconcile/rebaseline），\n不覆盖平台数据；人过 diff 后走 confirm（reconcile 未发布卡 = 应用+保持原状态）。",
+    "operationId": "create_reconcile_api_requirements__req_id__changes_reconcile_post",
+    "parameters": [
+     {
+      "name": "req_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Req Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Create Reconcile Api Requirements  Req Id  Changes Reconcile Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/requirements/{req_id}/changes/{change_id}": {
    "get": {
     "summary": "Detail",

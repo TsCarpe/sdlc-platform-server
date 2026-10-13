@@ -89,10 +89,11 @@ class TaskService:
                 # 终态锁定只约束质检与标准文档；用例/设计/修订本来就是发布后的正常动作
                 log.warning("建任务被终态锁拒绝：%s %s（已发布，非发布后类型）", req_id, type_)
                 raise ApiException(409, f"该需求已发布标准文档（终态锁定），不能新建{type_}任务")
-            if r.status == "changed" and type_ == T_QUALITY:
+            if r.status == "changed" and type_ == T_QUALITY and not self.changes.rebaseline_open(req_id):
                 # v4-15（§5.1 矩阵）：changed 拒全量质检——原文消化只走增量通道（回 published 后
-                # 重新开放；增量不可行的兜底 = 放弃变更）
-                raise ApiException(409, "该需求处于变更中（changed），全量质检已关闭——走增量质检合并")
+                # 重新开放；增量不可行的兜底 = 放弃变更）。v4-17 豁免：rebaseline 单放行一次全量（§10）
+                raise ApiException(409, "该需求处于变更中（changed），全量质检已关闭——走增量质检合并"
+                                        "（rebaseline 变更单例外，放行一次全量）")
             if type_ in (T_DESIGN, T_DESIGN_REV):
                 # 设计 lane 前置（D34）：发布后才可生成；C 级/已跳过/未配仓守卫收敛在 DesignService。
                 # v4-15（§5.1 矩阵）：changed 是发布后状态的合法变体——in-review 落改通道（design_rev）
@@ -253,10 +254,11 @@ class TaskService:
             if r.status == "published" and not post_publish:
                 # 终态锁不约束用例/设计草稿：两者都是发布后的正常动作（与 create 的豁免口径一致）
                 raise ApiException(409, "该需求已发布（终态锁定），不能写草稿")
-            if r.status == "changed" and type_ == D_DIGEST:
-                # v4-15（§5.1 草稿面矩阵）：changed 下许可面 = incremental_bundle + standard
+            if r.status == "changed" and type_ == D_DIGEST and not self.changes.rebaseline_open(req_id):
+                # v4-15（§5.1 草稿面矩阵）：changed 下许可面 = incremental_bundle + standard；
+                # v4-17 豁免：rebaseline 单放行一次（§10——空 anchor 存量行的全量重建通道）
                 raise ApiException(409, "该需求处于变更中（changed），全量质检草稿已关闭（许可面："
-                                        "incremental_bundle + standard）")
+                                        "incremental_bundle + standard；rebaseline 变更单例外）")
             d = DraftArtifact(
                 req_id=req_id, type=type_, md=jtext(body, "md", ""), content_json=jtext(body, "contentJson", ""),
                 task_id=jint_or_400(body, "taskId"), updated_at=Times.now(),

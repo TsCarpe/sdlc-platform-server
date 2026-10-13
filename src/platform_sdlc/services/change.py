@@ -73,9 +73,10 @@ class ChangeService:
         self._require_base(req_id)
         out: list[dict[str, Any]] = []
         for c in self.repos.req_change.list_by_req(req_id):
-            row = {"id": c.id, "title": c.title, "detail": c.detail, "proposedBy": c.proposed_by,
-                   "confirmedBy": c.confirmed_by, "status": c.status, "abortedBy": c.aborted_by,
-                   "createdAt": c.created_at, "confirmedAt": c.confirmed_at, "abortedAt": c.aborted_at}
+            row = {"id": c.id, "kind": c.kind, "title": c.title, "detail": c.detail,
+                   "proposedBy": c.proposed_by, "confirmedBy": c.confirmed_by, "status": c.status,
+                   "abortedBy": c.aborted_by, "createdAt": c.created_at,
+                   "confirmedAt": c.confirmed_at, "abortedAt": c.aborted_at}
             out.append({k: v for k, v in row.items() if v is not None})
         return out
 
@@ -84,7 +85,7 @@ class ChangeService:
         c = self._require_change(req_id, change_id)
         items = self.repos.req_change.list_items(change_id)
         return {
-            "id": c.id, "reqId": c.req_id, "title": c.title, "detail": c.detail,
+            "id": c.id, "reqId": c.req_id, "kind": c.kind, "title": c.title, "detail": c.detail,
             "proposedBy": c.proposed_by, "confirmedBy": c.confirmed_by, "status": c.status,
             "abortedBy": c.aborted_by, "createdAt": c.created_at,
             "confirmedAt": c.confirmed_at, "abortedAt": c.aborted_at,
@@ -112,9 +113,10 @@ class ChangeService:
             c = self._require_change(req_id, change_id)
             if c.status != "draft":
                 raise ApiException(409, f"变更单 #{change_id} 已{c.status}，不可确认")
-            if r.status not in ("published", "changed"):
+            if r.status not in ("published", "changed") and c.kind != "reconcile":
                 raise ApiException(409, f"仅已发布需求可确认变更单（当前：{r.status}）；"
-                                        "未发布卡的原文变更走窗口 1 直接编辑")
+                                        "未发布卡的原文变更走窗口 1 直接编辑（reconcile 对账单豁免——"
+                                        "应用+保持原状态，§5.1/§10）")
             # 活跃增量任务 / 未采纳增量·全量草稿（产物合并时 anchor 已漂移）
             if self.repos.task.count_active(req_id, "incremental_check") > 0:
                 raise ApiException(409, "存在排队中/执行中的增量质检任务，请等待完成后再确认")
@@ -134,6 +136,12 @@ class ChangeService:
             body_impact = body.get("impact")
             impact: dict[str, Any] = (body_impact if is_json_obj(body_impact)
                                       else self.preview_impact(req_id, change_id))
+            if c.kind == "rebaseline":
+                # §10：rebaseline 影响面 = 全卡（空 anchor 存量行无区间归属，全量重质检重建）
+                all_live = self.repos.req_block.list_by_req(req_id)
+                impact = {**impact, "blocks": [b.block_id for b in all_live],
+                          "counts": {**impact.get("counts", {}),
+                                     "blocks": len(all_live), "rebaseline": True}}
 
             # ②乐观锁 + 应用：old_text 逐条校验后按 blocks_json 留底数组整体应用
             items = self.repos.req_change.list_items(change_id)
@@ -162,7 +170,8 @@ class ChangeService:
                 raise ApiException(409, "确认竞态：变更单状态已变化")
 
             # ④content_rev+1 + changed（表外通道：不经 REQ_FLOW/set_status 通用路由——携带事务
-            # 副作用的流转走专用动作，通用 set_status 成为守卫旁路的口子不能开）
+            # 副作用的流转走专用动作，通用 set_status 成为守卫旁路的口子不能开）。reconcile 对账单
+            # 在未发布卡上豁免状态转换（保持原状态——changed 是「发布后发现变更」的语义，§10）
             self.repos.requirement.bump_content_rev(req_id)
             if r.status == "published":
                 self.repos.requirement.set_status(req_id, "changed")
@@ -179,6 +188,60 @@ class ChangeService:
         after = self.repos.requirement.find(req_id)
         out["contentRev"] = after.content_rev if after is not None else 0
         return out
+
+    # ---------- v4-17（DESIGN-v4 §10）：存量对账重导 ----------
+
+    def create_reconcile(self, req_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        """对账重导入口（§10）：新解析结果（全量块数组 + 可选评论）→ 服务端 diff 机械生成系统
+        draft——不覆盖任何平台数据，人过 diff 后 confirm（对账式永远合法，不受 §2.4 封存约束——
+        全量替换式才被封存）。kind：reconcile（缺省，未发布卡 confirm = 应用 + **保持原状态**，
+        §5.1 状态域豁免——changed 是「发布后发现变更」的语义，未发布卡不需要）；rebaseline
+        （已发布 text 存量卡：影响面 = 全卡，confirm 后**该单放行一次全量质检**——空 anchor 存量行
+        在任何状态下都无重建通道，本 kind 即为其开的门，豁免挂单 kind 不动 changed 拒全量的全局守卫）。
+        评论按 external_id 幂等 upsert（保原行 id 与 resolved 态——同块同作者同文本的重复发言会使
+        组合键定位不确定，external_id 是唯一稳定键）。"""
+        with self.db.tx():
+            self._require_base(req_id)
+            kind = jtext(body, "kind", "reconcile")
+            if kind not in ("reconcile", "rebaseline"):
+                raise ApiException(400, f"非法 kind：{kind}（对账单仅支持 reconcile|rebaseline）")
+            items, blocks_json = self._diff_items(req_id, body)
+            if not items:
+                raise ApiException(409, "对账 diff 为空（新解析结果与块表一致，无需对账单）")
+            change_id = self.repos.req_change.insert(ReqChange(
+                id=None, req_id=req_id, kind=kind, title=jtext(body, "title", "迁移对账"),
+                detail=jtext(body, "detail", "服务端 diff 机械生成；对账式重导不覆盖平台数据"),
+                proposed_by=jtext(body, "proposedBy", "迁移对账"), status="draft",
+                blocks_json=blocks_json, created_at=Times.now()))
+            self.repos.req_change.replace_items(change_id, items)
+            self._upsert_feishu_comments(req_id, body)
+        log.info("对账单 draft #%s（kind=%s）%s：%s", change_id, kind, req_id, _counts(items))
+        return self.detail(req_id, change_id)
+
+    def _upsert_feishu_comments(self, req_id: str, body: dict[str, Any]) -> int:
+        """评论幂等 upsert（§10）：external_id 唯一定位——已有行保留原 id/resolved/created_at（只刷
+        文本面），新行插入；不删除平台侧未在本次清单中的行（对账不收缩平台数据）。"""
+        raw = body.get("comments")
+        n = 0
+        for c in _arr(raw):
+            if not is_json_obj(c):
+                continue
+            ext = jtext(c, "externalId", "") or jtext(c, "id", "")
+            if not ext:
+                continue
+            self.repos.req_comment.upsert_feishu(
+                req_id, ext, jtext(c, "blockId", "") or jtext(c, "anchorBlockId", ""),
+                jtext(c, "author", ""), jtext(c, "text", ""), Times.now())
+            n += 1
+        return n
+
+    def rebaseline_open(self, req_id: str) -> bool:
+        """存在未消化的 confirmed rebaseline 单（§10 豁免判定：changed 拒全量的三处守卫据此放行
+        一次——采纳即消化（push 刷 pushed_at 后自然解除），不动全局守卫）。"""
+        dg = self.repos.artifact.find(req_id, "digest")
+        undigested = self.repos.req_change.confirmed_undigested(req_id, dg.pushed_at if dg else None)
+        by_id = {c.id: c for c in self.repos.req_change.list_by_req(req_id)}
+        return any(by_id.get(i) is not None and by_id[i].kind == "rebaseline" for i in undigested)
 
     # ---------- v4-14（DESIGN-v4 §6）：增量质检守卫 / selfCheck 机械校验 / 章节级机械合并 ----------
 

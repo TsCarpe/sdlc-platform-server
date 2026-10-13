@@ -45,6 +45,9 @@ _COLUMNS: list[tuple[str, str, str]] = [
     # v4.13（DESIGN-v4 §5.6）：snapshot_json = confirm 时点快照（baseline 块序 + 重开澄清原值——
     # 放弃的全量逆向回滚依据）；aborted_by/at = 放弃留痕
     ("req_change", "snapshot_json", "ALTER TABLE req_change ADD COLUMN snapshot_json TEXT DEFAULT ''"),
+    # v4.17（DESIGN-v4 §10）：变更单 kind 三值 change（人提）| reconcile（迁移对账，未发布卡
+    # confirm=应用+保持原状态的状态域豁免）| rebaseline（已发布 text 存量卡，该 kind 放行一次全量）
+    ("req_change", "kind", "ALTER TABLE req_change ADD COLUMN kind TEXT DEFAULT 'change'"),
     ("req_change", "aborted_by", "ALTER TABLE req_change ADD COLUMN aborted_by TEXT DEFAULT ''"),
     ("req_change", "aborted_at", "ALTER TABLE req_change ADD COLUMN aborted_at TEXT"),
     ("fr_point", "source", "ALTER TABLE fr_point ADD COLUMN source TEXT DEFAULT ''"),
