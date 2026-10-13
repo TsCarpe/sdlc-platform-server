@@ -117,14 +117,14 @@ def test_draft_upsert_and_gate(repos: Repos) -> None:
     assert repos.draft.delete("REQ-1", "cases") == 1
 
     round_id = repos.gate.insert_round(
-        GateRound(id=None, req_id="REQ-1", round_no=1, status="待裁决", created_by="tester", opened_at="2026-10-01 10:00:00")
+        GateRound(id=None, req_id="REQ-1", round_no=1, status="pending", created_by="tester", opened_at="2026-10-01 10:00:00")
     )
     repos.gate.insert_issues([GateIssue(id=None, round_id=round_id, code="A-01", merged_unit=3)])
     issue = repos.gate.list_issues(round_id)[0]
     assert repos.gate.apply_verdict(round_id, 3, "reconcile", "备注", "pm", "2026-10-01 11:00:00") == 1
     assert repos.gate.find_issue(issue.id).verdict == "reconcile"  # type: ignore[union-attr]
     assert repos.gate.set_released(round_id, "pm", "2026-10-01 12:00:00") == 1
-    assert repos.gate.list_rounds("REQ-1")[0].status == "已放行"
+    assert repos.gate.list_rounds("REQ-1")[0].status == "released"
 
 
 def test_media_iteration_comment_frpoint(repos: Repos) -> None:

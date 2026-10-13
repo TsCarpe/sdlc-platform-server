@@ -75,7 +75,7 @@ check('用例未全部定稿开闸 409', casesOpen, 409)
 await call('POST', '/api/cases', { reqId: R, items: [{ id: 'TC-G2', title: '草稿用例', points: ['需求.FR-01'], priority: 'P1', steps: 's', expect: 'e', owner: 'sdlc-test', tool: 'sdlc-test', status: 'reviewed', expectedVersion: 1 }] })
 
 const gv1 = await call('POST', `/api/requirements/${R}/gate/open`, { by: '李工' })
-check('三条件全绿开闸 r1', [gv1.phase, gv1.round.roundNo, gv1.round.status], ['running', 1, '待裁决'])
+check('三条件全绿开闸 r1', [gv1.phase, gv1.round.roundNo, gv1.round.status], ['running', 1, 'pending'])
 let twice = null
 try { await call('POST', `/api/requirements/${R}/gate/open`, { by: '李工' }) } catch (e) { twice = e.status }
 check('进行中轮重复开闸 409', twice, 409)
@@ -105,26 +105,26 @@ check('裁决单元聚合=3', gv2.units.length, 3)
 // ===== 4. 裁决三处置守卫 =====
 const issueOf = code => gv2.issues.find(i => i.code === code)
 let rejNoNote = null
-try { await call('POST', `/api/gate/issues/${issueOf('T-01').id}/verdict`, { verdict: '驳回' }) } catch (e) { rejNoNote = e.status }
+try { await call('POST', `/api/gate/issues/${issueOf('T-01').id}/verdict`, { verdict: 'reject' }) } catch (e) { rejNoNote = e.status }
 check('驳回缺理由 400', rejNoNote, 400)
 let fixNoLoc = null
-try { await call('POST', `/api/gate/issues/${issueOf('S-01').id}/verdict`, { verdict: '落改' }) } catch (e) { fixNoLoc = e.status }
+try { await call('POST', `/api/gate/issues/${issueOf('S-01').id}/verdict`, { verdict: 'revise' }) } catch (e) { fixNoLoc = e.status }
 check('落改缺落点 400', fixNoLoc, 400)
 let badV = null
 try { await call('POST', `/api/gate/issues/${issueOf('T-01').id}/verdict`, { verdict: '改掉', note: 'x' }) } catch (e) { badV = e.status }
 check('非法处置 400', badV, 400)
 
-const gv3 = await call('POST', `/api/gate/issues/${issueOf('T-01').id}/verdict`, { verdict: '驳回', note: '回归成本可接受，沉淀误报模式', by: '李工' })
-check('驳回落库', gv3.issues.find(i => i.code === 'T-01').verdict, '驳回')
-await call('POST', `/api/gate/issues/${issueOf('S-01').id}/verdict`, { verdict: '落改', revLocation: '§1 idx_publish_at｜待执行', by: '李工' })
-await call('POST', `/api/gate/issues/${issueOf('D-01').id}/verdict`, { verdict: '落改', revLocation: '§2 F03 改 409｜已执行', revStatus: '已执行', by: '李工' })
+const gv3 = await call('POST', `/api/gate/issues/${issueOf('T-01').id}/verdict`, { verdict: 'reject', note: '回归成本可接受，沉淀误报模式', by: '李工' })
+check('驳回落库', gv3.issues.find(i => i.code === 'T-01').verdict, 'reject')
+await call('POST', `/api/gate/issues/${issueOf('S-01').id}/verdict`, { verdict: 'revise', revLocation: '§1 idx_publish_at｜待执行', by: '李工' })
+await call('POST', `/api/gate/issues/${issueOf('D-01').id}/verdict`, { verdict: 'revise', revLocation: '§2 F03 改 409｜已执行', revStatus: 'done', by: '李工' })
 
 // ===== 5. GR-4 放行 =====
 let notClosed = null
 try { await call('POST', `/api/gate/rounds/${gv1.round.id}/release`, { by: '李工' }) } catch (e) { notClosed = e.status }
 check('落改未闭环放行 409', notClosed, 409)
-const gv4 = await call('POST', `/api/gate/issues/${issueOf('S-01').id}/revision`, { revLocation: '§1 idx_publish_at｜已执行', revStatus: '已执行' })
-check('修订推进 已执行', gv4.issues.find(i => i.code === 'S-01').revStatus, '已执行')
+const gv4 = await call('POST', `/api/gate/issues/${issueOf('S-01').id}/revision`, { revLocation: '§1 idx_publish_at｜已执行', revStatus: 'done' })
+check('修订推进 已执行', gv4.issues.find(i => i.code === 'S-01').revStatus, 'done')
 const rel = await call('POST', `/api/gate/rounds/${gv1.round.id}/release`, { by: '李工' })
 check('GR-4 全绿放行', [rel.ok, rel.roundNo, rel.casesConfirmed], [true, 1, 0])
 const gv5 = await call('GET', `/api/requirements/${R}/gate`)
@@ -142,7 +142,7 @@ await call('POST', `/api/requirements/${R}/drafts/design/approve`, { by: '王工
 const ch = await call('GET', `/api/requirements/${R}/gate/change-status`)
 check('GR-3 命中设计变更（released 窗口）', [ch.changed, ch.window], [true, 'released'])
 const gv6 = await call('POST', `/api/requirements/${R}/gate/reopen`, { by: '李工' })
-check('复审轮 r2 建立（旧轮归档）', [gv6.round.roundNo, gv6.round.status, gv6.rounds.length, gv6.rounds[0].status], [2, '待裁决', 2, '已放行'])
+check('复审轮 r2 建立（旧轮归档）', [gv6.round.roundNo, gv6.round.status, gv6.rounds.length, gv6.rounds[0].status], [2, 'pending', 2, 'released'])
 
 // ===== 7. 清理 =====
 await call('DELETE', `/api/requirements/${R}`)

@@ -20,7 +20,7 @@ from platform_sdlc.services.task import TaskService
 
 _CODE_P = re.compile(r"^[DAST]-\d{2}$")
 _SEVS = {"high", "mid", "low"}
-_VERDICTS = {"落改", "驳回", "存疑"}
+_VERDICTS = {"revise", "reject", "query"}  # 落改/驳回/存疑（中文口径见文案与 ER 图）
 
 
 class GateService:
@@ -85,7 +85,7 @@ class GateService:
                 raise ApiException(409, "开闸三条件未满足：" + "；".join(failed))
             rounds = self.repos.gate.list_rounds(req_id)
             latest = rounds[-1] if rounds else None
-            if latest is not None and latest.status == "待裁决":
+            if latest is not None and latest.status == "pending":
                 raise ApiException(409, f"已有进行中的评审轮 r{latest.round_no}（待裁决），先完成裁决或放行")
             self._create_round(req_id, len(rounds) + 1, cs, (body or {}).get("by"))
         return self.view(req_id)
@@ -96,7 +96,7 @@ class GateService:
             self.require(req_id)
             rounds = self.repos.gate.list_rounds(req_id)
             latest = rounds[-1] if rounds else None
-            if latest is None or latest.status != "已放行":
+            if latest is None or latest.status != "released":
                 raise ApiException(409, "仅「已放行」后可开复审轮（GR-3 两窗口之一）")
             ch = self.change_status(req_id)
             if not ch["changed"]:
@@ -105,7 +105,7 @@ class GateService:
         return self.view(req_id)
 
     def _create_round(self, req_id: str, round_no: int, cs: list[dict[str, Any]], by: Any) -> None:
-        rnd = GateRound(id=None, req_id=req_id, round_no=round_no, status="待裁决",
+        rnd = GateRound(id=None, req_id=req_id, round_no=round_no, status="pending",
                         checks_json=_json(cs), baseline_json=self._baseline_json(req_id),
                         created_by=(by or "") if isinstance(by, str) else "", opened_at=Times.now())
         self.repos.gate.insert_round(rnd)
@@ -136,7 +136,7 @@ class GateService:
                 raise ApiException(404, f"评审轮不存在：{round_id}")
             if rnd.req_id != req_id:
                 raise ApiException(404, "评审轮不属于该需求")
-            if rnd.status != "待裁决":
+            if rnd.status != "pending":
                 raise ApiException(409, "已放行轮只读，不能入库 issues")
             d = self.repos.draft.find(req_id, task_mod.D_GATE_ISSUES)
             if d is None:
@@ -192,26 +192,26 @@ class GateService:
             rnd = self.repos.gate.find_round(issue.round_id)
             if rnd is None:
                 raise ApiException(404, "评审轮不存在")
-            if rnd.status != "待裁决":
+            if rnd.status != "pending":
                 raise ApiException(409, "已放行轮只读，不能裁决")
             v = jrequired(body, "verdict").strip()
             if v not in _VERDICTS:
-                raise ApiException(400, f"非法处置：{v}（落改|驳回|存疑）")
+                raise ApiException(400, f"非法处置：{v}（revise|reject|query）")
             note = jtext(body, "note", "").strip()
             loc = jtext(body, "revLocation", "").strip()
-            if v == "落改":
+            if v == "revise":
                 if not loc:
                     raise ApiException(400, f"{issue.code} 落改必填落点（<文件+位置>）")
             elif not note:
-                suffix = "理由（沉淀误报模式）" if v == "驳回" else "去向"
+                suffix = "理由（沉淀误报模式）" if v == "reject" else "去向"
                 raise ApiException(400, f"{issue.code} {v}必填{suffix}")
             at = Times.now()
             self.repos.gate.apply_verdict(rnd.id or 0, issue.merged_unit, v, note,
                                           jtext(body, "by", "").strip(), at)
-            if v == "落改":
-                rev_status = jtext(body, "revStatus", "待执行")
-                if rev_status not in ("待执行", "已执行"):
-                    raise ApiException(400, f"非法修订状态：{rev_status}（待执行|已执行）")
+            if v == "revise":
+                rev_status = jtext(body, "revStatus", "pending")
+                if rev_status not in ("pending", "done"):
+                    raise ApiException(400, f"非法修订状态：{rev_status}（pending|done）")
                 self.repos.gate.apply_revision(rnd.id or 0, issue.merged_unit, loc, rev_status)
             req_id = rnd.req_id
         return self.view(req_id)
@@ -225,11 +225,11 @@ class GateService:
             rnd = self.repos.gate.find_round(issue.round_id)
             if rnd is None:
                 raise ApiException(404, "评审轮不存在")
-            if rnd.status != "待裁决":
+            if rnd.status != "pending":
                 raise ApiException(409, "已放行轮只读")
             st = jrequired({"revStatus": rev_status}, "revStatus")
-            if st not in ("待执行", "已执行"):
-                raise ApiException(400, "非法修订状态（待执行|已执行）")
+            if st not in ("pending", "done"):
+                raise ApiException(400, "非法修订状态（pending|done）")
             self.repos.gate.apply_revision(rnd.id or 0, issue.merged_unit, (rev_location or "").strip(), st)
             req_id = rnd.req_id
         return self.view(req_id)
@@ -243,7 +243,7 @@ class GateService:
             if rnd is None:
                 raise ApiException(404, f"评审轮不存在：{round_id}")
             self.require(rnd.req_id)
-            if rnd.status != "待裁决":
+            if rnd.status != "pending":
                 raise ApiException(409, "该轮已放行，不能重复放行")
             issues = self.repos.gate.list_issues(round_id)
             blocked: list[str] = []
@@ -252,7 +252,7 @@ class GateService:
                     continue  # 备案区除外（skill 口径）
                 if not g.verdict:
                     blocked.append(f"{g.code} 未裁决")
-                elif g.verdict == "落改" and (not g.rev_location or g.rev_status != "已执行"):
+                elif g.verdict == "revise" and (not g.rev_location or g.rev_status != "done"):
                     blocked.append(f"{g.code} 落改未闭环（落点 {'缺' if not g.rev_location else '有'} · "
                                    f"{g.rev_status or '待执行'}）")
             if blocked:
@@ -288,7 +288,7 @@ class GateService:
         if cur_cases > str(b.get("casesMaxUpdated", "")):
             reasons.append("用例在基线后有更新")
         return {"changed": bool(reasons), "reasons": reasons,
-                "window": "released" if latest.status == "已放行" else "in-review"}
+                "window": "released" if latest.status == "released" else "in-review"}
 
     # ---------- 读面（六态推导） ----------
 
@@ -311,7 +311,7 @@ class GateService:
                 if not u["verdict"] and g.verdict:
                     u["verdict"] = g.verdict
                 if g.filed == 1:
-                    u["verdict"] = u["verdict"] or "备案"
+                    u["verdict"] = u["verdict"] or "filed"  # 备案区（skill 口径）
             out["issues"] = issue_blocks
             out["units"] = list(units.values())
         out["change"] = self.change_status(req_id)
@@ -326,7 +326,7 @@ class GateService:
         """六态推导（UI 口径，非落库权威）：blocked/running/summary/deciding/released。"""
         if latest is None:
             return "blocked"
-        if latest.status == "已放行":
+        if latest.status == "released":
             return "released"
         if out.get("issues"):
             return "deciding"

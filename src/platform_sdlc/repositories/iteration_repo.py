@@ -24,7 +24,7 @@ _ROW_SELECT = (
     "  WHEN EXISTS (SELECT 1 FROM draft_artifact da WHERE da.req_id=r.id AND da.type='design') THEN 'draft'"
     "  ELSE 'none' END AS design_phase,"
     " CASE WHEN r.id IS NULL THEN 'none'"
-    "  WHEN EXISTS (SELECT 1 FROM gate_round gr WHERE gr.req_id=r.id AND gr.status='已放行'"
+    "  WHEN EXISTS (SELECT 1 FROM gate_round gr WHERE gr.req_id=r.id AND gr.status='released'"
     "    AND gr.round_no=(SELECT MAX(gr2.round_no) FROM gate_round gr2 WHERE gr2.req_id=r.id)) THEN 'released'"
     "  WHEN EXISTS (SELECT 1 FROM gate_round gr WHERE gr.req_id=r.id) THEN 'active'"
     "  ELSE 'none' END AS gate_stage"

@@ -207,7 +207,7 @@ erDiagram
         INTEGER id PK "AUTOINCREMENT"
         TEXT req_id FK
         INTEGER round_no "UNIQUE(req_id,round_no)，r1/r2/…"
-        TEXT status "待裁决 | 已放行（权威两值）"
+        TEXT status "pending | released（权威两值；2026-10 英文化，存量中文值经 SchemaMigrator 迁移）"
         TEXT checks_json "开闸三条件快照"
         TEXT baseline_json "GR-3 基线：设计终稿全文+用例 maxUpdated"
         TEXT released_at
@@ -230,8 +230,8 @@ erDiagram
         INTEGER tradeoff "权衡标记"
         INTEGER merged_unit "裁决单元（同单元批量同裁）"
         INTEGER filed "备案区（放行校验豁免）"
-        TEXT verdict "落改 | 驳回 | 存疑"
-        TEXT verdict_note "驳回=理由 / 存疑=去向"
+        TEXT verdict "revise(落改) | reject(驳回) | query(存疑)；空 = 备案区（读面推导 filed）"
+        TEXT verdict_note "reject=理由 / query=去向"
         TEXT verdict_by
         TEXT verdict_at
         TEXT rev_location "落改落点（<文件+位置>）"
@@ -268,8 +268,8 @@ erDiagram
 | `draft_artifact` | 草稿（agent/skill 回传） | 复合主键 upsert；采纳成功即删（草稿是临时态）；终态锁拒 `digest_bundle/standard` 类草稿 |
 | `seq_case_no` | 用例全局序号发号器 | 单行（id=1）账本，批量分配在事务内一次 UPDATE（循环内不查库） |
 | `iteration` | 迭代 | 名即主键；与需求 **1:1 = 存活需求按 iter 唯一**（软删自动释放迭代名）；仅空迭代可删（物理删除） |
-| `gate_round` | 评审轮 | 权威状态仅两值：待裁决→已放行；放行后轮只读；新轮=复审（GR-3），旧轮归档 |
-| `gate_issue` | 评审 issue 与裁决 | `merged_unit` 裁决单元：人裁决的是单元，同单元批量同裁；`filed=1` 备案区放行校验豁免；落改闭环 = 落点已填 ∧ `rev_status=已执行` |
+| `gate_round` | 评审轮 | 权威状态仅两值：pending→released；放行后轮只读；新轮=复审（GR-3），旧轮归档 |
+| `gate_issue` | 评审 issue 与裁决 | `merged_unit` 裁决单元：人裁决的是单元，同单元批量同裁；`filed=1` 备案区放行校验豁免；落改闭环 = 落点已填 ∧ `rev_status=done` |
 
 > 模式备注：`schema.sql` 头注明结构以运行库为权威；schema 变更 = 建表加 `IF NOT EXISTS` + `migrations.py` 判列补列（幂等）。反向索引等**读时聚合不落库**。
 
@@ -522,7 +522,7 @@ flowchart LR
 
 ## 10. 门禁域（v2.4 D35，GR-2/3/4）
 
-落库权威两值（待裁决｜已放行），六态为读面推导；旧轮只读归档。
+落库权威两值（pending｜released，revise/reject/query 裁决值同批英文化），六态为读面推导；旧轮只读归档。
 
 ```mermaid
 flowchart TD
@@ -534,9 +534,9 @@ flowchart TD
     ING -->|全绿| ISS[落 gate_issue 行 + 删草稿<br/>merged_unit 归并裁决单元]
     ING -->|违规| X400[400 整批不入]
     ISS --> V{人逐裁决单元 verdict}
-    V -->|落改| REV[必填落点 rev_location<br/>rev_status 待执行→已执行（GR-4 闭环）]
+    V -->|revise 落改| REV[必填落点 rev_location<br/>rev_status pending→done（GR-4 闭环）]
     V -->|驳回| REJ[必填理由（沉淀误报模式）]
-    V -->|存疑| HOLD[必填去向]
+    V -->|query 存疑| HOLD[必填去向]
     V & REV & REJ & HOLD --> REL{release 放行 GR-4}
     REL -->|"全部裁决（备案区豁免）∧ 落改全闭环<br/>∧ 三条件机械校验仍全绿"| OK[已放行（条件 UPDATE 防竞态）<br/>关卡互认：用例批量置 reviewed]
     REL -->|不满足| X409R[409 带阻塞明细]

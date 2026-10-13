@@ -60,7 +60,7 @@ _TABLES: list[str] = [
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       req_id TEXT NOT NULL,
       round_no INTEGER NOT NULL,
-      status TEXT NOT NULL DEFAULT '待裁决',
+      status TEXT NOT NULL DEFAULT 'pending',
       checks_json TEXT DEFAULT '',
       baseline_json TEXT DEFAULT '',
       released_at TEXT,
@@ -106,6 +106,7 @@ def run_migrations(db: Database) -> None:
     _init_case_no_seq(db)  # 账本初值取回填后的 MAX——先回填后建账，硬删/软删均不再复用已发放号
     _backfill_iterations(db)
     _backfill_target_repos(db)
+    _migrate_gate_values(db)
     _try_unique_req_iter_index(db)
 
 
@@ -173,6 +174,22 @@ def _backfill_target_repos(db: Database) -> None:
     )
     if n > 0:
         log.info("多目标仓回填：%d 行 target_repo → target_repos", n)
+
+
+def _migrate_gate_values(db: Database) -> None:
+    """批次6（AUDIT D2-3，用户裁决）：gate 域落库值英文化——round 待裁决→pending/已放行→released、
+    verdict 落改→revise/驳回→reject/存疑→query、rev_status 待执行→pending/已执行→done。
+    幂等（按中文值条件 UPDATE，转后不再命中）；读面推导值「备案」不落库、checks/baseline JSON
+    不含状态值，均无需迁移。中文口径保留在文案与 ER 图。"""
+    n = db.execute("UPDATE gate_round SET status='released' WHERE status='已放行'")
+    n += db.execute("UPDATE gate_round SET status='pending' WHERE status='待裁决'")
+    n += db.execute("UPDATE gate_issue SET verdict='revise' WHERE verdict='落改'")
+    n += db.execute("UPDATE gate_issue SET verdict='reject' WHERE verdict='驳回'")
+    n += db.execute("UPDATE gate_issue SET verdict='query' WHERE verdict='存疑'")
+    n += db.execute("UPDATE gate_issue SET rev_status='pending' WHERE rev_status='待执行'")
+    n += db.execute("UPDATE gate_issue SET rev_status='done' WHERE rev_status='已执行'")
+    if n > 0:
+        log.info("gate 值英文化迁移：%d 行转换（中文→英文枚举）", n)
 
 
 def _try_unique_req_iter_index(db: Database) -> None:

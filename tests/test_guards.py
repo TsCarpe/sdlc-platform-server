@@ -301,14 +301,14 @@ def test_gate_release_and_case_mutual_recognition(env: tuple[Repos, Services]) -
     services.gate.ingest(req_id, round_row.id, None)
     # 裁决落改：先缺落点应 400
     with pytest.raises(ApiException):
-        services.gate.verdict(repos.gate.list_issues(round_row.id)[0].id, {"verdict": "落改"})
+        services.gate.verdict(repos.gate.list_issues(round_row.id)[0].id, {"verdict": "revise"})
     issue = repos.gate.list_issues(round_row.id)[0]
-    services.gate.verdict(issue.id, {"verdict": "落改", "revLocation": "a.py:L1"})
+    services.gate.verdict(issue.id, {"verdict": "revise", "revLocation": "a.py:L1"})
     # 落改未执行 → 放行拒绝
     with pytest.raises(ApiException) as e:
         services.gate.release(round_row.id, {"by": "qa"})
     assert "落改未闭环" in str(e.value)
-    services.gate.revision(issue.id, "a.py:L1", "已执行")
+    services.gate.revision(issue.id, "a.py:L1", "done")
     out = services.gate.release(round_row.id, {"by": "qa"})
     # 用例在放行前已全部定稿 → 互认转换 0 条（互认是防御性兜底：draft sdlc-test 用例自动置 reviewed）
     assert out["ok"] is True and out["casesConfirmed"] == 0

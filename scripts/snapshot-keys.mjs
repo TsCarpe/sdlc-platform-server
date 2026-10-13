@@ -84,7 +84,7 @@ async function build() {
   await call('PUT', `/api/requirements/${A}/drafts/gate_issues`, { md: '# issues（评审状态：待裁决）\n\n|编号|S-01|\n', contentJson: JSON.stringify({ issues: ISSUES }) })
   await call('POST', `/api/tasks/${(await claimTask(gv1.activeTask.id)).id}/done`, { result: '{"issues":1}' })
   const gv2 = await call('POST', `/api/requirements/${A}/gate/rounds/${gv1.round.id}/ingest`, { by: '李工' })
-  await call('POST', `/api/gate/issues/${gv2.issues[0].id}/verdict`, { verdict: '驳回', note: '理由', by: '李工' })
+  await call('POST', `/api/gate/issues/${gv2.issues[0].id}/verdict`, { verdict: 'reject', note: '理由', by: '李工' })
   await call('POST', `/api/gate/rounds/${gv1.round.id}/release`, { by: '李工' })
 
   // 卡 B：submitted 初始形态（detail 无条件键的 NON_NULL 形态）

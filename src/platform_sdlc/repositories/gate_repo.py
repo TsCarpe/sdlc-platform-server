@@ -27,7 +27,7 @@ class GateRepo:
 
     def set_released(self, round_id: int, by: str, at: str) -> int:
         return self.db.execute(
-            "UPDATE gate_round SET status='已放行', released_at=?, released_by=? WHERE id=? AND status='待裁决'",
+            "UPDATE gate_round SET status='released', released_at=?, released_by=? WHERE id=? AND status='pending'",
             (at, by, round_id),
         )
 
