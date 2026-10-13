@@ -93,6 +93,18 @@ async def list_clarify_items(wrapper: RunContextWrapper[TaskRunContext]) -> str:
 
 
 @function_tool
+async def list_req_comments(wrapper: RunContextWrapper[TaskRunContext]) -> str:
+    """列出当前需求卡的评论（v4-5 质检输入源）：飞书导入 + 平台评论统一列表，输出即
+    resolve_anchors --comments 兼容格式（数组 + comment_id 键）——原样 write_file 落盘
+    raw/comments.json 即可喂锚点管线，不要改写结构。"""
+    def impl() -> str:
+        c = wrapper.context
+        return json.dumps(c.services.blocks.comments_payload(c.req_id), ensure_ascii=False)
+
+    return await asyncio.to_thread(impl)
+
+
+@function_tool
 async def get_digest_bundle(wrapper: RunContextWrapper[TaskRunContext]) -> str:
     """读取已采纳的质检产物：digest 与 audit 的 markdown 与 contentJson（case_gen / standard_doc 的输入）。"""
     def impl() -> str:
@@ -301,5 +313,5 @@ async def run_command(wrapper: RunContextWrapper[TaskRunContext], command: str, 
         return _err(f"命令执行失败：{e}")
 
 
-ALL_TOOLS: list[Tool] = [get_requirement_card, list_clarify_items, get_digest_bundle, get_design_doc,
-             list_cases, put_draft, upload_media, read_file, write_file, run_command]
+ALL_TOOLS: list[Tool] = [get_requirement_card, list_clarify_items, list_req_comments, get_digest_bundle,
+             get_design_doc, list_cases, put_draft, upload_media, read_file, write_file, run_command]

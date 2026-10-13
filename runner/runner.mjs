@@ -95,27 +95,25 @@ SDLC_TASK_RESULT {"关键统计": "..."}
 `
 
   if (task.type === 'quality_check') {
-    const src = card.card.sourceType === 'feishu'
-      ? `飞书需求文档：${card.card.sourceUrl}`
-      : `需求原文（直接以此为原文全文，无 doc 块管线）：\n<原文>\n${card.card.sourceText}\n</原文>`
     return `${common}
-按以下步骤执行需求质检（sdlc-intent 完整两段 + v1.2 锚点管线）：
+按以下步骤执行需求质检（sdlc-intent 完整两段 + v1.2 锚点管线；v4-5：纯分析读块模型——原文/评论从平台取）：
 
 1. 读取技能权威文档：
    - ${INTENT}/SKILL.md（两段式工作流）
    - ${INTENT}/references/digest-template.md（梳理 8 区块模板）
    - ${INTENT}/references/dimensions.md 与 references/report-template.md（体检六层维度与报告模板）
-   - ${INTENT}/references/doc-pipeline.md（原文预处理与块级锚点管线）
    - ${SYNC_CONTRACT}（payload 契约 v1.2）
-2. 输入：${src}
-   ${card.card.sourceType === 'feishu' ? '按 doc-pipeline.md 执行：lark-cli 拉 markdown 正文 + 评论区 JSON + 块级 XML（--detail with-ids）→ python3 ' + INTENT + '/scripts/parse_doc.py 产出 doc.json 与 media/（--download）。' : ''}
-3. 第一段梳理：按 digest-template 产出 digest（doc.json 存在时出处尽量写到条款级，用 scripts/list_clauses.py 查条款树）。
+2. 输入（块表权威，curl 直落供管线消费）：
+   curl -s ${PLATFORM}/api/requirements/${task.reqId}/doc.json -o intake/doc-task.json
+   curl -s ${PLATFORM}/api/requirements/${task.reqId}/comments.json -o raw/comments.json
+   （doc.json 404 = 原文未导入：如实终止报错，禁止以卡内 sourceText 降级替代；媒体已在平台，无上传步。）
+3. 第一段梳理：按 digest-template 产出 digest（出处尽量写到条款级，用 python3 ${INTENT}/scripts/list_clauses.py --doc intake/doc-task.json 查条款树）。
 4. 第二段体检：按 dimensions 六层逐层检查，产出 audit 与澄清清单（每个澄清问题 seq 用体检 P 编号，theme 必填）。
-5. 组装 v1.2 payload（严格按 payload-schema）：{snapshot:{md 原文全文}, domains:[全局需求域顺序], digest:{summary,roles,features,fr_points,md}, audit:{red,yellow,blue,items}, items:[澄清清单], ${card.card.sourceType === 'feishu' ? 'doc:{generator,source,blocks,media}' : '（text 源不带 doc）'}}。
-   ${card.card.sourceType === 'feishu' ? 'doc.media 里的每个文件先上传到平台媒体端点（mediaId 与 doc.media[].id 一致）；再用 python3 ' + INTENT + '/scripts/resolve_anchors.py 给 payload 附加 anchor（--comments 优先传 list-comments JSON）。' : ''}
-6. 把最终 payload 原样写入临时 json 文件，然后（payload 较大时务必用 --data-binary @文件）：
+5. 组装 v1.2 payload（严格按 payload-schema）：{snapshot:{md 原文全文}, domains:[全局需求域顺序], digest:{summary,roles,features,fr_points,md}, audit:{red,yellow,blue,items}, items:[澄清清单], doc:{blocks,media}}——doc 的 blocks/media 直接取自 intake/doc-task.json。
+6. 用 python3 ${INTENT}/scripts/resolve_anchors.py 给 payload 附加 anchor（--doc intake/doc-task.json --comments raw/comments.json）。
+7. 把最终 payload 原样写入临时 json 文件，然后（payload 较大时务必用 --data-binary @文件）：
    curl -X PUT ${PLATFORM}/api/requirements/${task.reqId}/drafts/digest_bundle -H 'Content-Type: application/json' --data-binary @<payload.json>
-7. 确认响应 200 后输出 SDLC_TASK_RESULT 行（含问题数/需求点数/媒体数/锚点命中统计）。`
+8. 确认响应 200 后输出 SDLC_TASK_RESULT 行（含问题数/需求点数/锚点命中统计）。`
   }
 
   if (task.type === 'standard_doc') {

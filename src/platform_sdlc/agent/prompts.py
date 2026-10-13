@@ -35,8 +35,7 @@ def sys_prompt(task_type: str, card: Requirement, skills_repo: Path, repos_of: l
     if task_type == "source_import":
         return _source_import_steps(common, card, repo, import_out_dir)
     if task_type == "quality_check":
-        feishu = card.source_type == "feishu"
-        return f"{common}\n{_quality_check_steps(repo, feishu)}\n{_quality_quick_ref()}"
+        return f"{common}\n{_quality_check_steps(repo, card)}\n{_quality_quick_ref()}"
     if task_type == "standard_doc":
         return (f"{common}\n执行标准需求文档合成（重写版）。平台已有该需求的全部澄清答复：\n"
                 "1. get_requirement_card + list_clarify_items 获取卡、原文与逐问答复；get_digest_bundle 获取 digest/audit。\n"
@@ -167,43 +166,26 @@ def payload_note(payload_json: str) -> str:
         return ""
 
 
-def _quality_check_steps(repo: str, feishu: bool) -> str:
-    steps = ("按以下步骤执行需求质检（sdlc-intent 两段式 + v1.2 锚点管线；产物结构见下方速查卡）：\n"
-             "1. get_requirement_card 获取输入。\n"
-             "2. ")
-    if feishu:
-        steps += ("飞书源固定拉取序列（<URL>=卡内 sourceUrl，在工作区逐条 run_command；"
-                  "禁止自写 grep/inspect 类脚本重造解析管线，skill 脚本行为不符预期时 read_file 其源码对症处理）：\n"
-                  "   mkdir -p raw intake/media\n"
-                  "   lark-cli docs +fetch --doc <URL> --doc-format markdown > raw/doc.md\n"
-                  "   lark-cli drive +list-comments --url <URL> --solved-status all --comment-scope all --need-relation --format json > raw/comments.json\n"
-                  "   lark-cli docs +fetch --doc <URL> --doc-format xml --detail with-ids > raw/fetch.json\n"
-                  "   从 fetch.json 提取解析器输入（run_command 按 |;&& 分段校验白名单，python3 -c 内的分号会被切段拒绝，故提取走脚本文件——write_file 落盘 tools/extract.py 后执行）：\n"
-                  "     import json\n"
-                  "     d = json.load(open('raw/fetch.json'))['data']['document']\n"
-                  "     open('raw/content.xml', 'w').write(d['content'])\n"
-                  "     rm = d['reference_map']\n"
-                  "     open('raw/refmap.json', 'w').write(json.dumps(rm.get('comments', rm)))\n"
-                  "   python3 tools/extract.py\n"
-                  f"   python3 {repo}/skills/sdlc-intent/scripts/parse_doc.py --xml raw/content.xml --refmap raw/refmap.json --out intake/doc-<YYYYMMDD>.json --media-dir intake/media --download --url <URL>\n"
-                  f"   查条款树：python3 {repo}/skills/sdlc-intent/scripts/list_clauses.py --doc intake/doc-<YYYYMMDD>.json [--row N]\n"
-                  "   纪律：raw/ 原始文件一律不 read_file 整读（只经脚本消费，防上下文膨胀）。\n"
-                  "3. ")
-    else:
-        steps += "文本源：直接以卡内 sourceText 为原文全文，无 doc 块管线。\n3. "
-    steps += ("第一段梳理：按速查卡「digest 8 区块」产出 intake/digest-<YYYYMMDD>.md（速查卡未覆盖的列级细节才 read_file "
-              f"{repo}/skills/sdlc-intent/references/digest-template.md）。\n"
-              "4. 第二段体检：按速查卡「七层/五章/三层」产出 intake/audit-<YYYYMMDD>.md 与 intake/pm-checklist-<YYYYMMDD>.md（细节才 read_file "
-              f"{repo}/skills/sdlc-intent/references/dimensions.md、references/report-template.md）。\n"
-              "5. 组装 payload.json（严格按速查卡「payload 字段」"
-              + ("；含 doc，其 blocks/media 直接取自 intake/doc-*.json）。\n" if feishu else "；文本源不带 doc）。\n"))
-    if feishu:
-        steps += ("6. doc.media 每个文件 upload_media（mediaId 与 doc.media[].id 一致，path=intake/media/<文件>）；"
-                  f"再 run_command 执行 python3 {repo}/skills/sdlc-intent/scripts/resolve_anchors.py --doc intake/doc-<YYYYMMDD>.json --comments raw/comments.json --payload payload.json --out payload-anchored.json。\n"
-                  "7. put_draft(type=digest_bundle, contentJsonPath=payload-anchored.json)，确认返回 ok 后输出 SDLC_TASK_RESULT 行（问题数/需求点数/媒体数/锚点命中统计）。")
-    else:
-        steps += ("6. put_draft(type=digest_bundle, contentJsonPath=payload.json)，确认返回 ok 后输出 SDLC_TASK_RESULT 行（问题数/需求点数统计）。")
-    return steps
+def _quality_check_steps(repo: str, card: Requirement) -> str:
+    """v4-5（DESIGN-v4 §3）：质检 = 纯分析读块模型——原文/评论从平台取（块表权威，双源统一单分支），
+    拉取序列与 text 特殊分支退役（导入已在 source_import 完成；媒体已在平台，无上传步）。"""
+    _ = card
+    return ("按以下步骤执行需求质检（sdlc-intent 两段式 + v1.2 锚点管线；产物结构见下方速查卡）：\n"
+            "1. get_requirement_card 获取输入：卡内 doc 键 = 块表权威原文 {blocks,media}（含评论拼回的 comment 块）；"
+            "无 doc 键 = 原文未导入——如实终止报错（「原文未导入，先完成 source_import」），禁止以 sourceText 降级替代。\n"
+            "2. 磁盘中介落盘（不要在对话里粘贴大段原文）：doc 原样 write_file 落盘 intake/doc-<YYYYMMDD>.json；"
+            "list_req_comments 获取评论 → write_file 原样落盘 raw/comments.json（输出即 resolve_anchors 兼容格式）。\n"
+            f"3. 查条款树：python3 {repo}/skills/sdlc-intent/scripts/list_clauses.py --doc intake/doc-<YYYYMMDD>.json [--row N]。\n"
+            "4. 第一段梳理：按速查卡「digest 8 区块」产出 intake/digest-<YYYYMMDD>.md（速查卡未覆盖的列级细节才 read_file "
+            f"{repo}/skills/sdlc-intent/references/digest-template.md）。\n"
+            "5. 第二段体检：按速查卡「七层/五章/三层」产出 intake/audit-<YYYYMMDD>.md 与 intake/pm-checklist-<YYYYMMDD>.md（细节才 read_file "
+            f"{repo}/skills/sdlc-intent/references/dimensions.md、references/report-template.md）。\n"
+            "6. 组装 payload.json（严格按速查卡「payload 字段」；含 doc，其 blocks/media 直接取自 intake/doc-*.json——"
+            "媒体已在平台（导入时已上传），本任务无媒体上传步）。\n"
+            f"7. run_command 执行 python3 {repo}/skills/sdlc-intent/scripts/resolve_anchors.py --doc intake/doc-<YYYYMMDD>.json"
+            " --comments raw/comments.json --payload payload.json --out payload-anchored.json。\n"
+            "8. put_draft(type=digest_bundle, contentJsonPath=payload-anchored.json)，确认返回 ok 后输出 SDLC_TASK_RESULT 行"
+            "（问题数/需求点数/锚点命中统计）。")
 
 
 def _quality_quick_ref() -> str:
@@ -222,7 +204,8 @@ def _quality_quick_ref() -> str:
         "states[{obj(取§6图题对象名),from,on,to,gap(断点行=true且to填?),src}], "
         "fr_points[{id:\"需求.FR-xx\",name,source,group,module}], md}、"
         "audit{red,yellow,blue,items[{id:\"体检.Pxx\",level:red|yellow|blue,title,where,go,group,quote}], md}、"
-        "items[{seq:\"Pxx\",level,theme(必填，取值=需求域),question,ctx,answer,quote}]、doc{generator,source,blocks,media}(飞书源)。\n"
+        "items[{seq:\"Pxx\",level,theme(必填，取值=需求域),question,ctx,answer,quote}]、"
+        "doc{blocks,media}(块表权威——取自卡内 doc 键/intake/doc-*.json，双源统一)。\n"
         "出处条款级写法：详述N·<小节名> 或 详述N·<序数>；定位不到回退章节名，禁止编造条款号/序数。"
     )
 
