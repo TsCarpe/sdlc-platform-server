@@ -69,6 +69,36 @@ def router(ctx: AppContext) -> APIRouter:
         body = await read_json(request, required=True)
         return await asyncio.to_thread(ctx.services.blocks.preview_diff, req_id, body)
 
+    @r.post("/api/requirements/{req_id}/comments")
+    async def create_comment(req_id: str, request: Request) -> dict[str, Any]:
+        """发评论（v4-8，DESIGN-v4 §4.2）：blockId 空=卡片级，非空锚定原文块；replyTo 回复串；
+        任何阶段可发（自由讨论，无状态守卫）。"""
+        body = await read_json(request, required=True)
+        return await asyncio.to_thread(ctx.services.comments.create, req_id, body)
+
+    @r.get("/api/requirements/{req_id}/comments")
+    async def list_comments(req_id: str) -> dict[str, Any]:
+        """评论列表 + 未解决计数（§4.3 列表页角标）。与 comments.json（resolve_anchors 兼容导出）
+        分立：本端点为平台面契约（行 id 定位升级/解决）。"""
+        return await asyncio.to_thread(ctx.services.comments.list, req_id)
+
+    @r.post("/api/requirements/{req_id}/comments/{comment_id}/resolve")
+    async def resolve_comment(req_id: str, comment_id: int, request: Request) -> dict[str, Any]:
+        """解决/重开（线程级：根 + 回复链全置，对齐飞书体验）；幂等。"""
+        body = await read_json(request, required=True)
+        return await asyncio.to_thread(ctx.services.comments.resolve, req_id, comment_id, body)
+
+    @r.delete("/api/requirements/{req_id}/comments/{comment_id}")
+    async def delete_comment(req_id: str, comment_id: int) -> dict[str, Any]:
+        return await asyncio.to_thread(ctx.services.comments.delete, req_id, comment_id)
+
+    @r.post("/api/requirements/{req_id}/comments/{comment_id}/escalate")
+    async def escalate_comment(req_id: str, comment_id: int, request: Request) -> dict[str, Any]:
+        """升级为澄清项（§4.1）：L<两位> 编号 + origin='local' + quote/anchor 带入 + src_comment_id
+        回链；已解决评论仍可升级；重复升级 409（幂等）。"""
+        body = await read_json(request, required=True)
+        return await asyncio.to_thread(ctx.services.comments.escalate, req_id, comment_id, body)
+
     @r.post("/api/requirements/{req_id}/artifacts")
     async def artifacts(req_id: str, request: Request) -> dict[str, Any]:
         body = await read_json(request, required=True)

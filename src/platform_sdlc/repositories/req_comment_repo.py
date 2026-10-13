@@ -37,6 +37,23 @@ class ReqCommentRepo:
         """删除该卡飞书导入行（§3 导入幂等：重跑替换 origin=feishu 行，平台侧评论不动）。"""
         return self.db.execute("DELETE FROM req_comment WHERE req_id=? AND origin='feishu'", (req_id,))
 
+    def find(self, req_id: str, comment_id: int) -> ReqComment | None:
+        """单条定位（升级/解决/删除的目标行）。"""
+        row = self.db.query_one("SELECT * FROM req_comment WHERE req_id=? AND id=?", (req_id, comment_id))
+        return ReqComment.from_row(row) if row else None
+
+    def set_resolved_many(self, ids: list[int], resolved: bool) -> None:
+        """线程级解决态批量落库（§4.3：解决是回复串级动作，对齐飞书体验；调用方事务内）。"""
+        if not ids:
+            return
+        self.db.executemany(
+            "UPDATE req_comment SET resolved=? WHERE id=?",
+            [(1 if resolved else 0, i) for i in ids])
+
+    def delete_one(self, req_id: str, comment_id: int) -> int:
+        """单条物理删（回复行保留——悬空 reply_to 在组装面归根处理，§4.3 自由讨论低门槛）。"""
+        return self.db.execute("DELETE FROM req_comment WHERE req_id=? AND id=?", (req_id, comment_id))
+
     def has_platform(self, req_id: str) -> bool:
         """存在平台评论（§2.4 飞书源重导封存判定条件之一）。"""
         return bool(self.db.query_scalar(

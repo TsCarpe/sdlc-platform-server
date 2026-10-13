@@ -36,6 +36,8 @@ _COLUMNS: list[tuple[str, str, str]] = [
     # v4.1（DESIGN-v4 §6.3）：澄清项来源三值 skill|incremental|local——判列补列默认空串，
     # 存量行由账本步骤 backfill_clarify_origin 回填 'skill'（否则「按来源合并」永远匹配不到存量行）
     ("clarify_item", "origin", "ALTER TABLE clarify_item ADD COLUMN origin TEXT DEFAULT ''"),
+    # v4.8（DESIGN-v4 §4.1）：评论升级回链——被升级的评论可跳回原讨论上下文；存量行无来源评论，无回填
+    ("clarify_item", "src_comment_id", "ALTER TABLE clarify_item ADD COLUMN src_comment_id INTEGER"),
     ("fr_point", "source", "ALTER TABLE fr_point ADD COLUMN source TEXT DEFAULT ''"),
     ("fr_point", "group_name", "ALTER TABLE fr_point ADD COLUMN group_name TEXT DEFAULT ''"),
     ("fr_point", "module", "ALTER TABLE fr_point ADD COLUMN module TEXT DEFAULT ''"),

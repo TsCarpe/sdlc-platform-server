@@ -121,6 +121,7 @@ class ClarifyItem:
     status: str = ""
     note: str = ""
     origin: str = ""  # v4.1（DESIGN-v4 §6.3）：skill|incremental|local，删除/合并规则按来源
+    src_comment_id: int | None = None  # v4.8（DESIGN-v4 §4.1）：评论升级回链原 req_comment 行
 
     @classmethod
     def from_row(cls, row: Row) -> ClarifyItem:
@@ -139,6 +140,7 @@ class ClarifyItem:
             status=_s(row, "status"),
             note=_s(row, "note"),
             origin=_s(row, "origin"),
+            src_comment_id=_in(row, "src_comment_id"),
         )
 
 

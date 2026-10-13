@@ -45,3 +45,8 @@ class ReqBlockRepo:
         的逆向语义，不属窗口 1 直接编辑，引导前端刷新基线）。"""
         return {str(r["block_id"]) for r in self.db.query_all(
             "SELECT block_id FROM req_block WHERE req_id=? AND deleted!=''", (req_id,))}
+
+    def find_text_any(self, req_id: str, block_id: str) -> str | None:
+        """块文本（含软删行——软删块上的评论升级仍需带入块文本作 quote，§4.3）；无行返回 None。"""
+        v = self.db.query_scalar("SELECT text FROM req_block WHERE req_id=? AND block_id=?", (req_id, block_id))
+        return None if v is None else str(v)

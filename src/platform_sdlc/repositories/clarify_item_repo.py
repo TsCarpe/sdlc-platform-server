@@ -29,9 +29,10 @@ class ClarifyItemRepo:
 
     def insert(self, c: ClarifyItem) -> None:
         self.db.execute(
-            "INSERT INTO clarify_item(req_id,seq,level,theme,question,ctx,answer,answered_at,quote,anchor,status,note,origin)"
-            " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
-            (c.req_id, c.seq, c.level, c.theme, c.question, c.ctx, c.answer, c.answered_at, c.quote, c.anchor, c.status, c.note, c.origin),
+            "INSERT INTO clarify_item(req_id,seq,level,theme,question,ctx,answer,answered_at,quote,anchor,"
+            "status,note,origin,src_comment_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (c.req_id, c.seq, c.level, c.theme, c.question, c.ctx, c.answer, c.answered_at, c.quote,
+             c.anchor, c.status, c.note, c.origin, c.src_comment_id),
         )
 
     def insert_many(self, items: list[ClarifyItem]) -> None:
@@ -39,10 +40,10 @@ class ClarifyItemRepo:
         if not items:
             return
         self.db.executemany(
-            "INSERT INTO clarify_item(req_id,seq,level,theme,question,ctx,answer,answered_at,quote,anchor,status,note,origin)"
-            " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
-            [(c.req_id, c.seq, c.level, c.theme, c.question, c.ctx, c.answer, c.answered_at, c.quote, c.anchor, c.status, c.note, c.origin)
-             for c in items],
+            "INSERT INTO clarify_item(req_id,seq,level,theme,question,ctx,answer,answered_at,quote,anchor,"
+            "status,note,origin,src_comment_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            [(c.req_id, c.seq, c.level, c.theme, c.question, c.ctx, c.answer, c.answered_at, c.quote,
+              c.anchor, c.status, c.note, c.origin, c.src_comment_id) for c in items],
         )
 
     def set_disposition(self, req_id: str, seq: str, answer: str, status: str, note: str, at: str) -> int:
@@ -61,3 +62,22 @@ class ClarifyItemRepo:
         total = int(row["total"]) if row is not None else 0
         answered = int(row["answered"] or 0) if row is not None else 0
         return {"total": total, "answered": answered}
+
+    # ---------- v4.8（DESIGN-v4 §4.1/§6.3）：评论升级 L 系 ----------
+
+    def exists_by_src_comment(self, req_id: str, comment_id: int) -> bool:
+        """该评论是否已升级过（升级幂等判定：EXISTS 直查，不重复插行）。"""
+        return bool(self.db.query_scalar(
+            "SELECT EXISTS(SELECT 1 FROM clarify_item WHERE req_id=? AND src_comment_id=?)",
+            (req_id, comment_id)))
+
+    def next_local_seq(self, req_id: str) -> str:
+        """L 系下一编号（§6.3：L<两位> 从 L01 起，与 P 系两族在 UNIQUE(req_id,seq) 下天然不冲突）。
+        一次查询取全部 L 行，Python 侧按数值聚合——字典序 MAX 在两位补零之外（L100+）会乱序。"""
+        nums: list[int] = []
+        for row in self.db.query_all(
+                "SELECT seq FROM clarify_item WHERE req_id=? AND seq LIKE 'L%'", (req_id,)):
+            tail = str(row[0])[1:]
+            if tail.isdigit():
+                nums.append(int(tail))
+        return f"L{max(nums, default=0) + 1:02d}"

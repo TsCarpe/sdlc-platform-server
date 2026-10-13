@@ -381,6 +381,240 @@
     }
    }
   },
+  "/api/requirements/{req_id}/comments": {
+   "post": {
+    "summary": "Create Comment",
+    "description": "发评论（v4-8，DESIGN-v4 §4.2）：blockId 空=卡片级，非空锚定原文块；replyTo 回复串；\n任何阶段可发（自由讨论，无状态守卫）。",
+    "operationId": "create_comment_api_requirements__req_id__comments_post",
+    "parameters": [
+     {
+      "name": "req_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Req Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Create Comment Api Requirements  Req Id  Comments Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "get": {
+    "summary": "List Comments",
+    "description": "评论列表 + 未解决计数（§4.3 列表页角标）。与 comments.json（resolve_anchors 兼容导出）\n分立：本端点为平台面契约（行 id 定位升级/解决）。",
+    "operationId": "list_comments_api_requirements__req_id__comments_get",
+    "parameters": [
+     {
+      "name": "req_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Req Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response List Comments Api Requirements  Req Id  Comments Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/requirements/{req_id}/comments/{comment_id}/resolve": {
+   "post": {
+    "summary": "Resolve Comment",
+    "description": "解决/重开（线程级：根 + 回复链全置，对齐飞书体验）；幂等。",
+    "operationId": "resolve_comment_api_requirements__req_id__comments__comment_id__resolve_post",
+    "parameters": [
+     {
+      "name": "req_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Req Id"
+      }
+     },
+     {
+      "name": "comment_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Comment Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Resolve Comment Api Requirements  Req Id  Comments  Comment Id  Resolve Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/requirements/{req_id}/comments/{comment_id}": {
+   "delete": {
+    "summary": "Delete Comment",
+    "operationId": "delete_comment_api_requirements__req_id__comments__comment_id__delete",
+    "parameters": [
+     {
+      "name": "req_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Req Id"
+      }
+     },
+     {
+      "name": "comment_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Comment Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Delete Comment Api Requirements  Req Id  Comments  Comment Id  Delete"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/requirements/{req_id}/comments/{comment_id}/escalate": {
+   "post": {
+    "summary": "Escalate Comment",
+    "description": "升级为澄清项（§4.1）：L<两位> 编号 + origin='local' + quote/anchor 带入 + src_comment_id\n回链；已解决评论仍可升级；重复升级 409（幂等）。",
+    "operationId": "escalate_comment_api_requirements__req_id__comments__comment_id__escalate_post",
+    "parameters": [
+     {
+      "name": "req_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Req Id"
+      }
+     },
+     {
+      "name": "comment_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Comment Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Escalate Comment Api Requirements  Req Id  Comments  Comment Id  Escalate Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/requirements/{req_id}/artifacts": {
    "post": {
     "summary": "Artifacts",

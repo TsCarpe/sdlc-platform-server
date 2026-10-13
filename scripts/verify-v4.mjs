@@ -1,7 +1,9 @@
-// V4（需求平台权威化）：source_import 任务通道 + L2 建卡自动排 + 质检启动守卫 + 窗口 1 块级直接编辑 断言。
+// V4（需求平台权威化）：source_import 任务通道 + L2 建卡自动排 + 质检启动守卫 + 窗口 1 块级直接编辑
+// + 评论系统 断言。
 // 覆盖：建卡自动排（只一次）、自建自领自落文件全链（完成回调落库→doc.json/comments.json）、
 // 分源封存守卫、块表空质检 failed 引导、块表就位后质检放行、
-// 块级编辑（diff 预览四态/PUT 应用 blk-ID/幂等/published 与活跃质检双守卫，v4-7）。
+// 块级编辑（diff 预览四态/PUT 应用 blk-ID/幂等/published 与活跃质检双守卫，v4-7）、
+// 评论（CRUD/线程级解决/升级 L 系带 quote·anchor·回链/幂等，v4-8）。
 // 用法：node scripts/verify-v4.mjs [baseUrl]   （默认 http://127.0.0.1:8080；服务从仓根启动）
 const base = process.argv[2] || 'http://127.0.0.1:8080'
 
@@ -193,6 +195,47 @@ const after = await call('PUT', `/api/requirements/${req}/blocks`, {
   ]
 })
 check('质检解除后编辑放行（幂等空 items）', after.items, [])
+
+// ===== 7. 评论系统（v4-8：CRUD + 线程级解决 + 升级 L 系） =====
+const cm1 = await call('POST', `/api/requirements/${req}/comments`, {
+  blockId: 'v4-p1', author: '张三', text: '这句口径有歧义'
+})
+check('块级评论：origin=platform 未解决', [cm1.blockId, cm1.origin, cm1.resolved], ['v4-p1', 'platform', false])
+const cm2 = await call('POST', `/api/requirements/${req}/comments`, {
+  blockId: 'v4-p1', author: '李四', text: '同意楼上的疑问', replyTo: cm1.id
+})
+const card1 = await call('POST', `/api/requirements/${req}/comments`, { author: '王五', text: '整体边界不清' })
+check('卡片级评论（blockId 空）+ 回复链', [card1.blockId, cm2.replyTo], ['', cm1.id])
+check('校验：replyTo 不存在 400',
+      await call('POST', `/api/requirements/${req}/comments`, { text: 'x', replyTo: 9999 })
+        .then(() => 0).catch(e => e.status), 400)
+
+let list1 = await call('GET', `/api/requirements/${req}/comments`)
+check('列表 + 未解决计数', [list1.comments.length, list1.unresolvedCount], [5, 5])  // 含导入的 2 条 feishu 评论
+
+// 线程级解决：resolve 叶子 → 根+链全置，他线程与 feishu 行不动
+await call('POST', `/api/requirements/${req}/comments/${cm2.id}/resolve`, { resolved: true })
+const list2 = await call('GET', `/api/requirements/${req}/comments`)
+const byId = Object.fromEntries(list2.comments.map(c => [c.id, c]))
+check('线程级解决（叶子→整链）', [byId[cm1.id].resolved, byId[cm2.id].resolved, byId[card1.id].resolved],
+      [true, true, false])
+check('未解决计数随线程下降', list2.unresolvedCount, 3)
+
+// 升级 L 系：quote=块文本 anchor=块 ID；已解决评论仍可升级；重复升级 409
+const e1 = await call('POST', `/api/requirements/${req}/comments/${cm1.id}/escalate`, {})
+check('升级：L01 + quote/anchor 带入 + origin=local + 回链',
+      [e1.seq, e1.quote, e1.anchor, e1.origin, e1.srcCommentId],
+      ['L01', '原文（已修订）。', 'v4-p1', 'local', cm1.id])
+const cardE = await call('POST', `/api/requirements/${req}/comments/${card1.id}/escalate`, { level: 'blue' })
+check('卡片级升级：quote/anchor 空 + level 可选', [cardE.seq, cardE.anchor, cardE.level], ['L02', '', 'blue'])
+const answers = await call('GET', `/api/requirements/${req}/answers`)
+check('answers 面：P/L 两族并存（L 行可见待处置）',
+      answers.filter(a => a.seq.startsWith('L')).map(a => [a.seq, a.status]), [['L01', 'pending'], ['L02', 'pending']])
+await expectErr('POST', `/api/requirements/${req}/comments/${cm1.id}/escalate`, {}, 409, '重复升级：409')
+// 删除单条（回复行保留）
+await call('DELETE', `/api/requirements/${req}/comments/${cm2.id}`)
+const list3 = await call('GET', `/api/requirements/${req}/comments`)
+check('删除单条', list3.comments.some(c => c.id === cm2.id), false)
 
 // 收尾清理：reqP 建卡自动排的 source_import 留在队列会干扰后续脚本，领走置 failed
 const leftover = await fetch(`${base}/api/tasks/next?runner=verify-v4`, { method: 'POST' })
