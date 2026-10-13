@@ -181,6 +181,9 @@ def run_migrations(db: Database) -> None:
         ("migrate_doc_artifact_to_blocks", _migrate_doc_artifact_to_blocks),
         ("audit_anchor_health", _audit_anchor_health),
         ("backfill_text_cards_import", _backfill_text_cards_import),
+        # v4.16（DESIGN-v4 §7/§10）：GR-3 基线 reqRev 存量回填——已放行轮的 baseline 无 reqRev 键时
+        # 补当前 content_rev（近似快照；变更判定本就查变更单不比 rev，此键仅作展示对照）
+        ("backfill_gate_reqrev", _backfill_gate_reqrev),
     ]
     for name, fn in steps:
         if _migration_applied(db, name):
@@ -442,3 +445,24 @@ def _try_unique_req_iter_index(db: Database) -> None:
     except Exception as e:
         # 与 Java 一致：索引创建失败不阻塞启动
         log.warning("1:1 唯一索引创建失败（不影响启动）：%s", e)
+
+
+def _backfill_gate_reqrev(db: Database) -> None:
+    import json as _json
+    n = 0
+    for row in db.query_all(
+            "SELECT r.id, r.req_id, r.baseline_json FROM gate_round r JOIN requirement q ON q.id=r.req_id"):
+        raw = str(row["baseline_json"] or "")
+        try:
+            b = _json.loads(raw or "{}")
+        except _json.JSONDecodeError:
+            continue
+        if not isinstance(b, dict) or "reqRev" in b:
+            continue
+        b["reqRev"] = int(q_val) if (q_val := db.query_scalar(
+            "SELECT content_rev FROM requirement WHERE id=?", (str(row["req_id"]),))) else 0
+        db.execute("UPDATE gate_round SET baseline_json=? WHERE id=?",
+                   (_json.dumps(b, ensure_ascii=False), int(row["id"])))
+        n += 1
+    if n:
+        log.info("GR-3 基线 reqRev 存量回填：%d 轮", n)

@@ -689,3 +689,43 @@ def test_on_answered_windowed_after_change(env: tuple[TestClient, Database, Repo
     tasks3 = client.get(f"/api/tasks?req_id={req_id}").json()
     stds = [t for t in tasks3 if t["type"] == "standard_doc"]
     assert len(stds) == 2 and stds[0]["createdBy"] == "auto:clarify-complete"  # 新窗口重排
+
+
+# ---------- v4-16：GR-3 扩展（baseline reqRev + 变更判定查变更单） ----------
+
+def test_gr3_change_status_by_change_order(env: tuple[TestClient, Database, Repos]) -> None:
+    """放行后 confirm 变更单 → 横幅 changed=true 带单号；aborted 单不算（已逆向回滚）。"""
+    client, db, repos = env
+    req_id = _mk_card(client)
+    _seed(repos, req_id)
+    _publish_card(client, repos, req_id)
+    # 开闸（三条件）：C 级声明轻量跳过 + 用例定稿 + 无 FR 视为覆盖
+    db.execute("DELETE FROM fr_point WHERE req_id=?", (req_id,))
+    db.execute("UPDATE requirement SET risk_tier='C' WHERE id=?", (req_id,))
+    sk = client.post(f"/api/requirements/{req_id}/design/skip",
+                     json={"by": "dev", "reason": "GR-3 演练跳过"})
+    assert sk.status_code == 200, sk.json()
+    repos.test_case.insert(_case(req_id, "TC-G", []))
+    db.execute("UPDATE test_case SET status='reviewed' WHERE req_id=?", (req_id,))
+    r2 = client.post(f"/api/requirements/{req_id}/gate/open", json={})
+    assert r2.status_code == 200, r2.json()
+    # 放行（无 issue 直接 release）
+    rnd = r2.json()["rounds"][-1]["id"]
+    rel = client.post(f"/api/gate/rounds/{rnd}/release", json={"by": "dev"})
+    assert rel.status_code == 200
+    # 放行时点回拨（秒级时间戳：release 与 confirm 相邻执行同秒会命中严格大于边界）
+    db.execute("UPDATE gate_round SET released_at='2026-10-13 00:00:00' WHERE id=?", (rnd,))
+    # 放行后 confirm 变更单 → GR-3 命中（查变更单，不比 rev）
+    cid = _draft_edit_p1(client, req_id)["id"]
+    db.execute("UPDATE artifact SET pushed_at='2026-10-13 00:00:00' WHERE req_id=? AND type='digest'",
+               (req_id,))
+    assert client.post(f"/api/requirements/{req_id}/changes/{cid}/confirm",
+                       json={"confirmedBy": "李四"}).status_code == 200
+    _cancel_auto_incremental(client, req_id)
+    ch = client.get(f"/api/requirements/{req_id}/gate").json()["change"]
+    assert ch["changed"] is True and ch["reqChangeIds"] == [cid]
+    assert any("变更单" in x for x in ch["reasons"])
+    # baseline 带 reqRev（开闸时点 = 0）
+    row = db.query_one("SELECT baseline_json FROM gate_round WHERE id=?", (rnd,))
+    import json as _j
+    assert row is not None and _j.loads(row["baseline_json"])["reqRev"] == 0

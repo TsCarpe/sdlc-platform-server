@@ -114,10 +114,13 @@ class GateService:
         self.repos.gate.insert_round(rnd)  # 评审任务排布在 orchestration.on_gate_opened（路由成功后）
 
     def _baseline_json(self, req_id: str) -> str:
-        """GR-3 基线：设计终稿全文（内容变更检测，非 hash）+ 用例最新更新时间。"""
+        """GR-3 基线：设计终稿全文（内容变更检测，非 hash）+ 用例最新更新时间 + reqRev（v4-16
+        §7：需求内容快照——变更判定查变更单不比 rev，rev 仅入基线作展示对照）。"""
         d = self.repos.artifact.find(req_id, A_DESIGN)
+        r = self.repos.requirement.find(req_id)
         return _json({"designVer": d.version if d else 0, "designMd": d.markdown if d else "",
-                      "casesMaxUpdated": self._cases_max_updated(req_id)})
+                      "casesMaxUpdated": self._cases_max_updated(req_id),
+                      "reqRev": r.content_rev if r else 0})
 
     def _cases_max_updated(self, req_id: str) -> str:
         mx = ""
@@ -275,7 +278,11 @@ class GateService:
     # ---------- GR-3 变更检测 ----------
 
     def change_status(self, req_id: str) -> dict[str, Any]:
-        """仅「已放行后」出变更横幅；评审中变更走落改通道，不开新轮（GR-3 两窗口口径）。"""
+        """仅「已放行后」出变更横幅；评审中变更走落改通道，不开新轮（GR-3 两窗口口径）。
+        v4-16（§7）：需求侧变更判定 = 开闸时间之后存在 confirmed（不含 aborted——其 items 已逆向
+        回滚，块与产物重新一致）变更单——**查变更单不比 rev**（rev 单调计数器非快照，回退的 rev
+        与基线相等性比对互构误报），横幅带变更单号供点入 items；diff 数据来源 = req_change_item
+        本身（rev 是计数器非快照，不从它重建）。"""
         reasons: list[str] = []
         rounds = self.repos.gate.list_rounds(req_id)
         latest = rounds[-1] if rounds else None
@@ -289,8 +296,18 @@ class GateService:
             reasons.append(f"设计文档内容变更（v{d.version if d else 0} ≠ 基线 v{int(b.get('designVer') or 0)}）")
         if cur_cases > str(b.get("casesMaxUpdated", "")):
             reasons.append("用例在基线后有更新")
-        return {"changed": bool(reasons), "reasons": reasons,
-                "window": "released" if latest.status == "released" else "in-review"}
+        out: dict[str, Any] = {"changed": bool(reasons), "reasons": reasons,
+                               "window": "released" if latest.status == "released" else "in-review"}
+        if latest.status == "released" and latest.released_at:
+            req_changes = [c for c in self.repos.req_change.list_by_req(req_id)
+                           if c.status == "confirmed" and (c.confirmed_at or "") > (latest.released_at or "")]
+            if req_changes:
+                out["changed"] = True
+                out["reqChangeIds"] = [c.id for c in req_changes]
+                out["reasons"].append(
+                    f"需求内容已变更（变更单 #{','.join(str(c.id) for c in req_changes)}，"
+                    f"reqRev {int(b.get('reqRev') or 0)} → 现值）")
+        return out
 
     # ---------- 读面（六态推导） ----------
 

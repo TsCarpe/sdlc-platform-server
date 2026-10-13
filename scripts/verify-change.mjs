@@ -267,6 +267,45 @@ const du = await call('POST', `/api/requirements/${reqU}/changes`, {
 await expectErr('POST', `/api/requirements/${reqU}/changes/${du.id}/confirm`, { confirmedBy: 'x' }, 409,
                 '未发布卡 confirm 拒（走窗口 1 直接编辑）')
 
+// ===== 6. GR-3 扩展（v4-16）：放行后变更单 → 横幅带单号（查变更单不比 rev） =====
+const { id: reqG } = await call('POST', '/api/requirements', {
+  name: 'GR-3 变更横幅验证', sourceType: 'text', sourceText: '# G', submittedBy: 'dev' })
+let impG = null
+for (let i = 0; i < 5; i++) {
+  const t = await call('POST', '/api/tasks/next?runner=verify-change')
+  if (t.type === 'source_import') { impG = t; break }
+  await call('POST', `/api/tasks/${t.id}/done`, { result: '{"drained":"verify-change-gr3"}' })
+}
+dropDoc(impG.id, { blocks: [{ id: 'g-p1', type: 'paragraph', text: '基线' }], media: [] })
+await call('POST', `/api/tasks/${impG.id}/done`, { result: 'g seed' })
+await call('POST', `/api/requirements/${reqG}/artifacts`, {
+  digest: { md: '', summary: 's', roles: [], flows: [], states: [], risk_tier: 'C', features: [
+    { role: 'u', m: 'm', func: 'f', anchor: 'g-p1' }] },
+  audit: { md: '', red: 0, yellow: 0, blue: 0, items: [] },
+  items: [{ seq: 'P1', level: 'yellow', theme: 't', question: 'q', anchor: 'g-p1' }] })
+await call('PUT', `/api/requirements/${reqG}/answers/P1`, { answer: 'a' })
+await call('POST', `/api/requirements/${reqG}/publish`, { standardMd: '# G 定稿' })
+// C 级轻量跳过 + 定稿用例 + 开闸放行（无 FR 视为覆盖）
+await call('POST', `/api/requirements/${reqG}/design/skip`, { by: 'dev', reason: 'GR-3 黑盒跳过' })
+await call('POST', '/api/cases', { reqId: reqG, items: [{ id: 'TC-GR3', title: 'GR-3 黑盒用例',
+  points: [], priority: 'P2', steps: 's', expect: 'e', owner: 'sdlc-test', tool: 'sdlc-test',
+  status: 'reviewed' }] })
+const gOpen = await call('POST', `/api/requirements/${reqG}/gate/open`, {})
+check('GR-3 前置：开闸成功', gOpen.rounds.length, 1)
+const gRnd = gOpen.rounds[0].id
+await call('POST', `/api/gate/rounds/${gRnd}/release`, { by: 'dev' })
+await new Promise(r => setTimeout(r, 1100))  // release 与 confirm 隔秒（严格大于口径）
+const gChange = await call('GET', `/api/requirements/${reqG}/changes`)
+check('放行后无变更单：横幅不亮', (await call('GET', `/api/requirements/${reqG}/gate`)).change.changed, false)
+const gDraft = await call('POST', `/api/requirements/${reqG}/changes`, {
+  title: 'GR-3 验证单', proposedBy: '张三',
+  blocks: [{ id: 'g-p1', type: 'paragraph', text: '基线（改）' }] })
+await call('POST', `/api/requirements/${reqG}/changes/${gDraft.id}/confirm`, { confirmedBy: '李四' })
+const gView = await call('GET', `/api/requirements/${reqG}/gate`)
+check('GR-3 命中：changed=true 带变更单号（查变更单不比 rev）',
+      [gView.change.changed, gView.change.reqChangeIds], [true, [gDraft.id]])
+check('GR-3 横幅文案带单号', gView.change.reasons.some(x => x.includes(`变更单 #${gDraft.id}`)), true)
+
 // ===== 汇总 =====
 if (failures > 0) { console.error(`\n变更单链路验证失败：${failures} 项`); process.exit(1) }
 console.log('\n变更单链路验证全部通过 ✓')
