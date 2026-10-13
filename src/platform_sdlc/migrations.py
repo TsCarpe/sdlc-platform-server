@@ -15,6 +15,7 @@ from typing import Any
 
 from platform_sdlc.common import is_json_list, is_json_obj
 from platform_sdlc.db import Database
+from platform_sdlc.models import BLOCK_ATTR_EXCLUDED as _BLOCK_ATTR_EXCLUDED
 
 log = logging.getLogger(__name__)
 
@@ -245,10 +246,7 @@ def _migrate_gate_values(db: Database) -> None:
         log.info("gate 值英文化迁移：%d 行转换（中文→英文枚举）", n)
 
 
-# 块 JSON 顶层键中不进 attrs_json 的集合：id/type/text 是独立列；comments（宿主块 comment-refs）
-# 由 req_comment.block_id 承载（DESIGN-v4 §3：避免同一评论两表双存）；path/ordinal 是派生字段（§2.2 读时推导）
-_BLOCK_ATTR_EXCLUDED = frozenset({"id", "type", "text", "comments", "path", "ordinal"})
-
+# 块 JSON 顶层键排除集契约见 models.BLOCK_ATTR_EXCLUDED（顶部 import 别名，迁移与导入落库共用单一来源）
 
 def _backfill_clarify_origin(db: Database) -> None:
     """v4.1（DESIGN-v4 §6.3/§10）：存量澄清项 origin 回填 'skill'——判列补列默认空串会让

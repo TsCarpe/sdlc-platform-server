@@ -23,6 +23,7 @@ T_CASES = "case_gen"
 T_DESIGN = "design_gen"
 T_DESIGN_REV = "design_rev"
 T_GATE = "gate_review"
+T_SOURCE_IMPORT = "source_import"  # v4-3（DESIGN-v4 §3）：原文导入——拉取+解析+评论导入，落库走完成回调
 
 D_DIGEST = "digest_bundle"
 D_STANDARD = "standard"
@@ -30,7 +31,7 @@ D_CASES = "cases"
 D_DESIGN = "design"
 D_GATE_ISSUES = "gate_issues"
 
-_TASK_TYPES = {T_QUALITY, T_STANDARD, T_CASES, T_DESIGN, T_DESIGN_REV, T_GATE}
+_TASK_TYPES = {T_QUALITY, T_STANDARD, T_CASES, T_DESIGN, T_DESIGN_REV, T_GATE, T_SOURCE_IMPORT}
 
 
 # 发布后合法的任务类型（终态锁/发布收尾的统一豁免面，D36）：用例/设计/修订/门禁评审
@@ -44,13 +45,14 @@ def _post_publish_task(type_: str) -> bool:
 
 class TaskService:
     def __init__(self, db: Database, repos: Repos, requirement_service: Any, case_service: Any,
-                 design_service: Any) -> None:
+                 design_service: Any, block_service: Any) -> None:
         # 服务依赖（对应 Java TaskService 注入 Requirement/Case/DesignService）
         self.db = db
         self.repos = repos
         self.requirements = requirement_service
         self.cases = case_service
         self.designs = design_service
+        self.blocks = block_service  # v4-3：source_import 完成回调落库（§3 挂点 = finish）
 
     # ---------- 任务 ----------
 
@@ -100,6 +102,8 @@ class TaskService:
                 if counts["total"] == 0 or counts["answered"] < counts["total"]:
                     raise ApiException(400, f"存在未处置问题（{counts['answered']}/{counts['total']}），"
                                             "全部问题答复/驳回/挂起后才可生成标准文档")
+            if type_ == T_SOURCE_IMPORT:
+                self._guard_import_sealed(r)
             if self.repos.task.count_active(req_id, type_) > 0:
                 raise ApiException(409, "该需求已有同类型任务在排队或执行中，请等待完成")
             t = Task(id=0, req_id=req_id, type=type_, status="queued",
@@ -109,6 +113,19 @@ class TaskService:
 
     def claim(self, runner: str) -> Task | None:
         return self.repos.task.claim(runner, Times.now())
+
+    def _guard_import_sealed(self, r: Any) -> None:
+        """v4-3（DESIGN-v4 §2.4）：导入一次性分源封存——封存只约束「全量替换式重导」。
+        text 源：块表非空即封存（重跑 ID 全换族，锚定下游全部漂移）；
+        飞书源：有平台编辑痕迹（version>1 或未软删 blk- 块）或平台评论即封存；
+        对账式重导（服务端 diff → 变更单，三期）不覆盖平台数据，永远合法不在此守卫面。
+        失败重试块表仍空 = 合法（首导/无下游时的失败重试）。"""
+        if r.source_type == "text" and not self.repos.req_block.empty(r.id):
+            raise ApiException(409, "文本源已导入（块表非空），全量重导已封存；"
+                                    "原文变更请直接编辑块（二期上线）或走变更单（三期）")
+        if r.source_type == "feishu" and (self.repos.req_block.has_edit_trace(r.id)
+                                          or self.repos.req_comment.has_platform(r.id)):
+            raise ApiException(409, "飞书源已导入且存在平台编辑痕迹/平台评论，全量重导已封存；原文变更走变更单")
 
     def finish(self, task_id: int, ok: bool, body: dict[str, Any] | None) -> Task:
         t = self.repos.task.find(task_id)
@@ -121,6 +138,19 @@ class TaskService:
                 body["error"] = "需求已发布（终态锁定），任务作废"
             body["reason"] = "superseded-by-publish"
             body["hint"] = "标准文档已由人工定稿；该任务不可重试"
+        # v4-3（DESIGN-v4 §3 落库机制细则）：source_import 完成回调——服务端直读输出文件落库
+        # （内容不经 LLM 上下文），落库成功才置 done；失败转 failed 可 retry。
+        # 两通道（runner POST done / 进程内 loop）在此汇合，落库只此一处。
+        if ok and t.type == T_SOURCE_IMPORT:
+            try:
+                imported = self.blocks.import_from_output(t)
+                body = {"result": _json(imported)}
+            except ApiException as e:
+                ok = False
+                body = {"error": str(e), "reason": "import-failed", "hint": "确认任务工作区 out/doc.json 已由 parse_doc 产出后重试"}
+            except Exception as e:  # noqa: BLE001  # 落库异常兜底转 failed
+                ok = False
+                body = {"error": f"导入落库失败：{e}", "reason": "import-failed", "hint": "可重试（retry 重新排队）"}
         result = jtext(body, "result", "") if ok else _json(_fail_map(body))
         if not self.repos.task.finish(task_id, "done" if ok else "failed", result, Times.now()):
             raise ApiException(409, f"仅执行中（running）的任务可回报结果（当前：{t.status}）")

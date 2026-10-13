@@ -67,7 +67,13 @@ class AgentExecutor:
         workspace.mkdir(parents=True, exist_ok=True)
 
         repos_of = self.services.designs.repos_of(task.req_id) if task.type == "design_gen" else []
-        instructions = prompts.sys_prompt(task.type, r, skills_repo, repos_of)
+        # v4-3（DESIGN-v4 §3）：source_import 输出目录按任务 ID 定位（<根>/tasks/<task_id>/out），
+        # 根与服务端完成回调同源（services.blocks.workspace_root = ResolvedPaths.workspace_root）——
+        # 分叉则落库找不到文件；agent 作业区（sdlc/<safe_name>）语义不变，仅导入产物走绝对路径。
+        import_out_dir = (self.services.blocks.workspace_root / "tasks" / str(task.id) / "out").resolve()
+        instructions = prompts.sys_prompt(
+            task.type, r, skills_repo, repos_of,
+            import_out_dir=import_out_dir if task.type == "source_import" else None)
 
         deadline = asyncio.get_running_loop().time() + self.settings.agent_timeout_min * 60
         text = ""

@@ -142,6 +142,12 @@ class ClarifyItem:
         )
 
 
+# 块 JSON 顶层键中不进 attrs_json 的集合（v4 块模型契约）：id/type/text 是独立列；
+# comments（宿主块 comment-refs）由 req_comment.block_id 承载（避免同一评论两表双存）；
+# path/ordinal 是派生字段（DESIGN-v4 §2.2 读时推导）。迁移（doc→块表）与导入落库共用。
+BLOCK_ATTR_EXCLUDED = frozenset({"id", "type", "text", "comments", "path", "ordinal"})
+
+
 @dataclass
 class ReqBlock:
     """v4.1 原文块（DESIGN-v4 §2.2）：一行一块，锚点（block_id）即主键；派生字段（path/ordinal）读时推导。"""

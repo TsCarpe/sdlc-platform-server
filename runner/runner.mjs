@@ -26,7 +26,10 @@ const INTERVAL = Number(process.env.SDLC_RUNNER_INTERVAL || 3000)
 const TIMEOUT_MIN = Number(process.env.SDLC_RUNNER_TIMEOUT_MIN || 30)
 const REPO = process.env.SDLC_SKILLS_REPO || path.join(homedir(), 'IdeaProjects/claude-sdlc-skills')
 const CLI = process.env.SDLC_CLAUDE_CLI || path.join(homedir(), '.local/bin/claude')
-const WORKSPACE = process.env.SDLC_WORKSPACE || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+// 工作区根三级优先（v4-3 §3）：SDLC_WORKSPACE env > 平台 meta 下发 workspaceRoot > 仓根默认；
+// loadRules 时按 meta 覆盖（env 已配置则不动）——与服务端落库回调同源
+const WORKSPACE_DEFAULT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+let WORKSPACE = process.env.SDLC_WORKSPACE || WORKSPACE_DEFAULT
 
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), `[${RUNNER}]`, ...a)
@@ -51,6 +54,7 @@ async function api(method, p, body) {
 // 拉取失败回退内置同款默认——阈值/映射变更只改平台 task_rules.py，双通道不再各自漂移 ----------
 const DEFAULT_RULES = {
   draftTypes: { quality_check: 'digest_bundle', standard_doc: 'standard', design_gen: 'design', design_rev: 'design', gate_review: 'gate_issues', case_gen: 'cases' },
+  noDraftTypes: ['source_import'],
   selfCheck: {
     standard: { minMd: 200 },
     design: { minMd: 200, requireHeading: '§0' },
@@ -64,8 +68,12 @@ async function loadRules() {
   try {
     const r = await api('GET', '/api/meta/task-rules')
     RULES = { draftTypes: { ...DEFAULT_RULES.draftTypes, ...(r.draftTypes || {}) },
+              noDraftTypes: r.noDraftTypes || DEFAULT_RULES.noDraftTypes,
               selfCheck: { ...DEFAULT_RULES.selfCheck, ...(r.selfCheck || {}) } }
-    log(`任务规则已从平台加载（${Object.keys(RULES.draftTypes).length} 类任务）`)
+    // v4-3（DESIGN-v4 §3）工作区根统一下发：env 显式配置最高 > meta workspaceRoot > 仓根默认。
+    // 与服务端完成回调同源（ResolvedPaths.workspace_root）——分叉则 source_import 落库找不到输出文件。
+    if (!process.env.SDLC_WORKSPACE && r.workspaceRoot) WORKSPACE = path.resolve(r.workspaceRoot)
+    log(`任务规则已从平台加载（${Object.keys(RULES.draftTypes).length} 类任务），工作区=${WORKSPACE}`)
   } catch (e) { log('任务规则拉取失败，使用内置默认：', e.message) }
 }
 
@@ -173,6 +181,41 @@ SDLC_TASK_RESULT {"关键统计": "..."}
 8. 输出 SDLC_TASK_RESULT 行（发现数/裁决单元数/分歧数/备案数）。`
   }
 
+  if (task.type === 'source_import') {
+    const OUT_DIR = `${WORKSPACE}/tasks/${task.id}/out`
+    const head = `你是 SDLC 平台的原文导入执行器。平台地址 ${PLATFORM}，需求卡 ${task.reqId}（${card.card.name}）。
+完成后必须输出单独一行结果摘要（最后一行，机器解析）：
+SDLC_TASK_RESULT {"blocks": "...", "comments": "...", "media": "..."}
+硬性红线（违反即失败）：
+1. 导入产物 = 且仅 = parse_doc.py 的输出文件 ${OUT_DIR}/doc.json——必须由 parse_doc 产出，禁止自写、改写、拼接该文件；落库由平台在任务完成回调直读该文件字节执行（不经对话上下文）。
+2. 本任务无草稿回传（不推 drafts 端点）；媒体文件照常先逐个 POST media（mediaId 与 doc.media[].id 一致）。
+3. 忠实原文：逐字转录不评价不脑补；拉取/解析失败如实报错终止，禁止降级自造产物。
+4. raw/ 原始文件一律不整读（只经脚本消费，防上下文膨胀）。
+按以下步骤执行原文导入：
+1. mkdir -p raw intake/media
+`
+    if (card.card.sourceType === 'feishu') {
+      return `${head}2. 飞书源固定拉取序列（<URL>=${card.card.sourceUrl}）：
+   lark-cli docs +fetch --doc <URL> --doc-format markdown > raw/doc.md
+   lark-cli drive +list-comments --url <URL> --solved-status all --comment-scope all --need-relation --format json > raw/comments.json
+   lark-cli docs +fetch --doc <URL> --doc-format xml --detail with-ids > raw/fetch.json
+   cat > tools/extract.py <<'PYEOF'
+import json
+d = json.load(open('raw/fetch.json'))['data']['document']
+open('raw/content.xml', 'w').write(d['content'])
+rm = d['reference_map']
+open('raw/refmap.json', 'w').write(json.dumps(rm.get('comments', rm)))
+PYEOF
+   python3 tools/extract.py
+   python3 ${INTENT}/scripts/parse_doc.py --xml raw/content.xml --refmap raw/refmap.json --out ${OUT_DIR}/doc.json --media-dir intake/media --download --url <URL>
+3. ls intake/media 盘点下载的媒体，逐个上传：curl -X POST "${PLATFORM}/api/requirements/${task.reqId}/media?name=<文件名>&mediaId=<doc.media[].id>" -H 'X-Media-Mime: <mime>' --data-binary @intake/media/<文件>
+4. 输出 SDLC_TASK_RESULT 行（块数/评论线程数/媒体数）。`
+    }
+    return `${head}2. 文本源：curl -s ${PLATFORM}/api/requirements/${task.reqId} 取卡内 sourceText，原文逐字（不增删）写入 raw/source.md。
+3. python3 ${INTENT}/scripts/parse_doc.py --md raw/source.md --out ${OUT_DIR}/doc.json（text 源无媒体/评论，块 ID 为解析器自造）。
+4. 输出 SDLC_TASK_RESULT 行（块数）。`
+  }
+
   return null
 }
 
@@ -205,8 +248,11 @@ function extractResult(claudeJson) {
   } catch { return { text: claudeJson.slice(0, 2000), summary: '', isError: true, subtype: 'parse' } }
 }
 
-/** 机械自查：草稿真的回传了、结构合法，才允许记 done */
+/** 机械自查：草稿真的回传了、结构合法，才允许记 done。
+ *  v4-3（DESIGN-v4 §3，两处代码分支之一）：noDraftTypes（source_import）无草稿面——
+ *  落库正确性由平台 finish 完成回调（直读输出文件）校验，跳过草稿自查。 */
 async function selfCheck(task) {
+  if ((RULES.noDraftTypes || []).includes(task.type)) return { ok: true, noDraft: true }
   const draftType = RULES.draftTypes[task.type] || 'cases'
   const rule = RULES.selfCheck[draftType] || {}
   const minMd = rule.minMd || 200
@@ -249,7 +295,7 @@ async function handle(task) {
   const chk = await selfCheck(task)
   if (code === 0 && chk.ok && !isError) {
     if (!summary) log(`#${task.id} 注意：输出无 SDLC_TASK_RESULT 结果行（草稿自查已过仍记 done；进程内通道此场景会续跑一轮）`)
-    const result = summary || JSON.stringify({ draft: chk.draftType })
+    const result = summary || JSON.stringify(chk.draftType ? { draft: chk.draftType } : { imported: true })
     await api('POST', `/api/tasks/${task.id}/done`, { result })
     log(`#${task.id} 完成：${result.slice(0, 160)}`)
   } else {

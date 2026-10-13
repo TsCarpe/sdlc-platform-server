@@ -13,7 +13,8 @@ from platform_sdlc.common import is_json_obj
 from platform_sdlc.models import Requirement
 
 
-def sys_prompt(task_type: str, card: Requirement, skills_repo: Path, repos_of: list[dict[str, str]]) -> str:
+def sys_prompt(task_type: str, card: Requirement, skills_repo: Path, repos_of: list[dict[str, str]],
+               import_out_dir: Path | None = None) -> str:
     repo = str(skills_repo)
     common = (
         "你是 SDLC 平台的任务执行器。平台能力以进程内工具提供（不要 curl 平台）。"
@@ -31,6 +32,8 @@ def sys_prompt(task_type: str, card: Requirement, skills_repo: Path, repos_of: l
         "最终回传用 put_draft(contentJsonPath=工作区内 payload.json 路径)（standard 用 mdPath），不要把大 payload 作为内联参数；"
         "已读过的文件不要重读，找不到文件先 run_command(ls; find . -name xxx) 而不是重跑上游步骤。\n"
     )
+    if task_type == "source_import":
+        return _source_import_steps(common, card, repo, import_out_dir)
     if task_type == "quality_check":
         feishu = card.source_type == "feishu"
         return f"{common}\n{_quality_check_steps(repo, feishu)}\n{_quality_quick_ref()}"
@@ -90,7 +93,58 @@ def sys_prompt(task_type: str, card: Requirement, skills_repo: Path, repos_of: l
     raise ValueError(f"未知任务类型：{task_type}")
 
 
+def _source_import_steps(common: str, card: Requirement, repo: str, out_dir: Path | None) -> str:
+    """v4-3（DESIGN-v4 §3）：原文导入任务——拉取 + 解析 + 评论导入，产物 = parse_doc 输出文件，
+    落库由任务完成回调（服务端直读文件字节）执行，不经对话上下文，不产草稿。"""
+    out = str(out_dir) if out_dir is not None else "tasks/<任务ID>/out"
+    feishu = card.source_type == "feishu"
+    head = (
+        "你是 SDLC 平台的原文导入执行器。平台能力以进程内工具提供（不要 curl 平台）。\n"
+        f"需求卡 {card.id}（{card.name}），工作区 sdlc/{card.name}/。\n"
+        "完成后必须输出单独一行结果摘要（最后一行，机器解析）：\n"
+        'SDLC_TASK_RESULT {"blocks": "...", "comments": "...", "media": "..."}\n'
+        "硬性红线（违反即失败）：\n"
+        f"1. 导入产物 = 且仅 = parse_doc.py 的输出文件 {out}/doc.json——必须由 parse_doc 产出，"
+        "禁止自写、改写、拼接该文件；落库由平台在任务完成回调直读该文件字节执行（不经对话上下文）。\n"
+        "2. 本任务无草稿回传（不 put_draft）；媒体文件照常先逐个 upload_media（mediaId 与 doc.media[].id 一致）。\n"
+        "3. 忠实原文：逐字转录不评价不脑补；拉取/解析失败如实报错终止，禁止降级自造产物。\n"
+        "4. raw/ 原始文件一律不整读（只经脚本消费，防上下文膨胀）。\n"
+    )
+    steps = "按以下步骤执行原文导入：\n1. run_command: mkdir -p raw intake/media\n"
+    if feishu:
+        steps += (
+            "2. 飞书源固定拉取序列（<URL>=卡内 sourceUrl，逐条 run_command；"
+            "禁止自写 grep/inspect 类脚本重造解析管线）：\n"
+            "   lark-cli docs +fetch --doc <URL> --doc-format markdown > raw/doc.md\n"
+            "   lark-cli drive +list-comments --url <URL> --solved-status all --comment-scope all --need-relation --format json > raw/comments.json\n"
+            "   lark-cli docs +fetch --doc <URL> --doc-format xml --detail with-ids > raw/fetch.json\n"
+            "   write_file 落盘 tools/extract.py 后 run_command 执行（run_command 按 |;&& 分段校验，"
+            "python3 -c 内分号会被切段拒绝）：\n"
+            "     import json\n"
+            "     d = json.load(open('raw/fetch.json'))['data']['document']\n"
+            "     open('raw/content.xml', 'w').write(d['content'])\n"
+            "     rm = d['reference_map']\n"
+            "     open('raw/refmap.json', 'w').write(json.dumps(rm.get('comments', rm)))\n"
+            f"   python3 {repo}/skills/sdlc-intent/scripts/parse_doc.py --xml raw/content.xml --refmap raw/refmap.json"
+            f" --out {out}/doc.json --media-dir intake/media --download --url <URL>\n"
+            "3. run_command(ls intake/media) 盘点下载的媒体，逐个 upload_media"
+            "（mediaId=doc.media[].id，path=intake/media/<文件名>）。\n"
+            "4. 输出 SDLC_TASK_RESULT 行（块数/评论线程数/媒体数）。\n"
+        )
+    else:
+        steps += (
+            "2. 文本源：get_requirement_card 取卡内 sourceText，write_file 落盘 raw/source.md（原文逐字，不增删）。\n"
+            f"3. python3 {repo}/skills/sdlc-intent/scripts/parse_doc.py --md raw/source.md --out {out}/doc.json"
+            "（text 源无媒体/评论，块 ID 为解析器自造）。\n"
+            "4. 输出 SDLC_TASK_RESULT 行（块数）。\n"
+        )
+    _ = common  # 导入任务不沿用通用红线段（无草稿面），保留参数形制与其它分支一致
+    return head + steps
+
+
 def goal_prompt(task_type: str) -> str:
+    if task_type == "source_import":
+        return "开始执行原文导入，按系统指令拉取解析并产出 out/doc.json，平台完成回调自动落库（无草稿回传）。"
     if task_type == "quality_check":
         return "开始执行需求质检，按系统指令的步骤完成并回传 digest_bundle 草稿。"
     if task_type == "standard_doc":

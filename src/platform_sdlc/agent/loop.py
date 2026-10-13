@@ -144,7 +144,13 @@ class AgentLoop:
     # ---------- 机械自查（自 runner.mjs selfCheck / SdlcAgentService 逐条移植） ----------
 
     def self_check(self, t: Task) -> str | None:
-        """草稿真的回传了、结构合法，才允许记 done；返回 None = 通过。"""
+        """草稿真的回传了、结构合法，才允许记 done；返回 None = 通过。
+        v4-3（DESIGN-v4 §3，两处代码分支之一）：noDraftTypes（source_import）无草稿面——
+        落库正确性由 finish 完成回调（直读输出文件）校验，跳过草稿自查。"""
+        from platform_sdlc.task_rules import NO_DRAFT_TYPES
+
+        if t.type in NO_DRAFT_TYPES:
+            return None
         draft_type = self._draft_type_of(t.type)
         try:
             d = self.services.tasks.get_draft(t.req_id, draft_type)

@@ -17,6 +17,11 @@ DRAFT_TYPES: dict[str, str] = {
     "case_gen": "cases",
 }
 
+# 不产草稿的任务类型（v4-3，DESIGN-v4 §3）：source_import 产物 = parse_doc 输出文件，由任务完成
+# 回调（服务端直读文件字节）落库——selfCheck 的「草稿回传了才记 done」对此类跳过（两通道各一处
+# 代码分支，漏改则 draftTypes 映射回退 'cases' 会错查不存在的草稿导致任务永远 failed）
+NO_DRAFT_TYPES: frozenset[str] = frozenset({"source_import"})
+
 # 机械自查阈值（done 判定的齐套下限；文案见 loop.self_check / runner.mjs selfCheck 各自实现）
 SELF_CHECK: dict[str, dict[str, object]] = {
     "standard": {"minMd": 200},
@@ -30,10 +35,13 @@ SELF_CHECK: dict[str, dict[str, object]] = {
 RESULT_LINE_PATTERN = r"SDLC_TASK_RESULT\s+(\{.*\})\s*$"
 
 
-def task_rules_payload() -> dict[str, object]:
-    """端点出参（runner 消费面）。"""
+def task_rules_payload(workspace_root: str) -> dict[str, object]:
+    """端点出参（runner 消费面）。v4-3（DESIGN-v4 §3）：noDraftTypes 登记 + workspaceRoot 统一下发
+    （runner 输出定位 <根>/tasks/<task_id>/out/doc.json；env 显式配置 SDLC_WORKSPACE 优先级最高）。"""
     return {
         "draftTypes": DRAFT_TYPES,
+        "noDraftTypes": sorted(NO_DRAFT_TYPES),
         "selfCheck": SELF_CHECK,
         "resultLinePattern": RESULT_LINE_PATTERN,
+        "workspaceRoot": workspace_root,
     }
