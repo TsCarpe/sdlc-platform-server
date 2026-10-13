@@ -112,7 +112,16 @@ class TaskService:
         return t
 
     def claim(self, runner: str) -> Task | None:
-        return self.repos.task.claim(runner, Times.now())
+        t = self.repos.task.claim(runner, Times.now())
+        if t is not None and t.type == T_QUALITY and self.repos.req_block.empty(t.req_id):
+            # v4-4（DESIGN-v4 §3 质检前置）：不做任务 DAG——启动守卫查块表非空，空则 failed 引导。
+            # 双通道（runner next 路由 / 进程内 loop）都汇合在 TaskService.claim，单点实现；
+            # 返回 None = 领取方本轮无任务，下一轮询自然前进（不自旋查库）。
+            self.finish(t.id, False, {
+                "error": "原文未导入，先完成 source_import", "reason": "blocks-empty",
+                "hint": "等待导入任务完成或人工重试导入后，重新创建质检任务"})
+            return None
+        return t
 
     def _guard_import_sealed(self, r: Any) -> None:
         """v4-3（DESIGN-v4 §2.4）：导入一次性分源封存——封存只约束「全量替换式重导」。

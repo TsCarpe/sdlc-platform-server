@@ -59,9 +59,10 @@ def test_requirement_flow_shapes(client: TestClient) -> None:
 
     ans = client.put("/api/requirements/REQ-2026-001/answers/P01", json={"answer": "8 位"})
     assert ans.json() == {"ok": True}
-    # L2：全部答完自动排 standard_doc
+    # L2：全部答完自动排 standard_doc（v4-4：建卡自动排的 source_import 同在列表——HTTP 层已触发）
     tasks = client.get("/api/tasks", params={"req_id": "REQ-2026-001"}).json()
-    assert [t["type"] for t in tasks] == ["standard_doc"] and tasks[0]["createdBy"] == "auto:clarify-complete"
+    assert {t["type"]: t["createdBy"] for t in tasks}["standard_doc"] == "auto:clarify-complete"
+    assert any(t["type"] == "source_import" and t["createdBy"] == "auto:card-created" for t in tasks)
 
     published = client.post("/api/requirements/REQ-2026-001/publish", json={"standardMd": "# 标准文档"})
     assert published.json() == {"ok": True, "publishedAt": published.json()["publishedAt"]}
@@ -86,7 +87,12 @@ def test_case_and_task_and_agent_shapes(client: TestClient) -> None:
         {"id": "TC-1", "title": "用例", "points": ["需求.FR-01"], "verifyRefs": ["体检.P01"]}]})
     assert set(sync.json()) == {"ok", "inserted", "updated", "removed", "removedIds"}
 
-    task = client.post("/api/requirements/REQ-2026-001/tasks", json={"type": "quality_check"}).json()
+    # v4-4：先消化建卡自动排的 source_import（领走即 done——本夹具不测导入，块表由推 doc 补位）
+    auto_import = client.post("/api/tasks/next", params={"runner": "smoke"}).json()
+    assert auto_import["type"] == "source_import"
+    client.post(f"/api/tasks/{auto_import['id']}/failed", json={"error": "api-shape fixture 跳过导入"})
+    # v4-4：quality_check 领取有块表非空守卫（本夹具跳过导入）——形状/状态机断言改用 case_gen
+    task = client.post("/api/requirements/REQ-2026-001/tasks", json={"type": "case_gen"}).json()
     assert set(task) == {"id", "reqId", "type", "status", "payload", "result", "runner",
                          "createdBy", "createdAt", "updatedAt"}
     claimed = client.post("/api/tasks/next", params={"runner": "smoke"})

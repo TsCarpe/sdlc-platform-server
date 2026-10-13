@@ -49,7 +49,7 @@ echo
 echo "== verify-token（自建实例）=="
 node scripts/verify-token.mjs || FAIL=1
 
-for s in verify-m2 verify-guard verify-m3 verify-m4 verify-m5 verify-m6 verify-delete verify-iter verify-design verify-gate; do
+for s in verify-m2 verify-guard verify-m3 verify-m4 verify-m5 verify-m6 verify-v4 verify-delete verify-iter verify-design verify-gate; do
   echo
   echo "== $s =="
   node "scripts/$s.mjs" "$BASE" || FAIL=1

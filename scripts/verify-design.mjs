@@ -40,7 +40,12 @@ const runTask = async (id, type) => {
     if (r.status === 204) break
     const tk = await r.json()
     if (tk.id === t.id) return tk
-    await call('POST', `/api/tasks/${tk.id}/done`, { result: '{"drainedBy":"verify-design"}' })
+    // v4-4：drain 到 source_import 用 failed 回报（done 会触发完成回调落库，无输出文件徒增噪音）
+    if (tk.type === 'source_import') {
+      await call('POST', `/api/tasks/${tk.id}/failed`, { error: 'drainedBy:verify-design' })
+    } else {
+      await call('POST', `/api/tasks/${tk.id}/done`, { result: '{"drainedBy":"verify-design"}' })
+    }
   }
   return t
 }

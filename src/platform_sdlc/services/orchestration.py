@@ -47,8 +47,21 @@ class OrchestrationService:
             log.info("[L2] %s 澄清全部答完 → 自动创建 #%s standard_doc", req_id, t.id)
         except ApiException as e:
             log.info("[L2] %s 自动排 standard_doc 跳过：%s", req_id, e)  # 预期内：已有同类活跃任务（409）等
-        except Exception as e:  # noqa: BLE001——编排失败绝不连累作答主操作
+        except Exception as e:  # noqa: BLE001  # 编排失败绝不连累作答主操作
             log.warning("[L2] %s 自动排 standard_doc 失败（不影响作答）：%s", req_id, e)
+
+    def on_created(self, req_id: str) -> None:
+        """建卡后（v4-4，DESIGN-v4 §3 触发/§8）：自动排队 source_import——只自动一次（人取消即终局，
+        失败/取消后人工可重试）；建卡是主操作，编排失败不连累（沿 ①② 容错惯例）。"""
+        try:
+            if self.tasks.any_task_of_type(req_id, task_mod.T_SOURCE_IMPORT):
+                return
+            t = self.tasks.create_auto(req_id, task_mod.T_SOURCE_IMPORT, "auto:card-created", "建卡自动导入原文")
+            log.info("[L2] %s 建卡 → 自动创建 #%s source_import", req_id, t.id)
+        except ApiException as e:
+            log.info("[L2] %s 自动排 source_import 跳过：%s", req_id, e)
+        except Exception as e:  # noqa: BLE001  # 编排失败绝不连累建卡主操作
+            log.warning("[L2] %s 自动排 source_import 失败（不影响建卡）：%s", req_id, e)
 
     def on_published(self, req_id: str) -> None:
         """发布成功后：终态收尾（取消 queued 残留）→ 自动排队用例生成。"""
@@ -57,7 +70,7 @@ class OrchestrationService:
             cancelled = self.tasks.settle_terminal(req_id)
             if cancelled > 0:
                 log.info("[L2] %s 发布收尾：取消 %d 个终态残留排队任务（质检/合成）", req_id, cancelled)
-        except Exception as e:  # noqa: BLE001——不影响发布
+        except Exception as e:  # noqa: BLE001  # 不影响发布
             log.warning("[L2] %s 发布收尾取消残留任务失败（不影响发布）：%s", req_id, e)
         # 第二段：自动排队 case_gen（cancel 仅对 queued 生效，是人手中的逃生门）
         try:
@@ -67,7 +80,7 @@ class OrchestrationService:
             log.info("[L2] %s 已发布 → 自动创建 #%s case_gen", req_id, t.id)
         except ApiException as e:
             log.info("[L2] %s 自动排 case_gen 跳过：%s", req_id, e)
-        except Exception as e:  # noqa: BLE001——不影响发布
+        except Exception as e:  # noqa: BLE001  # 不影响发布
             log.warning("[L2] %s 自动排 case_gen 失败（不影响发布）：%s", req_id, e)
 
     def on_gate_opened(self, req_id: str, round_no: int) -> None:

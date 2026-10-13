@@ -149,6 +149,7 @@ def run_migrations(db: Database) -> None:
         ("backfill_clarify_origin", _backfill_clarify_origin),
         ("migrate_doc_artifact_to_blocks", _migrate_doc_artifact_to_blocks),
         ("audit_anchor_health", _audit_anchor_health),
+        ("backfill_text_cards_import", _backfill_text_cards_import),
     ]
     for name, fn in steps:
         if _migration_applied(db, name):
@@ -357,6 +358,21 @@ def _iter_anchor_refs(db: Database, req_id: str) -> list[tuple[str, str]]:
     for c in db.query_all("SELECT seq, anchor FROM clarify_item WHERE req_id=?", (req_id,)):
         refs.append((f"clarify.{c['seq']}", str(c["anchor"] or "")))
     return refs
+
+
+def _backfill_text_cards_import(db: Database) -> None:
+    """v4-4（DESIGN-v4 §10）：存量 text 卡补排 source_import——块表空 = 首次导入（不是重导）。
+    测试卡一并补排（导入无害，宽口径）；已有任务行的卡跳过（幂等）；已删卡不补。"""
+    n = db.execute(
+        "INSERT INTO task(req_id, type, status, payload, created_by, created_at)"
+        " SELECT r.id, 'source_import', 'queued', '{\"note\":\"存量首导补排（v4 迁移）\"}',"
+        " 'migration:v4', datetime('now', 'localtime')"
+        " FROM requirement r"
+        " WHERE r.source_type='text' AND r.deleted_at=''"
+        " AND NOT EXISTS (SELECT 1 FROM req_block WHERE req_id=r.id)"
+        " AND NOT EXISTS (SELECT 1 FROM task t WHERE t.req_id=r.id AND t.type='source_import')")
+    if n > 0:
+        log.info("存量 text 卡首导补排：%d 张卡 queued source_import（导入后自动可用块模型质检）", n)
 
 
 def _audit_anchor_health(db: Database) -> None:

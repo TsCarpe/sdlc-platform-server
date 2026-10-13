@@ -41,7 +41,7 @@ check('前置：queued 任务已建', task.status, 'queued')
 // ===== 2. 删除：软删 + queued 任务自动作废 =====
 const del = await call('DELETE', `/api/requirements/${R}`)
 check('删除返回 ok', del.ok, true)
-check('queued 任务随删自动作废', del.cancelledTasks, 1)
+check('queued 任务随删自动作废（v4-4：含建卡自动排的 source_import）', del.cancelledTasks, 2)
 
 // ===== 3. 删后可见性与守卫 =====
 const list = await call('GET', '/api/requirements')
@@ -78,12 +78,20 @@ for (let i = 0; i < 50; i++) {
   const r = await fetch(`${base}/api/tasks/next?runner=verify-delete-drain`, { method: 'POST' })
   if (r.status !== 200) break
   const t = await r.json()
-  await call('POST', `/api/tasks/${t.id}/done`, { result: '{"drainedBy":"verify-delete"}' })
+  if (t.type === 'source_import') {
+    await call('POST', `/api/tasks/${t.id}/failed`, { error: 'drainedBy:verify-delete' })
+  } else {
+    await call('POST', `/api/tasks/${t.id}/done`, { result: '{"drainedBy":"verify-delete"}' })
+  }
 }
 const { id: R3 } = await call('POST', '/api/requirements', {
   name: 'B4 running 拒删验证', sourceType: 'text', sourceText: 'running fixture', submittedBy: 'verify-delete'
 })
-const t3 = await call('POST', `/api/requirements/${R3}/tasks`, { type: 'quality_check' })
+// v4-4：先消化建卡自动排的 source_import（领走即 failed，块表保持空不触发质检守卫所需条件），
+// running 夹具改用 case_gen（quality_check 领取有块表非空守卫）
+const imp3 = await fetch(`${base}/api/tasks/next?runner=verify-delete`, { method: 'POST' }).then(r => r.status === 200 ? r.json() : null)
+if (imp3) await call('POST', `/api/tasks/${imp3.id}/failed`, { error: 'verify-delete 夹具跳过导入' })
+const t3 = await call('POST', `/api/requirements/${R3}/tasks`, { type: 'case_gen' })
 const mine = await fetch(`${base}/api/tasks/next?runner=verify-delete`, { method: 'POST' }).then(r => r.status === 200 ? r.json() : null)
 check('夹具任务被本脚本领取（running）', [mine?.id, mine?.status], [t3.id, 'running'])
 let busy = null

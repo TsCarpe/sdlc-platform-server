@@ -22,6 +22,8 @@ def router(ctx: AppContext) -> APIRouter:
     async def create(request: Request) -> dict[str, Any]:
         body = await read_json(request, required=True)
         created = await asyncio.to_thread(svc.create, body)
+        # v4-4（DESIGN-v4 §3）：建卡成功 → L2 自动排 source_import（只一次；失败不连累建卡）
+        await asyncio.to_thread(orch.on_created, created.id)
         return {"id": created.id, "status": "submitted"}
 
     @r.get("/api/requirements")

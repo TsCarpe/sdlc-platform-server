@@ -47,6 +47,27 @@ const { id: reqA } = await call('POST', '/api/requirements', {
   name: 'M5 任务与草稿验证', sourceType: 'text', sourceText: 'M5 fixture', submittedBy: 'dev'
 })
 
+// v4-4：建卡自动排 source_import——领走并经完成回调塞块（out/doc.json 按 tasks/<id>/out 定位，
+// 服务端工作区根=仓根；块表就位后质检领取不再被启动守卫拒）。注意：启动 drain 领到的历史导入任务
+// done 后会因无输出文件 failed——drain 无断言，属预期（migration 补排卡等待其 runner 正常执行）。
+import { mkdirSync, writeFileSync } from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const imp = await call('POST', '/api/tasks/next?runner=verify-m5')
+if (imp && imp.type === 'source_import' && imp.reqId === reqA) {
+  const outDir = path.join(REPO_ROOT, 'tasks', String(imp.id), 'out')
+  mkdirSync(outDir, { recursive: true })
+  writeFileSync(path.join(outDir, 'doc.json'), JSON.stringify({
+    blocks: [
+      { id: 'm5-b1', type: 'heading', level: 1, text: 'M5 fixture' },
+      { id: 'm5-b2', type: 'paragraph', text: 'M5 fixture 正文' }
+    ], media: []
+  }))
+  const impDone = await call('POST', `/api/tasks/${imp.id}/done`, { result: 'fixture import' })
+  if (impDone.status !== 'done') throw new Error(`夹具导入未 done：${impDone.status} ${impDone.result}`)
+}
+
 const pushPayload = (question, answer) => ({
   snapshot: { md: '# M5 快照\n\n详述1 测试' },
   domains: ['查询与展示口径'],

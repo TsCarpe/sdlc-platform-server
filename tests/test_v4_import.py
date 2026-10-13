@@ -208,3 +208,62 @@ def test_check_consistency_detects_drift() -> None:
 def test_check_task_templates_main_green() -> None:
     """真文件全链（CI 第五道门同款入口）。"""
     assert _ctt.main() == 0
+
+
+# ---------- v4-4：L2 建卡自动排 + 质检启动守卫 + 存量补排 ----------
+
+def test_on_created_auto_once(env: tuple[Database, Repos, Services, Path]) -> None:
+    _, repos, services, _ = env
+    _mk_card(repos)
+    orch = services.orchestration
+    orch.on_created("REQ-2026-001")
+    orch.on_created("REQ-2026-001")  # 二次触发不再建（只自动一次）
+    rows = repos.task.list("REQ-2026-001", None, 100)
+    imports = [t for t in rows if t.type == "source_import"]
+    assert len(imports) == 1 and imports[0].created_by == "auto:card-created"
+
+
+def test_on_created_failure_does_not_raise(env: tuple[Database, Repos, Services, Path]) -> None:
+    _, repos, services, _ = env
+    # 无卡场景：create_guarded 会 404 → 钩子吞掉（建卡主操作不连累）
+    services.orchestration.on_created("REQ-NONE-404")
+    _mk_card(repos)  # 后续建卡照常
+
+
+def test_claim_quality_check_guard_blocks_empty(env: tuple[Database, Repos, Services, Path]) -> None:
+    _, repos, services, _ = env
+    _mk_card(repos)
+    services.tasks.create_guarded("REQ-2026-001", "quality_check", "", "")
+    # 块表空：领取即守卫拦截（返回 None，任务被置 failed 带引导文案）
+    assert services.tasks.claim("runner-x") is None
+    rows = repos.task.list("REQ-2026-001", "failed", 100)
+    t = next(x for x in rows if x.type == "quality_check")
+    m = json.loads(t.result)
+    assert m["reason"] == "blocks-empty" and "先完成 source_import" in m["error"]
+
+    # 块表就位：同构重试路径放行（retry → queued → claim 领到 running）
+    services.tasks.retry(t.id)
+    repos.req_block.replace_all("REQ-2026-001", [
+        __import__("platform_sdlc.models", fromlist=["ReqBlock"]).ReqBlock(
+            req_id="REQ-2026-001", block_id="x-1", seq=1000, type="paragraph", text="a")])
+    got = services.tasks.claim("runner-x")
+    assert got is not None and got.type == "quality_check" and got.status == "running"
+
+
+def test_backfill_text_cards_import(tmp_path: Path) -> None:
+    from platform_sdlc.migrations import _backfill_text_cards_import
+    from platform_sdlc.migrations import run_migrations as rm
+
+    db2 = Database(tmp_path / "legacy2.db")
+    rm(db2)  # 先建全 schema（账本全跑完，本库无数据）
+    db2.execute("INSERT INTO requirement(id,name,source_type,status) VALUES('REQ-2026-100','已有导入任务','text','submitted')")
+    db2.execute("INSERT INTO requirement(id,name,source_type,status) VALUES('REQ-2026-101','飞书卡','feishu','submitted')")
+    db2.execute("INSERT INTO requirement(id,name,source_type,status,deleted_at) VALUES('REQ-2026-102','已删','text','submitted','x')")
+    db2.execute("INSERT INTO requirement(id,name,source_type,status) VALUES('REQ-2026-103','应补排','text','submitted')")
+    db2.execute("INSERT INTO task(req_id,type,status) VALUES('REQ-2026-100','source_import','done')")
+    _backfill_text_cards_import(db2)
+    rows = db2.query_all(
+        "SELECT req_id FROM task WHERE type='source_import' AND created_by='migration:v4' ORDER BY req_id")
+    # 只补排「text + 存活 + 无块表 + 无导入任务」的卡；已有任务卡跳过（幂等）、已删卡不补、
+    # feishu 卡不补（对账重导走三期变更单）
+    assert [r["req_id"] for r in rows] == ["REQ-2026-103"]

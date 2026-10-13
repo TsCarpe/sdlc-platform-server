@@ -63,7 +63,13 @@ try {
   r = await call('POST', '/api/requirements', { name: 'token冒烟', sourceType: 'text', sourceText: '内容' }, TOKEN)
   assert(r.status === 200 && r.data.id, '带 token 建卡成功', r.data.id || JSON.stringify(r.data))
   const reqId = r.data.id
-  r = await call('POST', `/api/requirements/${reqId}/tasks`, { type: 'quality_check' }, TOKEN)
+  // v4-4：先消化建卡自动排的 source_import（领走即 failed，防其插队领取与落库噪音）；
+  // quality_check 领取另有块表非空守卫——令牌冒烟用 case_gen
+  const imp = await call('POST', '/api/tasks/next?runner=verify-token', undefined, TOKEN)
+  if (imp.status === 200 && imp.data && imp.data.type === 'source_import') {
+    await call('POST', `/api/tasks/${imp.data.id}/failed`, { error: 'verify-token 夹具跳过导入' }, TOKEN)
+  }
+  r = await call('POST', `/api/requirements/${reqId}/tasks`, { type: 'case_gen' }, TOKEN)
   assert(r.status === 200, '带 token 建任务成功', `status=${r.status}`)
   r = await call('POST', '/api/tasks/next?runner=verify-token', undefined, TOKEN)
   assert(r.status === 200 && r.data.status === 'running', '带 token 领取成功（running）', `status=${r.status}`)

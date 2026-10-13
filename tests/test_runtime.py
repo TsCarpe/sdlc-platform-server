@@ -18,7 +18,7 @@ from platform_sdlc.common import ApiException
 from platform_sdlc.config import Settings
 from platform_sdlc.db import Database
 from platform_sdlc.migrations import run_migrations
-from platform_sdlc.models import Requirement, Task
+from platform_sdlc.models import ReqBlock, Requirement, Task
 from platform_sdlc.repositories import Repos
 from platform_sdlc.services import Services
 
@@ -43,6 +43,10 @@ def make_req(repos: Repos, services: Services, status: str = "clarifying") -> st
     if status != "submitted":
         repos.requirement.set_status(r.id, "reviewing")
         repos.requirement.set_status(r.id, status)
+    # v4-4：质检领取有「块表非空」启动守卫——夹具塞一行块，使 quality_check 可被领取（本文件测
+    # claim 并发/删除守卫/retry，与质检前置无关）
+    repos.req_block.replace_all(r.id, [
+        ReqBlock(req_id=r.id, block_id="rt-fixture", seq=1000, type="paragraph", text="fixture")])
     return r.id
 
 
