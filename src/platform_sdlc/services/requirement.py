@@ -251,6 +251,7 @@ class RequirementService:
                 "seq": c.seq, "level": c.level, "theme": c.theme, "question": c.question,
                 "answer": c.answer, "answeredAt": c.answered_at, "status": c.status, "note": c.note,
                 "origin": c.origin,  # v4-9：P/L 两族呈现区分（skill/incremental=机器，local=评论升级）
+                "srcCommentId": c.src_comment_id,  # v4.8 升级回链（前端「每条评论只可升级一次」预禁用依据）
             })
         return out
 

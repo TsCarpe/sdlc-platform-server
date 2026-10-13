@@ -34,7 +34,8 @@ _WIRE: dict[type[Any], tuple[str, ...]] = {
                   "submitted_by", "standard_doc", "created_at", "synced_at", "risk_tier",
                   "content_rev"),  # content_rev=v4.12 契约增键（§7 展示计数）
     ClarifyItem: ("id", "req_id", "seq", "level", "theme", "question", "ctx", "answer",
-                  "answered_at", "quote", "anchor", "status", "note", "origin"),  # origin=v4.9 契约增键
+                  "answered_at", "quote", "anchor", "status", "note", "origin", "src_comment_id"),
+    # origin=v4.9 契约增键；src_comment_id=v4.8 升级回链（交接 §6「answers 已带」——detail/answers 面补齐）
     Artifact: ("req_id", "type", "markdown", "content_json", "version", "pushed_at"),
     FrPoint: ("req_id", "id", "name", "source", "group", "module", "anchor"),
     MediaFile: ("req_id", "media_id", "sha256", "name", "mime", "bytes", "created_at"),

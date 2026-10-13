@@ -233,6 +233,8 @@ check('卡片级升级：quote/anchor 空 + level 可选', [cardE.seq, cardE.anc
 const answers = await call('GET', `/api/requirements/${req}/answers`)
 check('answers 面：P/L 两族并存（L 行可见待处置）',
       answers.filter(a => a.seq.startsWith('L')).map(a => [a.seq, a.status]), [['L01', 'pending'], ['L02', 'pending']])
+check('answers 面：L 行携带升级回链 srcCommentId（detail 同 wire）',
+      answers.filter(a => a.seq.startsWith('L')).map(a => a.srcCommentId), [cm1.id, card1.id])
 await expectErr('POST', `/api/requirements/${req}/comments/${cm1.id}/escalate`, {}, 409, '重复升级：409')
 // 删除单条（回复行保留）
 await call('DELETE', `/api/requirements/${req}/comments/${cm2.id}`)
