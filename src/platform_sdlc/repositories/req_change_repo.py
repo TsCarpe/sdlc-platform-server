@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import json
+from typing import Any
+
+from platform_sdlc.common import is_json_obj
 from platform_sdlc.db import Database
 from platform_sdlc.models import ReqChange, ReqChangeItem
 
@@ -13,9 +17,9 @@ class ReqChangeRepo:
     def insert(self, c: ReqChange) -> int:
         return self.db.insert(
             "INSERT INTO req_change(req_id,title,detail,proposed_by,confirmed_by,status,impact_json,"
-            "created_at,confirmed_at) VALUES(?,?,?,?,?,?,?,?,?)",
+            "blocks_json,created_at,confirmed_at) VALUES(?,?,?,?,?,?,?,?,?,?)",
             (c.req_id, c.title, c.detail, c.proposed_by, c.confirmed_by, c.status, c.impact_json,
-             c.created_at, c.confirmed_at),
+             c.blocks_json, c.created_at, c.confirmed_at),
         )
 
     def find(self, req_id: str, change_id: int) -> ReqChange | None:
@@ -26,11 +30,44 @@ class ReqChangeRepo:
         return [ReqChange.from_row(r) for r in self.db.query_all(
             "SELECT * FROM req_change WHERE req_id=? ORDER BY id DESC", (req_id,))]
 
-    def update_draft_meta(self, change_id: int, title: str, detail: str, proposed_by: str) -> int:
-        """draft 元信息更新（items 由 replace_items 全量重算，不在此面）。"""
+    def update_draft_meta(self, change_id: int, title: str, detail: str, proposed_by: str,
+                          blocks_json: str) -> int:
+        """draft 元信息 + 全量块数组留底更新（items 由 replace_items 全量重算，不在此面）。"""
         return self.db.execute(
-            "UPDATE req_change SET title=?, detail=?, proposed_by=? WHERE id=? AND status='draft'",
-            (title, detail, proposed_by, change_id))
+            "UPDATE req_change SET title=?, detail=?, proposed_by=?, blocks_json=? WHERE id=? AND status='draft'",
+            (title, detail, proposed_by, blocks_json, change_id))
+
+    def set_confirmed(self, change_id: int, impact_json: str, confirmed_by: str, at: str) -> int:
+        """confirm 落库（§5.5 第 2 步）：冻结影响面 + 确认人/时间；draft 之外不可 confirm。"""
+        return self.db.execute(
+            "UPDATE req_change SET status='confirmed', impact_json=?, confirmed_by=?, confirmed_at=?"
+            " WHERE id=? AND status='draft'",
+            (impact_json, confirmed_by, at, change_id))
+
+    def confirmed_undigested(self, req_id: str, digest_pushed_at: str | None) -> list[int]:
+        """影响面未消化的前序 confirmed 单（§5.1 串行 confirm）：digest/FR 非空 ∧ 消化时点早于
+        confirm 时点。digest_pushed_at = digest artifact 最近推送时间（None = 从未推送，视为未消化）。"""
+        out: list[int] = []
+        for c in self.list_by_req(req_id):
+            if c.status != "confirmed":
+                continue
+            if not c.impact_json:
+                out.append(c.id or 0)
+                continue
+            try:
+                impact: Any = json.loads(c.impact_json)
+            except json.JSONDecodeError:
+                out.append(c.id or 0)
+                continue
+            n = 0
+            if is_json_obj(impact) and is_json_obj(impact.get("counts")):
+                counts = impact["counts"]
+                n = int(counts.get("digestRows") or 0) + int(counts.get("frPoints") or 0)
+            if n == 0:
+                continue  # 影响面为空的单无产物面，不阻塞后单
+            if digest_pushed_at is None or (c.confirmed_at or "") > digest_pushed_at:
+                out.append(c.id or 0)
+        return out
 
     def delete(self, req_id: str, change_id: int) -> int:
         """draft 直接删（调用方守卫仅 draft；items 级联删——draft 未碰块表零代价，§5.6）。"""

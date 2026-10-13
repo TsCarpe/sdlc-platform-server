@@ -95,6 +95,11 @@ class RequirementRepo:
     def set_status(self, req_id: str, status: str) -> None:
         self.db.execute("UPDATE requirement SET status=? WHERE id=?", (status, req_id))
 
+    def bump_content_rev(self, req_id: str) -> None:
+        """content_rev +1（v4.12 §5.5/§7）：单调递增不回退——放弃变更不减；仅作展示计数，
+        变更判定查变更单不比 rev（回退的 rev 与基线相等性比对互构误报）。"""
+        self.db.execute("UPDATE requirement SET content_rev=content_rev+1 WHERE id=?", (req_id,))
+
     def soft_delete(self, req_id: str, at: str) -> int:
         """软删除打标（评测 P0-3）：返回 0 表示已删（幂等防线），不物理删行。"""
         return self.db.execute("UPDATE requirement SET deleted_at=? WHERE id=? AND deleted_at=''", (at, req_id))

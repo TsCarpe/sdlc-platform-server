@@ -45,6 +45,17 @@ def router(ctx: AppContext) -> APIRouter:
         """draft 可直接删（未碰块表零代价）；confirmed 不可删（不作废，§5.6）。"""
         return await asyncio.to_thread(svc.delete, req_id, change_id)
 
+    @r.post("/api/requirements/{req_id}/changes/{change_id}/confirm")
+    async def confirm(req_id: str, change_id: int, request: Request) -> dict[str, Any]:
+        """confirm = 一个事务（§5.5）：items 应用 + 乐观锁校验 + impact 冻结 + content_rev+1 +
+        published→changed（表外通道）+ 受影响澄清重开。body: {confirmedBy, impact?}。"""
+        body = await read_json(request, required=True)
+        out = await asyncio.to_thread(svc.confirm, req_id, change_id, body)
+        # L2：影响面非空自动排增量质检（编排失败不连累确认；任务类型 v4-14 注册）
+        await asyncio.to_thread(ctx.services.orchestration.on_change_confirmed,
+                                req_id, change_id, out.get("impact"))
+        return out
+
     @r.get("/api/requirements/{req_id}/changes/{change_id}/impact")
     async def preview_impact(req_id: str, change_id: int) -> dict[str, Any]:
         """影响面预览（机械 join 现算不冻结，§5.4）：受影响块集（edit/move 直接 ∪ delete 子孙递归

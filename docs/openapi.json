@@ -1105,6 +1105,57 @@
     }
    }
   },
+  "/api/requirements/{req_id}/changes/{change_id}/confirm": {
+   "post": {
+    "summary": "Confirm",
+    "description": "confirm = 一个事务（§5.5）：items 应用 + 乐观锁校验 + impact 冻结 + content_rev+1 +\npublished→changed（表外通道）+ 受影响澄清重开。body: {confirmedBy, impact?}。",
+    "operationId": "confirm_api_requirements__req_id__changes__change_id__confirm_post",
+    "parameters": [
+     {
+      "name": "req_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Req Id"
+      }
+     },
+     {
+      "name": "change_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Change Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Confirm Api Requirements  Req Id  Changes  Change Id  Confirm Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/requirements/{req_id}/changes/{change_id}/impact": {
    "get": {
     "summary": "Preview Impact",

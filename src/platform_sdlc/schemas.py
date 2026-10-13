@@ -31,7 +31,8 @@ from platform_sdlc.models import (
 # 键序 = Java 实体字段声明序（既有契约，勿重排）
 _WIRE: dict[type[Any], tuple[str, ...]] = {
     Requirement: ("id", "name", "iter", "source_type", "source_url", "source_text", "status",
-                  "submitted_by", "standard_doc", "created_at", "synced_at", "risk_tier"),
+                  "submitted_by", "standard_doc", "created_at", "synced_at", "risk_tier",
+                  "content_rev"),  # content_rev=v4.12 契约增键（§7 展示计数）
     ClarifyItem: ("id", "req_id", "seq", "level", "theme", "question", "ctx", "answer",
                   "answered_at", "quote", "anchor", "status", "note", "origin"),  # origin=v4.9 契约增键
     Artifact: ("req_id", "type", "markdown", "content_json", "version", "pushed_at"),

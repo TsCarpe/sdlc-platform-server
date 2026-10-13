@@ -38,6 +38,10 @@ _COLUMNS: list[tuple[str, str, str]] = [
     ("clarify_item", "origin", "ALTER TABLE clarify_item ADD COLUMN origin TEXT DEFAULT ''"),
     # v4.8（DESIGN-v4 §4.1）：评论升级回链——被升级的评论可跳回原讨论上下文；存量行无来源评论，无回填
     ("clarify_item", "src_comment_id", "ALTER TABLE clarify_item ADD COLUMN src_comment_id INTEGER"),
+    # v4.12（DESIGN-v4 §5.5/§7）：content_rev 单调递增不回退（仅作展示计数，变更判定查变更单不比 rev）；
+    # blocks_json = draft 全量块数组留底（confirm 应用面的顺序来源——items 只存变更行不含新序）
+    ("requirement", "content_rev", "ALTER TABLE requirement ADD COLUMN content_rev INTEGER NOT NULL DEFAULT 0"),
+    ("req_change", "blocks_json", "ALTER TABLE req_change ADD COLUMN blocks_json TEXT DEFAULT ''"),
     ("fr_point", "source", "ALTER TABLE fr_point ADD COLUMN source TEXT DEFAULT ''"),
     ("fr_point", "group_name", "ALTER TABLE fr_point ADD COLUMN group_name TEXT DEFAULT ''"),
     ("fr_point", "module", "ALTER TABLE fr_point ADD COLUMN module TEXT DEFAULT ''"),

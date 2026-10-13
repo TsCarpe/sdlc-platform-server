@@ -54,7 +54,8 @@ def test_requirement_flow_shapes(client: TestClient) -> None:
                            "frCount", "frPoints", "coverage", "quality", "answered", "totalQ"}
     assert "doc" not in detail  # NON_NULL：无 doc 块时键缺失（verify-m4 降级契约）
     assert set(detail["card"]) == {"id", "name", "iter", "sourceType", "sourceUrl", "sourceText",
-                                   "status", "submittedBy", "standardDoc", "createdAt", "syncedAt", "riskTier"}
+                                   "status", "submittedBy", "standardDoc", "createdAt", "syncedAt",
+                                   "riskTier", "contentRev"}  # contentRev=v4.12 增键
     assert detail["quality"] == {"stars": 3, "basis": "阻断 1 项"}
 
     ans = client.put("/api/requirements/REQ-2026-001/answers/P01", json={"answer": "8 位"})

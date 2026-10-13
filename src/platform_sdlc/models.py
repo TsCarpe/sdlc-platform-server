@@ -70,6 +70,7 @@ class Requirement:
     created_at: str | None = None
     synced_at: str | None = None
     risk_tier: str = ""
+    content_rev: int = 0  # v4.12（§5.5/§7）：变更 confirm 时 +1，单调递减不回退（展示计数，判定查变更单）
 
     @classmethod
     def from_row(cls, row: Row) -> Requirement:
@@ -86,6 +87,7 @@ class Requirement:
             created_at=_sn(row, "created_at"),
             synced_at=_sn(row, "synced_at"),
             risk_tier=_s(row, "risk_tier"),
+            content_rev=_i(row, "content_rev"),
         )
 
 
@@ -351,6 +353,7 @@ class ReqChange:
     confirmed_by: str = ""
     status: str = "draft"  # draft | confirmed | aborted
     impact_json: str = ""
+    blocks_json: str = ""  # v4.12：draft 全量块数组留底（confirm 应用面的顺序来源）
     created_at: str | None = None
     confirmed_at: str | None = None
 
@@ -365,6 +368,7 @@ class ReqChange:
             confirmed_by=_s(row, "confirmed_by"),
             status=_s(row, "status"),
             impact_json=_s(row, "impact_json"),
+            blocks_json=_s(row, "blocks_json"),
             created_at=_sn(row, "created_at"),
             confirmed_at=_sn(row, "confirmed_at"),
         )

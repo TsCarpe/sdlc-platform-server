@@ -1,7 +1,7 @@
 -- SDLC 平台建表脚本（IF NOT EXISTS 可重复执行）
 -- v2.1 重建说明：原文件在架构升级事故中损坏，此版自 live SQLite（platform.db）.schema 提取生成，结构以运行库为权威；列注释从 git 历史与代码整理
 
-CREATE TABLE IF NOT EXISTS requirement ( id TEXT PRIMARY KEY, name TEXT NOT NULL, iter TEXT DEFAULT '', source_type TEXT NOT NULL, source_url TEXT DEFAULT '', source_text TEXT DEFAULT '', status TEXT NOT NULL, submitted_by TEXT DEFAULT '', standard_doc TEXT DEFAULT '', created_at TEXT, synced_at TEXT, domains TEXT DEFAULT '', deleted_at TEXT DEFAULT '', risk_tier TEXT DEFAULT '', target_repo TEXT DEFAULT '', design_final_json TEXT DEFAULT '', target_repos TEXT DEFAULT '' );
+CREATE TABLE IF NOT EXISTS requirement ( id TEXT PRIMARY KEY, name TEXT NOT NULL, iter TEXT DEFAULT '', source_type TEXT NOT NULL, source_url TEXT DEFAULT '', source_text TEXT DEFAULT '', status TEXT NOT NULL, submitted_by TEXT DEFAULT '', standard_doc TEXT DEFAULT '', created_at TEXT, synced_at TEXT, domains TEXT DEFAULT '', deleted_at TEXT DEFAULT '', risk_tier TEXT DEFAULT '', target_repo TEXT DEFAULT '', design_final_json TEXT DEFAULT '', target_repos TEXT DEFAULT '', content_rev INTEGER NOT NULL DEFAULT 0 );
 CREATE TABLE IF NOT EXISTS clarify_item ( id INTEGER PRIMARY KEY AUTOINCREMENT, req_id TEXT NOT NULL, seq TEXT NOT NULL, level TEXT NOT NULL, theme TEXT DEFAULT '', question TEXT NOT NULL, ctx TEXT DEFAULT '', answer TEXT DEFAULT '', answered_at TEXT, quote TEXT DEFAULT '', anchor TEXT DEFAULT '', status TEXT DEFAULT '', note TEXT DEFAULT '', origin TEXT DEFAULT '', src_comment_id INTEGER, UNIQUE (req_id, seq) );
 CREATE TABLE IF NOT EXISTS artifact ( req_id TEXT NOT NULL, type TEXT NOT NULL, markdown TEXT DEFAULT '', content_json TEXT DEFAULT '', version INTEGER NOT NULL DEFAULT 1, pushed_at TEXT, PRIMARY KEY (req_id, type) );
 CREATE TABLE IF NOT EXISTS fr_point ( req_id TEXT NOT NULL, id TEXT NOT NULL, name TEXT DEFAULT '', source TEXT DEFAULT '', group_name TEXT DEFAULT '', module TEXT DEFAULT '', anchor TEXT DEFAULT '', PRIMARY KEY (req_id, id) );
@@ -67,7 +67,7 @@ CREATE INDEX IF NOT EXISTS idx_clarify_req_status ON clarify_item(req_id, status
 CREATE INDEX IF NOT EXISTS idx_task_status ON task(status);
 CREATE INDEX IF NOT EXISTS idx_gate_round_req ON gate_round(req_id);
 -- v4.11 变更单（DESIGN-v4 §5.2）：已发布需求原文变更的结构化载体；draft 可删，confirmed 不作废（放弃走 §5.6 逆向回滚）
-CREATE TABLE IF NOT EXISTS req_change ( id INTEGER PRIMARY KEY AUTOINCREMENT, req_id TEXT NOT NULL, title TEXT DEFAULT '', detail TEXT DEFAULT '', proposed_by TEXT DEFAULT '', confirmed_by TEXT DEFAULT '', status TEXT NOT NULL DEFAULT 'draft', impact_json TEXT DEFAULT '', created_at TEXT, confirmed_at TEXT );
+CREATE TABLE IF NOT EXISTS req_change ( id INTEGER PRIMARY KEY AUTOINCREMENT, req_id TEXT NOT NULL, title TEXT DEFAULT '', detail TEXT DEFAULT '', proposed_by TEXT DEFAULT '', confirmed_by TEXT DEFAULT '', status TEXT NOT NULL DEFAULT 'draft', impact_json TEXT DEFAULT '', blocks_json TEXT DEFAULT '', created_at TEXT, confirmed_at TEXT );
 CREATE INDEX IF NOT EXISTS idx_req_change_req ON req_change(req_id);
 CREATE TABLE IF NOT EXISTS req_change_item ( id INTEGER PRIMARY KEY AUTOINCREMENT, change_id INTEGER NOT NULL, block_id TEXT NOT NULL, op TEXT NOT NULL, old_text TEXT DEFAULT '', new_text TEXT DEFAULT '', old_attrs TEXT DEFAULT '', new_attrs TEXT DEFAULT '' );
 CREATE INDEX IF NOT EXISTS idx_req_change_item_change ON req_change_item(change_id);

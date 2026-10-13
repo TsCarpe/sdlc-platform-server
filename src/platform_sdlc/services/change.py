@@ -35,10 +35,11 @@ class ChangeService:
         （§5.2 不设审批环，防误操作不防故意）；draft 不碰块表，不限需求状态。"""
         with self.db.tx():
             self._require_base(req_id)
-            items = self._diff_items(req_id, body)
+            items, blocks_json = self._diff_items(req_id, body)
             change_id = self.repos.req_change.insert(ReqChange(
                 id=None, req_id=req_id, title=jtext(body, "title", ""), detail=jtext(body, "detail", ""),
-                proposed_by=jrequired(body, "proposedBy"), status="draft", created_at=Times.now()))
+                proposed_by=jrequired(body, "proposedBy"), status="draft",
+                blocks_json=blocks_json, created_at=Times.now()))
             self.repos.req_change.replace_items(change_id, items)
         log.info("变更单 draft #%s %s：%s", change_id, req_id, _counts(items))
         return self.detail(req_id, change_id)
@@ -51,10 +52,10 @@ class ChangeService:
             c = self._require_change(req_id, change_id)
             if c.status != "draft":
                 raise ApiException(409, f"变更单 #{change_id} 已{c.status}，不可再编辑（confirmed 是冻结快照）")
-            items = self._diff_items(req_id, body)
+            items, blocks_json = self._diff_items(req_id, body)
             self.repos.req_change.update_draft_meta(
                 change_id, jtext(body, "title", c.title), jtext(body, "detail", c.detail),
-                jtext(body, "proposedBy", "") or c.proposed_by)
+                jtext(body, "proposedBy", "") or c.proposed_by, blocks_json)
             self.repos.req_change.replace_items(change_id, items)
         return self.detail(req_id, change_id)
 
@@ -90,7 +91,105 @@ class ChangeService:
                        "oldAttrs": _load_or_none(i.old_attrs), "newAttrs": _load_or_none(i.new_attrs)}
                       for i in items],
             "counts": _counts(items),
+            **({"impact": _load_or_none(c.impact_json)} if c.impact_json else {}),  # confirmed 冻结面
         }
+
+    # ---------- confirm = 一个事务（§5.5；changed 流转不进 REQ_FLOW，表外三通道之一） ----------
+
+    def confirm(self, req_id: str, change_id: int, body: dict[str, Any]) -> dict[str, Any]:
+        """confirm 事务：①守卫（状态 ∈ {published,changed} ∧ 无活跃增量任务/未采纳增量草稿 ∧ 无
+        影响面未消化的前序 confirmed 单——串行）；②items 应用块表（edit/move version+1、insert、
+        delete 软删、blocks_json 留底数组整体重排 seq）+ 乐观锁（edit/delete/move 项 old_text ==
+        块表现值，不符整单 409——连环 confirm 场景 draft 基于旧块态，直接应用会无感覆盖）；③
+        impact_json 冻结（body.impact 携带 = 确认界面人工增删结果，缺省 = 机械预览值）；
+        ④content_rev+1 + published→changed（表外直写）；⑤受影响澄清重开（旧答复挪 note 前缀，
+        answer 清空回 pending）。钩子（事务后）on_change_confirmed 排增量质检——v4-14 接任务类型。"""
+        with self.db.tx():
+            r = self.repos.requirement.find(req_id)
+            if r is None:
+                raise ApiException(404, f"需求不存在：{req_id}")
+            c = self._require_change(req_id, change_id)
+            if c.status != "draft":
+                raise ApiException(409, f"变更单 #{change_id} 已{c.status}，不可确认")
+            if r.status not in ("published", "changed"):
+                raise ApiException(409, f"仅已发布需求可确认变更单（当前：{r.status}）；"
+                                        "未发布卡的原文变更走窗口 1 直接编辑")
+            # 活跃增量任务 / 未采纳增量·全量草稿（产物合并时 anchor 已漂移）
+            if self.repos.task.count_active(req_id, "incremental_check") > 0:
+                raise ApiException(409, "存在排队中/执行中的增量质检任务，请等待完成后再确认")
+            for dtype in ("incremental_bundle", "digest_bundle"):
+                if self.repos.draft.find(req_id, dtype) is not None:
+                    raise ApiException(409, f"存在未采纳的 {dtype} 草稿（产物锚点将随块变更漂移），"
+                                            "请先采纳或作废再确认")
+            digest = self.repos.artifact.find(req_id, "digest")
+            undigested = self.repos.req_change.confirmed_undigested(req_id, digest.pushed_at if digest else None)
+            if undigested:
+                raise ApiException(409, f"前序变更单 #{undigested[0]} 影响面未消化（先完成增量质检与"
+                                        "合并），串行确认")
+            confirmed_by = jrequired(body, "confirmedBy")
+
+            # ③影响面冻结（body.impact = 确认界面人工增删结果，缺省机械预览）——在块表应用**前**
+            # 计算：delete 子孙 CTE 与锚定 join 基于确认时点块态（应用后 delete 块已软删、锚定悬空）
+            body_impact = body.get("impact")
+            impact: dict[str, Any] = (body_impact if is_json_obj(body_impact)
+                                      else self.preview_impact(req_id, change_id))
+
+            # ②乐观锁 + 应用：old_text 逐条校验后按 blocks_json 留底数组整体应用
+            items = self.repos.req_change.list_items(change_id)
+            current = self.repos.req_block.list_by_req(req_id)
+            cur_by_id = {b.block_id: b for b in current}
+            for it in items:
+                if it.op == "insert":
+                    if it.block_id in cur_by_id:
+                        raise ApiException(409, f"insert 块 {it.block_id} 已存在于块表（基线漂移），"
+                                                "请重新编辑 draft")
+                    continue
+                cur = cur_by_id.get(it.block_id)
+                if cur is None or cur.text != it.old_text:
+                    raise ApiException(409, f"块 {it.block_id} 已被后续修改（变更单基于旧基线），"
+                                            "请重新编辑 draft")
+            if not c.blocks_json:
+                raise ApiException(409, f"变更单 #{change_id} 无块数组留底（旧版本数据），请重新保存 draft")
+            submitted = self.blocks.parse_blocks({"blocks": _load_raw_list(c.blocks_json)})
+            self.blocks.diff_blocks(req_id, submitted, current)  # 打标（is_new/changed/moved）
+            self.blocks.assign_insert_ids(req_id, submitted)
+            self.blocks.apply_edits(req_id, submitted, current, confirmed_by)
+
+            at = Times.now()
+            impact_json = json.dumps(impact, ensure_ascii=False, separators=(",", ":"))
+            if self.repos.req_change.set_confirmed(change_id, impact_json, confirmed_by, at) == 0:
+                raise ApiException(409, "确认竞态：变更单状态已变化")
+
+            # ④content_rev+1 + changed（表外通道：不经 REQ_FLOW/set_status 通用路由——携带事务
+            # 副作用的流转走专用动作，通用 set_status 成为守卫旁路的口子不能开）
+            self.repos.requirement.bump_content_rev(req_id)
+            if r.status == "published":
+                self.repos.requirement.set_status(req_id, "changed")
+
+            # ⑤受影响澄清重开（冻结影响面口径；已答/驳回/挂起行回 pending，旧答复挪 note 前缀）
+            reopen = self._reopen_rows(req_id, change_id, impact)
+            self.repos.clarify_item.reopen_items(req_id, reopen)
+        log.info("变更单 #%s confirm %s（by=%s，重开澄清 %d 项）", change_id, req_id, confirmed_by, len(reopen))
+        out = self.detail(req_id, change_id)
+        after = self.repos.requirement.find(req_id)
+        out["contentRev"] = after.content_rev if after is not None else 0
+        return out
+
+    def _reopen_rows(self, req_id: str, change_id: int, impact: dict[str, Any]) -> list[tuple[str, str, str | None]]:
+        """重开行构造：冻结影响面的 clarifyItems（含人工增删）∩ 已处置行——旧答复挪 note 前缀
+        「因变更单#N 重开，原答复：…」（answer 空的行 note 只记重开标记）。"""
+        raw: Any = impact.get("clarifyItems")
+        seqs = {jtext(x, "seq", "") for x in _arr(raw) if is_json_obj(x)}
+        seqs.discard("")
+        if not seqs:
+            return []
+        out: list[tuple[str, str, str | None]] = []
+        for item in self.repos.clarify_item.list_by_req(req_id):
+            if item.seq not in seqs or item.status == "pending":
+                continue
+            note = f"因变更单#{change_id} 重开，原答复：{item.answer}" if item.answer else f"因变更单#{change_id} 重开"
+            out.append((item.seq, note, None))
+        return out
 
     # ---------- 影响面预览（§5.4：机械 join 现算，不冻结） ----------
 
@@ -138,17 +237,19 @@ class ChangeService:
             raise ApiException(404, f"变更单不存在：#{change_id}")
         return c
 
-    def _diff_items(self, req_id: str, body: dict[str, Any]) -> list[ReqChangeItem]:
-        """全量块数组 vs 块表 → ReqChangeItem（复用 diff_blocks 四态 + LIS；insert 块经
-        assign_insert_ids 在草稿期即有平台 ID，§5.2）。"""
+    def _diff_items(self, req_id: str, body: dict[str, Any]) -> tuple[list[ReqChangeItem], str]:
+        """全量块数组 vs 块表 → (ReqChangeItem 列表, 规范化全量块数组 JSON 留底)。复用 diff_blocks
+        四态 + LIS；insert 块经 assign_insert_ids 在草稿期即有平台 ID（§5.2）——留底存 assign 后
+        数组（confirm 应用面直接可重放，空 id 临时 id 不进留底）。"""
         submitted = self.blocks.parse_blocks(body)
         current = self.repos.req_block.list_by_req(req_id)
         diff = self.blocks.diff_blocks(req_id, submitted, current)
         self.blocks.assign_insert_ids(req_id, submitted)
-        return [ReqChangeItem(
+        items = [ReqChangeItem(
             id=None, change_id=0, block_id=d.block_id, op=d.op,
             old_text=d.old_text, new_text=d.new_text,
             old_attrs=_dumps(d.old_attrs), new_attrs=_dumps(d.new_attrs)) for d in diff]
+        return items, _norm_blocks(submitted)
 
     def _digest_rows_in(self, req_id: str, target: set[str]) -> list[dict[str, str]]:
         """digest 行锚定 join：artifact.content_json（_digest_view 形态）解析 features/flows/states，
@@ -249,3 +350,17 @@ def _load_or_none(raw: str) -> dict[str, Any] | None:
     except json.JSONDecodeError:
         return None
     return dict(v) if is_json_obj(v) else None
+
+
+def _norm_blocks(submitted: list[Any]) -> str:
+    """draft 全量块数组留底（assign 后规范化：平台 ID + clean attrs——confirm 应用面直接重放）。"""
+    return json.dumps([{**{"id": sb.block_id, "type": sb.type, "text": sb.text}, **sb.attrs}
+                       for sb in submitted], ensure_ascii=False, separators=(",", ":"))
+
+
+def _load_raw_list(raw: str) -> list[Any]:
+    try:
+        v: Any = json.loads(raw or "[]")
+    except json.JSONDecodeError:
+        return []
+    return list(v) if is_json_list(v) else []

@@ -50,6 +50,16 @@ class ClarifyItemRepo:
               c.anchor, c.status, c.note, c.origin, c.src_comment_id) for c in items],
         )
 
+    def reopen_items(self, req_id: str, rows: list[tuple[str, str, str | None]]) -> None:
+        """变更 confirm 的受影响澄清重开（v4.12 §5.5 第 4 步，调用方事务内）：rows = (seq, 新 note,
+        answered_at=None)；answer 清空回 pending。行集合由服务层按冻结影响面算好（一次读全行，
+        循环内无数据库查询铁律）。"""
+        if not rows:
+            return
+        self.db.executemany(
+            "UPDATE clarify_item SET answer='', status='pending', note=?, answered_at=? WHERE req_id=? AND seq=?",
+            [(note, at, req_id, seq) for seq, note, at in rows])
+
     def set_disposition(self, req_id: str, seq: str, answer: str, status: str, note: str, at: str) -> int:
         return self.db.execute(
             "UPDATE clarify_item SET answer=?, status=?, note=?, answered_at=? WHERE req_id=? AND seq=?",

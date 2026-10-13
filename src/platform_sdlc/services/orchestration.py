@@ -18,9 +18,9 @@ count_active 预判承担原子性守卫（对抗审查 M1：消「轮已建、�
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from platform_sdlc.common import ApiException
+from platform_sdlc.common import ApiException, is_json_obj
 from platform_sdlc.services import task as task_mod
 
 if TYPE_CHECKING:
@@ -82,6 +82,28 @@ class OrchestrationService:
             log.info("[L2] %s 自动排 case_gen 跳过：%s", req_id, e)
         except Exception as e:  # noqa: BLE001  # 不影响发布
             log.warning("[L2] %s 自动排 case_gen 失败（不影响发布）：%s", req_id, e)
+
+    def on_change_confirmed(self, req_id: str, change_id: int, impact: dict[str, Any] | None) -> None:
+        """变更单 confirm 后（v4.12，DESIGN-v4 §8）：影响面 digest/FR 非空 → 自动排 incremental_check
+        （v4-14 注册任务类型——此前 create_guarded 400 被容错吞掉，钩子结构先落，上线即通）。
+        人工逃生门（§5.5 第 6 步）：incremental_check 开放手动创建——不能让需求停在 changed +
+        影响面冻结 + 增量无人排的中间态。"""
+        try:
+            n = 0
+            if is_json_obj(impact) and is_json_obj(impact.get("counts")):
+                counts = impact["counts"]
+                n = int(counts.get("digestRows") or 0) + int(counts.get("frPoints") or 0)
+            if n == 0:
+                log.info("[L2] %s 变更单 #%s 影响面无 digest/FR 行，不排增量质检", req_id, change_id)
+                return
+            t = self.tasks.create_auto(req_id, "incremental_check", "auto:change-confirmed",
+                                       f"变更单 #{change_id} 确认，L2 自动排增量质检")
+            log.info("[L2] %s 变更单 #%s confirm → 自动创建 #%s incremental_check", req_id, change_id, t.id)
+        except ApiException as e:
+            log.info("[L2] %s 变更单 #%s 自动排增量质检跳过（任务类型随 v4-14 注册）：%s",
+                     req_id, change_id, e)
+        except Exception as e:  # noqa: BLE001  # 编排失败不连累 confirm 主操作
+            log.warning("[L2] %s 变更单 #%s 自动排增量质检失败（不影响确认）：%s", req_id, change_id, e)
 
     def on_gate_opened(self, req_id: str, round_no: int) -> None:
         """开闸建轮后：自动排队 gate_review（收敛自 gate.open 事务内 create_auto——批次7，AUDIT D1-4）。

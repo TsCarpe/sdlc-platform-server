@@ -212,7 +212,7 @@ class BlockService:
             submitted = self.parse_blocks(body)
             current = self.repos.req_block.list_by_req(req_id)
             items = self.diff_blocks(req_id, submitted, current)
-            self._apply_edits(req_id, submitted, current, updated_by)
+            self.apply_edits(req_id, submitted, current, updated_by)
         log.info("块级直接编辑 %s（by=%s）：%s", req_id, updated_by, _counts_of(items))
         return self._diff_view(items)
 
@@ -327,7 +327,7 @@ class BlockService:
                                        old_attrs=_clean_attrs(_load_attrs(b.attrs_json))))
         return items
 
-    def _apply_edits(self, req_id: str, submitted: list[_SubBlock],
+    def apply_edits(self, req_id: str, submitted: list[_SubBlock],
                      current: list[ReqBlock], updated_by: str) -> None:
         """事务内应用（调用方已开 tx，§5.5 confirm 同款语义）：edit/move version+1 留痕、insert 落
         blk-<ulid> 新行（version=1，updated_by 记创建人）、delete 软删（deleted=时间戳）、存留块按

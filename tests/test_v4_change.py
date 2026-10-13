@@ -253,3 +253,134 @@ def _mk_card(client: TestClient, name: str = "变更单验证") -> str:
     created = client.post("/api/requirements", json={"name": name, "sourceType": "text",
                                                      "sourceText": "# 原文", "submittedBy": "tester"}).json()
     return str(created["id"])
+
+
+# ---------- confirm 事务（§5.5；v4-12） ----------
+
+def _publish_card(client: TestClient, repos: Repos, req_id: str) -> None:
+    """发布链：推产物（P1-P4 重建）→ 全处置 → publish。种子块/锚定不动。"""
+    client.post(f"/api/requirements/{req_id}/artifacts", json={
+        "digest": {"md": "", "summary": "s", "roles": [], "flows": [], "states": [], "features": [
+            {"role": "用户", "m": "注册", "func": "手机号注册", "anchor": "p1"}]},
+        "audit": {"md": "", "red": 0, "yellow": 0, "blue": 0, "items": []},
+        "items": [{"seq": "P1", "level": "yellow", "theme": "t", "question": "q1", "anchor": "p1"},
+                  {"seq": "P2", "level": "yellow", "theme": "t", "question": "q2", "anchor": "li2"},
+                  {"seq": "P3", "level": "yellow", "theme": "t", "question": "q3"},
+                  {"seq": "P4", "level": "yellow", "theme": "t", "question": "q4", "anchor": "trc1"}],
+    })
+    for seq in ("P1", "P2", "P3", "P4"):
+        client.put(f"/api/requirements/{req_id}/answers/{seq}", json={"answer": f"答 {seq}"})
+    client.post(f"/api/requirements/{req_id}/publish", json={"standardMd": "# 定稿"})
+
+
+def _draft_edit_p1(client: TestClient, req_id: str, title: str = "口径修订") -> Any:
+    return client.post(f"/api/requirements/{req_id}/changes", json={
+        "title": title, "proposedBy": "张三", "blocks": [
+            {"id": "t1", "type": "title", "text": "标题"},
+            {"id": "h1", "type": "heading", "level": 2, "text": "背景"},
+            {"id": "p1", "type": "paragraph", "text": "一段说明（修订）"},
+            {"type": "paragraph", "text": "变更新增段"},
+            {"id": "li1", "type": "list-item", "marker": "1. ", "depth": 1, "text": "列表项一"},
+            {"id": "li2", "type": "list-item", "marker": "a. ", "depth": 2, "parent": "li1", "text": "子项 a"},
+        ]}).json()  # tr1/trc1 delete
+
+
+def test_confirm_transaction(env: tuple[TestClient, Database, Repos]) -> None:
+    client, db, repos = env
+    req_id = _mk_card(client)
+    _seed(repos, req_id)
+    _publish_card(client, repos, req_id)
+    cid = _draft_edit_p1(client, req_id)["id"]
+
+    out = client.post(f"/api/requirements/{req_id}/changes/{cid}/confirm",
+                      json={"confirmedBy": "李四"}).json()
+    # changed（表外通道——通用 set_status 不认此流转）+ content_rev+1 + impact 冻结
+    assert out["status"] == "confirmed" and out["contentRev"] == 1 and out["impact"]["counts"]["blocks"] >= 1
+    card = client.get(f"/api/requirements/{req_id}").json()["card"]
+    assert card["status"] == "changed" and card["contentRev"] == 1
+    assert client.post(f"/api/requirements/{req_id}/status", json={"status": "changed"}).status_code == 409
+
+    # items 应用：edit 文本/version+1/留痕；insert 落 blk-；delete 软删；seq 重排按留底数组
+    rows = {r["block_id"]: r for r in db.query_all("SELECT * FROM req_block WHERE req_id=?", (req_id,))}
+    assert rows["p1"]["text"] == "一段说明（修订）" and rows["p1"]["version"] == 2
+    assert rows["p1"]["updated_by"] == "李四"
+    new_blocks = [b for b in repos.req_block.list_by_req(req_id) if b.block_id.startswith("blk-")]
+    assert [b.text for b in new_blocks] == ["变更新增段"] and new_blocks[0].version == 1
+    assert rows["tr1"]["deleted"] != "" and rows["trc1"]["deleted"] != ""
+    nid = new_blocks[0].block_id
+    assert [b.block_id for b in repos.req_block.list_by_req(req_id)] == ["t1", "h1", "p1", nid, "li1", "li2"]
+
+    # 澄清重开（冻结影响面锚 p1/trc1）：P1/P4 回 pending + note 前缀；P2(li2 未动)/P3(空) 不动
+    answers = {a["seq"]: a for a in client.get(f"/api/requirements/{req_id}/answers").json()}
+    assert answers["P1"]["status"] == "pending" and answers["P1"]["answer"] == ""
+    assert "因变更单#1 重开，原答复：答 P1" in answers["P1"]["note"]
+    assert answers["P4"]["status"] == "pending"
+    assert answers["P2"]["answer"] == "答 P2" and answers["P3"]["answer"] == "答 P3"
+
+    # 重复 confirm 409
+    again = client.post(f"/api/requirements/{req_id}/changes/{cid}/confirm", json={"confirmedBy": "x"})
+    assert again.status_code == 409 and "不可确认" in again.json()["error"]
+
+
+def test_confirm_optimistic_lock_and_atomicity(env: tuple[TestClient, Database, Repos]) -> None:
+    """draft 后块表被窗口 1 编辑 → old_text 不符整单 409，零写入（原子性）。"""
+    client, db, repos = env
+    req_id = _mk_card(client)
+    _seed(repos, req_id)
+    _publish_card(client, repos, req_id)
+    cid = _draft_edit_p1(client, req_id)["id"]
+
+    # 窗口 1 编辑同块（draft 与编辑并存期间漂移——published 拒编辑？changed 前的 published 卡不可编辑，
+    # 用 db 直改模拟「后续修改」）
+    db.execute("UPDATE req_block SET text='被并发修改的文本' WHERE req_id=? AND block_id='p1'", (req_id,))
+    r = client.post(f"/api/requirements/{req_id}/changes/{cid}/confirm", json={"confirmedBy": "李四"})
+    assert r.status_code == 409 and "已被后续修改" in r.json()["error"]
+    # 原子性：状态/rev/块表/items 全无变化
+    card = client.get(f"/api/requirements/{req_id}").json()["card"]
+    assert card["status"] == "published" and card["contentRev"] == 0
+    row = db.query_one("SELECT text FROM req_block WHERE req_id=? AND block_id='p1'", (req_id,))
+    assert row is not None and row["text"] == "被并发修改的文本"
+    assert db.query_scalar("SELECT status FROM req_change WHERE id=?", (cid,)) == "draft"
+
+
+def test_confirm_guards_serial(env: tuple[TestClient, Database, Repos]) -> None:
+    client, db, repos = env
+    req_id = _mk_card(client)
+    _seed(repos, req_id)
+    # 未发布拒（窗口 1 直接编辑是未发布卡的通道）
+    c0 = _draft_edit_p1(client, req_id)
+    r0 = client.post(f"/api/requirements/{req_id}/changes/{c0['id']}/confirm", json={"confirmedBy": "x"})
+    assert r0.status_code == 409 and "窗口 1" in r0.json()["error"]
+
+    _publish_card(client, repos, req_id)
+    c1 = _draft_edit_p1(client, req_id, title="第一单")["id"]
+    # digest.pushed_at 回拨一秒（秒级时间戳下发布链 push 与 confirm 同秒会命中已消化边界——
+    # §5.1 严格小于口径：同秒算消化）
+    db.execute("UPDATE artifact SET pushed_at='2026-10-13 00:00:00'"
+               " WHERE req_id=? AND type='digest'", (req_id,))
+    assert client.post(f"/api/requirements/{req_id}/changes/{c1}/confirm", json={"confirmedBy": "李四"}).status_code == 200
+
+    # 串行守卫：前序 confirmed 单影响面未消化（digest.pushed_at < confirmed_at）拒第二单
+    c2 = client.post(f"/api/requirements/{req_id}/changes", json={
+        "title": "第二单", "proposedBy": "张三", "blocks": [
+            {"id": "t1", "type": "title", "text": "标题"},
+            {"id": "h1", "type": "heading", "level": 2, "text": "背景"},
+            {"id": "p1", "type": "paragraph", "text": "一段说明（修订二）"},
+            {"type": "paragraph", "text": "变更新增段"},
+            {"id": "li1", "type": "list-item", "marker": "1. ", "depth": 1, "text": "列表项一"},
+            {"id": "li2", "type": "list-item", "marker": "a. ", "depth": 2, "parent": "li1", "text": "子项 a"},
+        ]}).json()["id"]
+    r2 = client.post(f"/api/requirements/{req_id}/changes/{c2}/confirm", json={"confirmedBy": "李四"})
+    assert r2.status_code == 409 and "未消化" in r2.json()["error"]
+
+    # 消化 = digest.pushed_at 刷新到 confirm 之后（v4-14 增量合并 artifact.upsert 的真实语义；
+    # 全量重推不可作模拟通道——push 的隐式推进会把 changed 吞成 clarifying，§5.1 点名的面）
+    db.execute("UPDATE artifact SET pushed_at='2099-01-01 00:00:00'"
+               " WHERE req_id=? AND type='digest'", (req_id,))
+    # 第二单放行；changed 下 confirm 状态域 OK（不再转态）
+    # changed 拒全量重推（§5.1 矩矩——v4-15 落地）？本批未落：push 在 changed 下仍可行（走旧守卫）
+    # ——重推后串行判定放行的前提是 digest.pushed_at > confirmed_at，上式 push 成功即满足。
+    r3 = client.post(f"/api/requirements/{req_id}/changes/{c2}/confirm", json={"confirmedBy": "王五"})
+    assert r3.status_code == 200
+    card = client.get(f"/api/requirements/{req_id}").json()["card"]
+    assert card["status"] == "changed" and card["contentRev"] == 2
