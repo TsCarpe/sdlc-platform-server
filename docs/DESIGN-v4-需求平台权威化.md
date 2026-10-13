@@ -527,10 +527,10 @@ global——全局行不参与区间二分，任何变更单 confirm 视为需�
 
 ## 11. 未决事项（实施前需回到桌面）
 
-1. **编辑器技术选型**：开源块编辑器（评估方向：块结构可控、可挂自定义块渲染、数据模型可映射
-   req_block）vs 自研（Vue 3 + 现有 OriginTab 渲染逻辑加编辑态）。**已明确后置到最后再定**，
-   先落数据模型与后端面。
-2. 块类型编辑分期：一期 heading/paragraph/list-item；table-row 只读或整块替换；image 支持上传替换。
+1. ~~编辑器技术选型~~ **已裁决（2026-10-13）：方案 C 块级聚焦编辑**（详见 §14），Tiptap 留作
+   演进路径不封死——后期按使用反馈再调整升级。
+2. 块类型编辑分期（并入 §14）：编辑面 heading/paragraph/list-item；table-row 整块替换（行表单）；
+   image 上传替换。
 3. 评论通知：不做推送（v1 边界），角标方案先跑。
 4. ~~skill 侧迁移策略~~ **已裁决（2026-10-13）：做方向 a，范围 = pull-artifacts 一个子命令 +
    定位表述更新 + 评论导出兼容格式，不重构消费链**，详见 §13。
@@ -543,7 +543,7 @@ global——全局行不参与区间二分，任何变更单 confirm 视为需�
 | 期 | 内容 | 交付判据 |
 |---|---|---|
 | 一期·地基 | req_block/req_comment 表 + source_import 任务（双分支+评论导入，完成回调服务端直读落库；tasks/<task_id> 目录定位 + 工作区根 meta 下发 + runner/loop 两处 selfCheck 代码分支 + noDraftTypes 键）+ 读侧同形状导出（doc.json/comments.json 文件端点，curl 直落供质检管线）+ 存量迁移（origin 回填/anchor 校验/text 卡首导；**对账重导与 rebaseline 随变更单机制归三期**）+ 红线精确化 + 模板双写 CI 守护 | 建卡自动导入，原文/评论平台可读，质检改读块模型（verify 黑盒质检链路断言随输入源切换同步改造后全绿）；source_import 两通道均能记 done |
-| 二期·编辑 | 块级编辑器（基础块类型）+ 未发布直接编辑 + 手动「重新质检」+ 评论（呈现+升级澄清项 L 系）+ clarify_item.origin **+ push_artifacts 按来源合并**（与 L 系同期货：有 origin 列才有 L 系，有 L 系就必须有合并保护——否则二期每次重推冲掉已答 L 系行） | 窗口 1 全程平台内闭环；L 系行经重推不丢 |
+| 二期·编辑 | 块级编辑器（方案 C：聚焦编辑，§14）+ 未发布直接编辑 + 手动「重新质检」+ 评论（呈现+升级澄清项 L 系）+ clarify_item.origin **+ push_artifacts 按来源合并**（与 L 系同期货：有 origin 列才有 L 系，有 L 系就必须有合并保护——否则二期每次重推冲掉已答 L 系行） | 窗口 1 全程平台内闭环；L 系行经重推不丢；变更单 diff 视图可用 |
 | 三期·变更 | 变更单全流程 + changed 态 + 影响面（机械+人工增删）+ incremental_check/incremental_bundle + 章节级合并 + content_rev/GR-3 + L2 适配（on_answered 窗口化、on_change_confirmed、on_merged）+ skill 侧迁移（§13：pull-artifacts / incremental-guide / 定位更新） | 窗口 2/3 不开新卡完成变更；verify-*.mjs 新增变更链路黑盒；skill 触发回归通过 |
 
 每期遵守既有工程纪律：schema.sql IF NOT EXISTS + migrations 判列补列、pyright strict、
@@ -596,7 +596,47 @@ sdlc-gate 的 SKILL.md 与模板。v4 是把这个趋势推到底（权威正式
 - 兜底链回归：平台停服时本地全流程仍可用（降级 = 现状），changed 卡本地重推收到明确 409 文案。
 - 消费链零适配：pull-artifacts 产出的 intake md 被本地 sdlc-design / sdlc-test 直接消费。
 
-## 附：决策清单（2026-10-13 定稿）
+## 14. 编辑器技术方案（已裁决：方案 C 块级聚焦编辑）
+
+**裁决**：不做整篇即时编辑（WYSIWYG），做「渲染态 ⇄ 单块编辑态」切换的块级聚焦编辑。
+判断依据：PM 改需求是低频「改文档」而非「写文档」，为低频操作背 contenteditable 的光标/IME/
+撤销三大坑（中文 IME 尤甚）不成比例；且块表关系化的红利正在于**编辑器是可替换的编辑面，
+权威在数据层**——后期升级路径不封死。
+
+### 14.1 交互规格
+
+- **渲染态**：块列表照常渲染（复用 OriginTab 现有渲染：行内 markdown 样式、图片、评论角标）。
+- **块手柄**：hover 出现——拖拽排序（HTML5 原生 drag&drop，不引 dnd 库）、「+」插入兄弟块、
+  菜单（升级/降级 heading level 与列表 depth、删除、块类型转换）。
+- **单块编辑态**（点击进入，Esc/失焦保存退出）：
+  | 块类型 | 编辑控件 |
+  |---|---|
+  | paragraph / list-item | textarea（markdown 文本，自动增高）+ 工具条按钮插入行内语法（选中点 B 包 `**`） |
+  | heading | 级别选择 + 文本输入 |
+  | table-row | 行表单（head + cells 数组编辑，整块替换） |
+  | image / attachment | 上传替换（upload_media 既有通道，块引用新 mediaId） |
+  | whiteboard | 只读（编辑走平台外产出再替换） |
+- **输出契约**：编辑器组件输出**全量块数组**——窗口 1 直接编辑与变更单 draft 两场景共用同一
+  组件，仅提交端点不同（服务端 diff + LIS 判 move，§5.3）。
+- **diff 视图是编辑器组件的必做件**（非可选）：变更单 confirm 界面的块级 diff（edit/insert/
+  delete/move 四态着色）复用同一渲染层。
+
+### 14.2 明确不做（边界）
+
+- 整篇连续编辑（回车分块/跨块选区/连续输入）——不引入 contenteditable。
+- 行内所见即所得——textarea 源文本 + 语法按钮够用（需求文档行内样式实测低频：粗体/删除线/@人）。
+- 多选/批量块操作——低频场景单块操作够用。
+- 保存后的事务级 undo——撤销模型：会话内浏览器原生（单块 Ctrl+Z）+ 前端块操作栈（块级操作
+  可撤销）；保存后回退 = draft 重拉基线（变更单场景）或重推前次版本。
+
+### 14.3 演进路径（后期优化的调整方向）
+
+升级触发条件：实际使用中出现高频编辑痛点、或 PM 明确要求所见即所得。届时评估 **Tiptap**
+（Vue 3 生态唯一匹配的自定义块模型编辑器：heading/paragraph/list 有现成 node，table-row
+自定义 NodeView；BlockNote/Lexical 为 React 优先直接排除）。**数据模型不动，换的只是编辑面**——
+块表/锚点/变更单/diff 全链路零改动。此裁决记录于 2026-10-13，工作量参考：方案 C 约 1.5~2 周。
+
+
 
 | # | 决策点 | 结论 |
 |---|---|---|
@@ -623,8 +663,12 @@ sdlc-gate 的 SKILL.md 与模板。v4 是把这个趋势推到底（权威正式
 | 15 | standard 重合成 | 全量重合成；on_answered 窗口精确化 |
 | 16 | 权限 | 手填身份必填+全量留痕，不加限制 |
 | 18 | skill 侧迁移 | 做方向 a：pull-artifacts 子命令 + 定位表述更新 + 评论导出兼容格式，不重构消费链；改动须符合 Agent Skills 官方最佳实践（§13.3 逐条映射） |
+| 19 | 编辑器方案 | 方案 C 块级聚焦编辑（§14）：渲染态⇄单块编辑态、textarea 源文本+语法按钮、零新依赖；Tiptap 留作演进路径（触发条件：高频编辑痛点/所见即所得诉求），数据层不动换编辑面 |
 | — | 骨架 | 平台唯一权威；块表关系化；评论系统；编辑器选型后置；change 态；三窗口全做分期执行 |
 
+> **2026-10-13 编辑器裁决**：§11.1 转已裁决，新增 §14（方案 C 块级聚焦编辑：交互规格/明确不做/
+> Tiptap 演进路径），§12 二期行与决策清单 #19 同步。
+>
 > **2026-10-13 doubt-review 第三轮修订（收口轮）**：第三轮 26 条（25 可行动 + 1 低置信），已修订——
 > 核心统一解 **串行 confirm**（无未消化前序单才可 confirm），一并消掉连环单发布旁路、后单删前单
 > 冻结 heading 的悬空、放弃的 LIFO 语义；发布守卫②改为「changed 必须有草稿且哈希一致，clarifying
