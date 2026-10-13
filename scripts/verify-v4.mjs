@@ -1,6 +1,7 @@
-// V4（需求平台权威化·一期）：source_import 任务通道 + L2 建卡自动排 + 质检启动守卫 断言。
+// V4（需求平台权威化）：source_import 任务通道 + L2 建卡自动排 + 质检启动守卫 + 窗口 1 块级直接编辑 断言。
 // 覆盖：建卡自动排（只一次）、自建自领自落文件全链（完成回调落库→doc.json/comments.json）、
-// 分源封存守卫、块表空质检 failed 引导、块表就位后质检放行。
+// 分源封存守卫、块表空质检 failed 引导、块表就位后质检放行、
+// 块级编辑（diff 预览四态/PUT 应用 blk-ID/幂等/published 与活跃质检双守卫，v4-7）。
 // 用法：node scripts/verify-v4.mjs [baseUrl]   （默认 http://127.0.0.1:8080；服务从仓根启动）
 const base = process.argv[2] || 'http://127.0.0.1:8080'
 
@@ -112,6 +113,93 @@ check('质检 retry 重新排队', retryQ.status, 'queued')
 const nextQ2 = await call('POST', '/api/tasks/next?runner=verify-v4')
 check('块表就位：质检正常领取（running）', [nextQ2.type, nextQ2.status], ['quality_check', 'running'])
 await call('POST', `/api/tasks/${nextQ2.id}/done`, { result: '{"ok":1}' })
+
+// ===== 6. 窗口 1 块级直接编辑（v4-7：diff 预览 + PUT 应用 + 幂等 + 双守卫） =====
+// 第 2 段卡块（h1/p1/li1）：li1 挪最前 = move、p1 改文本 = edit、h1 不提交 = delete、空 id 新块 = insert
+const editBody = {
+  updatedBy: 'dev',
+  blocks: [
+    { id: 'v4-li1', type: 'list-item', marker: '1. ', depth: 1, text: '项一' },
+    { id: 'v4-p1', type: 'paragraph', text: '原文（已修订）。' },
+    { type: 'paragraph', text: '补充说明' }
+  ]
+}
+const preview = await call('POST', `/api/requirements/${req}/blocks/diff`, editBody)
+check('diff 预览：四态各一（LIS 判 move）', preview.counts, { edit: 1, insert: 1, delete: 1, move: 1 })
+check('diff 预览：按提交序 + delete 尾置',
+      preview.items.map(i => i.op), ['move', 'edit', 'insert', 'delete'])
+check('diff 预览：edit 行文本对照',
+      [preview.items.find(i => i.op === 'edit').oldText, preview.items.find(i => i.op === 'edit').newText],
+      ['原文。', '原文（已修订）。'])
+check('diff 预览：insert 行 blockId 为提交临时 id（空）',
+      preview.items.find(i => i.op === 'insert').blockId, '')
+
+const applied = await call('PUT', `/api/requirements/${req}/blocks`, editBody)
+check('PUT 应用：counts 同预览', applied.counts, preview.counts)
+const newId = applied.items.find(i => i.op === 'insert').blockId
+check('insert 服务端发 blk-<ulid>（26 字符 Crockford）',
+      [newId.startsWith('blk-'), newId.length, /^[0-9A-HJKMNP-TV-Z]{26}$/.test(newId.slice(4))],
+      [true, 30, true])
+
+const doc2 = await call('GET', `/api/requirements/${req}/doc.json`)
+check('doc.json：编辑生效（h1 软删不渲染、新序、改文本、新块）',
+      doc2.blocks.filter(b => b.type !== 'comment').map(b => [b.id, b.text]),
+      [['v4-li1', '项一'], ['v4-p1', '原文（已修订）。'], [newId, '补充说明']])
+check('doc.json：评论随宿主块（v4-p1 的 comment-refs 不受编辑影响）',
+      doc2.blocks.find(b => b.id === 'v4-p1').comments, 'c1')
+
+// 幂等：同数组重发（insert 块带正式 id）→ diff 为空、零写入
+const again = await call('PUT', `/api/requirements/${req}/blocks`, {
+  updatedBy: 'dev2',
+  blocks: [
+    { id: 'v4-li1', type: 'list-item', marker: '1. ', depth: 1, text: '项一' },
+    { id: 'v4-p1', type: 'paragraph', text: '原文（已修订）。' },
+    { id: newId, type: 'paragraph', text: '补充说明' }
+  ]
+})
+check('幂等重发：items 为空', [again.items, again.counts], [[], { edit: 0, insert: 0, delete: 0, move: 0 }])
+
+// 双守卫①：published 终态锁拒（发布链走通到 published）
+const { id: reqP } = await call('POST', '/api/requirements', {
+  name: 'V4 编辑终态锁验证', sourceType: 'text', sourceText: '# P', submittedBy: 'dev'
+})
+await call('POST', `/api/requirements/${reqP}/artifacts`, {
+  digest: { md: '', summary: 's', roles: [], features: [], flows: [], states: [] },
+  audit: { md: '', red: 0, yellow: 0, blue: 0, items: [] },
+  items: [{ seq: 'P1', level: 'yellow', theme: 't', question: 'q' }]
+})
+await call('PUT', `/api/requirements/${reqP}/answers/P1`, { answer: 'a' })
+await call('POST', `/api/requirements/${reqP}/publish`, { standardMd: '# P' })
+await expectErr('PUT', `/api/requirements/${reqP}/blocks`,
+                { updatedBy: 'dev', blocks: [{ type: 'paragraph', text: 'x' }] }, 409, 'published 终态锁拒编辑：409')
+
+// 双守卫②：活跃质检互斥（queued quality_check → 409；cancel 解除 → 放行）
+const qc = await call('POST', `/api/requirements/${req}/tasks`, { type: 'quality_check', note: '互斥验证' })
+await expectErr('PUT', `/api/requirements/${req}/blocks`, {
+  updatedBy: 'dev',
+  blocks: [
+    { id: 'v4-li1', type: 'list-item', marker: '1. ', depth: 1, text: '项一' },
+    { id: 'v4-p1', type: 'paragraph', text: '原文（已修订）。' },
+    { id: newId, type: 'paragraph', text: '补充说明' }
+  ]
+}, 409, '活跃质检互斥：409')
+await call('POST', `/api/tasks/${qc.id}/cancel`)
+const after = await call('PUT', `/api/requirements/${req}/blocks`, {
+  updatedBy: 'dev',
+  blocks: [
+    { id: 'v4-li1', type: 'list-item', marker: '1. ', depth: 1, text: '项一' },
+    { id: 'v4-p1', type: 'paragraph', text: '原文（已修订）。' },
+    { id: newId, type: 'paragraph', text: '补充说明' }
+  ]
+})
+check('质检解除后编辑放行（幂等空 items）', after.items, [])
+
+// 收尾清理：reqP 建卡自动排的 source_import 留在队列会干扰后续脚本，领走置 failed
+const leftover = await fetch(`${base}/api/tasks/next?runner=verify-v4`, { method: 'POST' })
+if (leftover.status === 200) {
+  const lt = await leftover.json()
+  await call('POST', `/api/tasks/${lt.id}/failed`, { error: 'verify-v4 收尾清理' })
+}
 
 // ===== 汇总 =====
 if (failures > 0) { console.error(`\nV4 验证失败：${failures} 项`); process.exit(1) }

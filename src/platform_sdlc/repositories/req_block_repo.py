@@ -39,3 +39,9 @@ class ReqBlockRepo:
         """块表是否为空（§2.4「块表为空=首次导入」：含软删行——曾有导入即非空）。"""
         return not bool(self.db.query_scalar(
             "SELECT EXISTS(SELECT 1 FROM req_block WHERE req_id=?)", (req_id,)))
+
+    def deleted_ids(self, req_id: str) -> set[str]:
+        """软删块 ID 集（v4-7 编辑面基线过期检测：提交 id 命中即拒——软删块的复活是三期放弃变更
+        的逆向语义，不属窗口 1 直接编辑，引导前端刷新基线）。"""
+        return {str(r["block_id"]) for r in self.db.query_all(
+            "SELECT block_id FROM req_block WHERE req_id=? AND deleted!=''", (req_id,))}

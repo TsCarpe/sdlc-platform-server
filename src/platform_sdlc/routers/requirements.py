@@ -55,6 +55,20 @@ def router(ctx: AppContext) -> APIRouter:
 
         return await asyncio.to_thread(load)
 
+    @r.put("/api/requirements/{req_id}/blocks")
+    async def put_blocks(req_id: str, request: Request) -> dict[str, Any]:
+        """窗口 1 块级直接编辑（DESIGN-v4 §5.3，EXEC v4-7）：全量块数组 → 服务端 diff（LIS 判 move）
+        → 事务应用（version+1 留痕 / insert 发 blk-<ulid> / delete 软删 / 整体重排 seq）。"""
+        body = await read_json(request, required=True)
+        return await asyncio.to_thread(ctx.services.blocks.apply_full_blocks, req_id, body)
+
+    @r.post("/api/requirements/{req_id}/blocks/diff")
+    async def blocks_diff_preview(req_id: str, request: Request) -> dict[str, Any]:
+        """diff 预览（dry-run 不落库）：保存前四态预览（edit/insert/delete/move）——三期变更单 diff
+        视图复用同形态；GET 载不动全量块数组，预览承载面为 POST。"""
+        body = await read_json(request, required=True)
+        return await asyncio.to_thread(ctx.services.blocks.preview_diff, req_id, body)
+
     @r.post("/api/requirements/{req_id}/artifacts")
     async def artifacts(req_id: str, request: Request) -> dict[str, Any]:
         body = await read_json(request, required=True)

@@ -12,11 +12,14 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
+import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from platform_sdlc.common import ApiException, is_json_list, is_json_obj, jint
+from platform_sdlc.common import ApiException, Times, is_json_list, is_json_obj, jint, jrequired, jtext
 from platform_sdlc.db import Database
 from platform_sdlc.models import BLOCK_ATTR_EXCLUDED, ReqBlock, ReqComment, Task
 from platform_sdlc.repositories import Repos
@@ -196,6 +199,203 @@ class BlockService:
         log.info("source_import 落库 %s（任务 #%s）：%s", req_id, task.id, out)
         return out
 
+    # ---------- 写面：窗口 1 块级直接编辑（DESIGN-v4 §5.3/§1 表，EXEC v4-7；三期变更单 draft 复用同一 diff） ----------
+
+    def apply_full_blocks(self, req_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        """全量块数组 → 服务端 diff（edit/insert/delete/move，LIS 判 move）→ 事务应用（§5.3：
+        diff 只在服务端一份，前端零 diff 代码）。守卫（§1 窗口 1 表）：拒 published、活跃质检互斥、
+        块表空无基线拒。insert 服务端发 blk-<ulid>（提交可带临时 id，同批 parent 引用按映射改写）；
+        delete 软删留痕；应用后按提交序整体重排 seq。幂等：同数组重发 diff 为空、零写入。"""
+        with self.db.tx():
+            self._guard_edit(req_id)
+            updated_by = jrequired(body, "updatedBy")  # 手填身份必填（§9：全量留痕，防误操作不防故意）
+            submitted = self._parse_submitted(body)
+            current = self.repos.req_block.list_by_req(req_id)
+            items = self._diff(req_id, submitted, current)
+            self._apply_edits(req_id, submitted, current, updated_by)
+        log.info("块级直接编辑 %s（by=%s）：%s", req_id, updated_by, _counts_of(items))
+        return self._diff_view(items)
+
+    def preview_diff(self, req_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        """diff 预览（dry-run）：同守卫同 diff 不落库——前端保存前四态预览（三期变更单 diff 视图
+        复用同形态）；insert 项 blockId 为提交临时 id（正式提交时服务端才发 blk-）。"""
+        self._guard_edit(req_id)
+        submitted = self._parse_submitted(body)
+        current = self.repos.req_block.list_by_req(req_id)
+        return self._diff_view(self._diff(req_id, submitted, current))
+
+    def _guard_edit(self, req_id: str) -> None:
+        """窗口 1 编辑守卫（§1 表）：published 终态锁拒（直接编辑是新写入口，继承的只有该谓词）；
+        活跃质检互斥（queued/running 的 quality_check——防产物 anchor 基于编辑混合态，与质检启动的
+        块表快照时序互斥；字面量沿 task.py T_QUALITY，import 会循环依赖）；块表空无基线拒。"""
+        r = self.repos.requirement.find(req_id)
+        if r is None:
+            raise ApiException(404, f"需求不存在：{req_id}")
+        if r.status == "published":
+            raise ApiException(409, "该需求已发布标准文档（终态锁定），不可直接编辑原文")
+        if self.repos.task.count_active(req_id, "quality_check") > 0:
+            raise ApiException(409, "存在排队中/执行中的质检任务，请等待质检完成后再编辑（防产物锚点基于编辑混合态）")
+        if self.repos.req_block.empty(req_id):
+            raise ApiException(409, "原文未导入（块表空，无编辑基线）：先完成 source_import")
+
+    def _parse_submitted(self, body: dict[str, Any]) -> list[_SubBlock]:
+        """提交面校验：非空数组、类型白名单（comment 不入块表——评论走 req_comment 通道）、id 去重、
+        parent 拓扑（§2.3：parent 必须在本批之前出现；行内子块（parent 指向 table-row）必须紧跟
+        父块或前一个同父子块——保证 seq 区间与 parent 递归两套机制答案一致，不产区间外孤儿）。"""
+        blocks = body.get("blocks")
+        if not is_json_list(blocks) or not blocks:
+            raise ApiException(400, "blocks 必须为非空数组（全量块数组契约，DESIGN-v4 §5.3）")
+        out: list[_SubBlock] = []
+        ids: set[str] = set()
+        first_pos: dict[str, int] = {}  # id → 首现位置（前向引用判定）
+        types: dict[str, str] = {}      # id → 类型（全量，供 parent 类型判定）
+        for i, b in enumerate(blocks):
+            if not is_json_obj(b):
+                raise ApiException(400, f"blocks[{i}] 不是对象")
+            btype = jtext(b, "type", "")
+            if btype == "comment":
+                raise ApiException(400, f"blocks[{i}] 为 comment 块：评论不入块表，全量块数组只含内容块")
+            if btype not in _BLOCK_TYPES:
+                raise ApiException(400, f"blocks[{i}] 非法块类型：{btype or '(空)'}")
+            bid = jtext(b, "id", "").strip()
+            if bid:
+                if bid in ids:
+                    raise ApiException(400, f"blocks[{i}] 块 ID 重复：{bid}")
+                ids.add(bid)
+                first_pos[bid] = i
+                types[bid] = btype
+            attrs = _clean_attrs({k: v for k, v in b.items() if k not in BLOCK_ATTR_EXCLUDED})
+            out.append(_SubBlock(block_id=bid, type=btype, text=jtext(b, "text", ""), attrs=attrs))
+        prev_id = ""
+        prev_inline_parent = ""
+        for i, sb in enumerate(out):
+            parent = str(sb.attrs.get("parent") or "")
+            if parent:
+                if first_pos.get(parent, len(out)) >= i:
+                    raise ApiException(400, f"blocks[{i}]（{sb.block_id or '新块'}）parent={parent}"
+                                            " 未在本批之前出现（父块缺失或前向引用）")
+                ptype = types.get(parent)
+                if ptype == "table-row" and parent != prev_id and parent != prev_inline_parent:
+                    raise ApiException(400, f"blocks[{i}]（{sb.block_id or '新块'}）为行内子块，"
+                                            f"必须紧随其表格行 {parent}（§2.3 写入约束）")
+                prev_inline_parent = parent if ptype == "table-row" else ""
+            else:
+                prev_inline_parent = ""
+            prev_id = sb.block_id
+        return out
+
+    def _diff(self, req_id: str, submitted: list[_SubBlock], current: list[ReqBlock]) -> list[_DiffItem]:
+        """全量块数组 vs 块表（未软删基线）→ 四态 items：同 ID 文本/属性变 = edit；不在基线 = insert
+        （服务端发新 ID，提交临时 id 亦然）；基线消失 = delete；顺序变 = move。move 判定 LIS：新序列中
+        保持旧 seq 相对顺序的最大子集为未动，其余才是 move——朴素逐位对比会把一次挪动判成 N 个 move，
+        把无关行拉进影响面（违背「宁可漏报不可误报」）；O(n log n) 几百块无压力。"""
+        cur_by_id = {b.block_id: b for b in current}
+        gone = self.repos.req_block.deleted_ids(req_id)
+        matched: list[tuple[int, int]] = []  # (提交序, 旧 seq) 按提交序
+        for i, sb in enumerate(submitted):
+            if not sb.block_id:
+                continue
+            cur = cur_by_id.get(sb.block_id)
+            if cur is not None:
+                matched.append((i, cur.seq))
+            elif sb.block_id in gone:
+                raise ApiException(409, f"块 {sb.block_id} 已删除（编辑基线过期）：请刷新原文后重试")
+        stable = _lis_positions(matched)
+        items: list[_DiffItem] = []
+        for i, sb in enumerate(submitted):
+            cur = cur_by_id.get(sb.block_id) if sb.block_id else None
+            if cur is None:
+                sb.is_new = True
+                item = _DiffItem(block_id=sb.block_id, op="insert", new_text=sb.text, new_attrs=dict(sb.attrs))
+                sb.item = item
+                items.append(item)
+                continue
+            old_attrs = _clean_attrs(_load_attrs(cur.attrs_json))
+            sb.changed = sb.text != cur.text or sb.attrs != old_attrs
+            sb.moved = i not in stable
+            if sb.changed:
+                items.append(_DiffItem(block_id=sb.block_id, op="edit", old_text=cur.text, new_text=sb.text,
+                                       old_attrs=old_attrs, new_attrs=dict(sb.attrs), moved=sb.moved))
+            elif sb.moved:
+                items.append(_DiffItem(block_id=sb.block_id, op="move", old_text=cur.text, new_text=sb.text))
+        sub_ids = {sb.block_id for sb in submitted if sb.block_id}
+        for b in current:
+            if b.block_id not in sub_ids:
+                items.append(_DiffItem(block_id=b.block_id, op="delete", old_text=b.text,
+                                       old_attrs=_clean_attrs(_load_attrs(b.attrs_json))))
+        return items
+
+    def _apply_edits(self, req_id: str, submitted: list[_SubBlock],
+                     current: list[ReqBlock], updated_by: str) -> None:
+        """事务内应用（调用方已开 tx，§5.5 confirm 同款语义）：edit/move version+1 留痕、insert 落
+        blk-<ulid> 新行（version=1，updated_by 记创建人）、delete 软删（deleted=时间戳）、存留块按
+        提交序整体重排 seq=(i+1)*1000（§2.2 重排常规化；软删行不动——冻结面不引用 seq 数值因此无害）。"""
+        at = Times.now()
+        id_map: dict[str, str] = {}
+        for sb in submitted:
+            if not sb.is_new:
+                continue
+            new_id = self._new_block_id(req_id)
+            if sb.block_id:
+                id_map[sb.block_id] = new_id  # 临时 id → 正式 id（同批行内子块 parent 引用改写）
+            sb.block_id = new_id
+            if sb.item is not None:
+                sb.item.block_id = new_id  # 出参带正式锚点（前端刷新引用）
+        if id_map:
+            for sb in submitted:
+                parent = str(sb.attrs.get("parent") or "")
+                if parent in id_map:
+                    sb.attrs["parent"] = id_map[parent]
+        edit_rows = [(sb.text, _dumps(sb.attrs), at, updated_by, req_id, sb.block_id)
+                     for sb in submitted if sb.changed]
+        if edit_rows:
+            self.db.executemany(
+                "UPDATE req_block SET text=?, attrs_json=?, version=version+1, updated_at=?, updated_by=?"
+                " WHERE req_id=? AND block_id=?", edit_rows)
+        move_rows = [(at, updated_by, req_id, sb.block_id)
+                     for sb in submitted if sb.moved and not sb.changed]
+        if move_rows:
+            self.db.executemany(
+                "UPDATE req_block SET version=version+1, updated_at=?, updated_by=? WHERE req_id=? AND block_id=?",
+                move_rows)
+        insert_rows = [(req_id, sb.block_id, (i + 1) * 1000, sb.type, sb.text, _dumps(sb.attrs), at, updated_by)
+                       for i, sb in enumerate(submitted) if sb.is_new]
+        if insert_rows:
+            self.db.executemany(
+                "INSERT INTO req_block(req_id,block_id,seq,type,text,attrs_json,version,updated_at,updated_by)"
+                " VALUES(?,?,?,?,?,?,1,?,?)", insert_rows)
+        sub_ids = {sb.block_id for sb in submitted}
+        delete_rows = [(at, at, updated_by, req_id, b.block_id)
+                       for b in current if b.block_id not in sub_ids]
+        if delete_rows:
+            self.db.executemany(
+                "UPDATE req_block SET deleted=?, updated_at=?, updated_by=? WHERE req_id=? AND block_id=?",
+                delete_rows)
+        seq_rows = [((i + 1) * 1000, req_id, sb.block_id)
+                    for i, sb in enumerate(submitted) if not sb.is_new]
+        if seq_rows:
+            self.db.executemany("UPDATE req_block SET seq=? WHERE req_id=? AND block_id=?", seq_rows)
+
+    def _new_block_id(self, req_id: str) -> str:
+        """blk-<ulid>（§2.2：随机派生禁内容哈希——重复文本是常态，内容哈希即主键冲突）；
+        碰撞即重抽（单写者事务内 EXISTS 检查无竞态）。"""
+        while True:
+            bid = "blk-" + _new_ulid26()
+            if not self.db.query_scalar(
+                    "SELECT EXISTS(SELECT 1 FROM req_block WHERE req_id=? AND block_id=?)", (req_id, bid)):
+                return bid
+
+    @staticmethod
+    def _diff_view(items: list[_DiffItem]) -> dict[str, Any]:
+        out: list[dict[str, Any]] = []
+        for it in items:
+            row: dict[str, Any] = {"blockId": it.block_id, "op": it.op, "oldText": it.old_text,
+                                   "newText": it.new_text, "oldAttrs": it.old_attrs, "newAttrs": it.new_attrs}
+            if it.moved:
+                row["moved"] = True  # edit 且顺序变：diff 视图附加提示（op 语义不变）
+            out.append(row)
+        return {"items": out, "counts": _counts_of(items)}
+
 
 def _comment_chain(req_id: str, cb: dict[str, Any]) -> list[ReqComment]:
     """comment 块（parse_doc 契约）→ req_comment 链：thread 首条为根，后续 reply_to 逐条；
@@ -228,6 +428,101 @@ def _load_attrs(raw: str) -> dict[str, Any]:
     except json.JSONDecodeError:
         return {}
     return dict(v) if is_json_obj(v) else {}
+
+
+# ---------- 窗口 1 直接编辑：模型 / LIS / blk-ID（DESIGN-v4 §5.3/§2.2，EXEC v4-7） ----------
+
+_BLOCK_TYPES = frozenset({"title", "heading", "paragraph", "list-item",
+                          "table-row", "image", "attachment", "whiteboard"})
+
+_ULID_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"  # Crockford Base32（无 I/L/O/U）
+
+
+@dataclass
+class _SubBlock:
+    """提交块（编辑面）：block_id 空/不在未软删基线 = insert（is_new，服务端发 blk-，
+    提交临时 id 亦可——同批 parent 引用按映射改写）；changed/moved 由 diff 打标供应用阶段消费。"""
+
+    block_id: str
+    type: str
+    text: str
+    attrs: dict[str, Any]
+    is_new: bool = False
+    changed: bool = False
+    moved: bool = False
+    item: _DiffItem | None = None
+
+
+@dataclass
+class _DiffItem:
+    """diff 四态行（§5.3）：列语义对齐三期 req_change_item（old/new_text + old/new_attrs），
+    变更单 draft（v4-11）直接复用本结构与 _diff——diff 只在服务端一份。"""
+
+    block_id: str
+    op: str  # edit | insert | delete | move
+    old_text: str = ""
+    new_text: str = ""
+    old_attrs: dict[str, Any] | None = None
+    new_attrs: dict[str, Any] | None = None
+    moved: bool = False  # edit 且顺序变（diff 视图提示；op 语义不变）
+
+
+def _new_ulid26() -> str:
+    """26 字符 ULID = 48bit 毫秒时间戳 + 80bit 随机（Crockford Base32 编码 128bit），自实现不引新依赖。"""
+    value = (int(time.time() * 1000) << 80) | int.from_bytes(os.urandom(10), "big")
+    chars = bytearray(26)
+    for i in range(25, -1, -1):
+        chars[i] = ord(_ULID_ALPHABET[value & 0x1F])
+        value >>= 5
+    return chars.decode("ascii")
+
+
+def _lis_positions(pairs: list[tuple[int, int]]) -> set[int]:
+    """最长严格递增子序列（O(n log n) patience）：pairs = [(提交序, 旧 seq)] 按提交序——返回属于
+    LIS 的提交序集合（move 判定的未动集）。旧 seq 全库唯一，严格递增即保持相对顺序。"""
+    if not pairs:
+        return set()
+    tail_vals: list[int] = []   # 各长度递增子序列的最小尾元素（seq 值）
+    tail_idx: list[int] = []    # 对应 pairs 下标（回溯用）
+    prev: list[int] = [-1] * len(pairs)
+    for i, (_, seq) in enumerate(pairs):
+        lo, hi = 0, len(tail_vals)
+        while lo < hi:  # bisect_left：严格递增（相等元素替换不延长）
+            mid = (lo + hi) // 2
+            if tail_vals[mid] < seq:
+                lo = mid + 1
+            else:
+                hi = mid
+        if lo == len(tail_vals):
+            tail_vals.append(seq)
+            tail_idx.append(i)
+        else:
+            tail_vals[lo] = seq
+            tail_idx[lo] = i
+        prev[i] = tail_idx[lo - 1] if lo > 0 else -1
+    marks: set[int] = set()
+    k = tail_idx[-1]
+    while k != -1:
+        marks.add(pairs[k][0])
+        k = prev[k]
+    return marks
+
+
+def _clean_attrs(attrs: dict[str, Any]) -> dict[str, Any]:
+    """剥 None 值键：导入落库存过 parent:null 一类缺省标记，编辑器省略该键的未动块与库中 null 键块
+    必须等价——否则 diff 误判 edit（属性比较与落库统一过本函数）。"""
+    return {k: v for k, v in attrs.items() if v is not None}
+
+
+def _dumps(attrs: dict[str, Any]) -> str:
+    return json.dumps(attrs, ensure_ascii=False, separators=(",", ":"))
+
+
+def _counts_of(items: list[_DiffItem]) -> dict[str, int]:
+    counts = {"edit": 0, "insert": 0, "delete": 0, "move": 0}
+    for it in items:
+        counts[it.op] += 1
+    return counts
 
 
 def _thread_groups(comments: list[ReqComment]) -> dict[str, list[dict[str, Any]]]:

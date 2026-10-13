@@ -297,6 +297,90 @@
     }
    }
   },
+  "/api/requirements/{req_id}/blocks": {
+   "put": {
+    "summary": "Put Blocks",
+    "description": "窗口 1 块级直接编辑（DESIGN-v4 §5.3，EXEC v4-7）：全量块数组 → 服务端 diff（LIS 判 move）\n→ 事务应用（version+1 留痕 / insert 发 blk-<ulid> / delete 软删 / 整体重排 seq）。",
+    "operationId": "put_blocks_api_requirements__req_id__blocks_put",
+    "parameters": [
+     {
+      "name": "req_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Req Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Put Blocks Api Requirements  Req Id  Blocks Put"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/requirements/{req_id}/blocks/diff": {
+   "post": {
+    "summary": "Blocks Diff Preview",
+    "description": "diff 预览（dry-run 不落库）：保存前四态预览（edit/insert/delete/move）——三期变更单 diff\n视图复用同形态；GET 载不动全量块数组，预览承载面为 POST。",
+    "operationId": "blocks_diff_preview_api_requirements__req_id__blocks_diff_post",
+    "parameters": [
+     {
+      "name": "req_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Req Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Blocks Diff Preview Api Requirements  Req Id  Blocks Diff Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/requirements/{req_id}/artifacts": {
    "post": {
     "summary": "Artifacts",
