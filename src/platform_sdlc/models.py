@@ -120,6 +120,7 @@ class ClarifyItem:
     anchor: str = ""
     status: str = ""
     note: str = ""
+    origin: str = ""  # v4.1（DESIGN-v4 §6.3）：skill|incremental|local，删除/合并规则按来源
 
     @classmethod
     def from_row(cls, row: Row) -> ClarifyItem:
@@ -137,6 +138,69 @@ class ClarifyItem:
             anchor=_s(row, "anchor"),
             status=_s(row, "status"),
             note=_s(row, "note"),
+            origin=_s(row, "origin"),
+        )
+
+
+@dataclass
+class ReqBlock:
+    """v4.1 原文块（DESIGN-v4 §2.2）：一行一块，锚点（block_id）即主键；派生字段（path/ordinal）读时推导。"""
+
+    req_id: str
+    block_id: str
+    seq: int
+    type: str
+    text: str = ""
+    attrs_json: str = ""
+    version: int = 1
+    updated_at: str | None = None
+    updated_by: str | None = None
+    deleted: str = ""
+
+    @classmethod
+    def from_row(cls, row: Row) -> ReqBlock:
+        return cls(
+            req_id=_s(row, "req_id"),
+            block_id=_s(row, "block_id"),
+            seq=_i(row, "seq"),
+            type=_s(row, "type"),
+            text=_s(row, "text"),
+            attrs_json=_s(row, "attrs_json"),
+            version=_i(row, "version"),
+            updated_at=_sn(row, "updated_at"),
+            updated_by=_sn(row, "updated_by"),
+            deleted=_s(row, "deleted"),
+        )
+
+
+@dataclass
+class ReqComment:
+    """v4.1 评论（DESIGN-v4 §4.2）：块级（block_id 非空）/卡片级（空）双锚；external_id = 飞书 comment-id。"""
+
+    id: int
+    req_id: str
+    block_id: str = ""
+    origin: str = "platform"
+    external_id: str = ""
+    author: str = ""
+    text: str = ""
+    reply_to: int | None = None
+    resolved: int = 0
+    created_at: str | None = None
+
+    @classmethod
+    def from_row(cls, row: Row) -> ReqComment:
+        return cls(
+            id=_i(row, "id"),
+            req_id=_s(row, "req_id"),
+            block_id=_s(row, "block_id"),
+            origin=_s(row, "origin"),
+            external_id=_s(row, "external_id"),
+            author=_s(row, "author"),
+            text=_s(row, "text"),
+            reply_to=_in(row, "reply_to"),
+            resolved=_i(row, "resolved"),
+            created_at=_sn(row, "created_at"),
         )
 
 

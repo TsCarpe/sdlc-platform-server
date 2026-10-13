@@ -2,7 +2,7 @@
 -- v2.1 重建说明：原文件在架构升级事故中损坏，此版自 live SQLite（platform.db）.schema 提取生成，结构以运行库为权威；列注释从 git 历史与代码整理
 
 CREATE TABLE IF NOT EXISTS requirement ( id TEXT PRIMARY KEY, name TEXT NOT NULL, iter TEXT DEFAULT '', source_type TEXT NOT NULL, source_url TEXT DEFAULT '', source_text TEXT DEFAULT '', status TEXT NOT NULL, submitted_by TEXT DEFAULT '', standard_doc TEXT DEFAULT '', created_at TEXT, synced_at TEXT, domains TEXT DEFAULT '', deleted_at TEXT DEFAULT '', risk_tier TEXT DEFAULT '', target_repo TEXT DEFAULT '', design_final_json TEXT DEFAULT '', target_repos TEXT DEFAULT '' );
-CREATE TABLE IF NOT EXISTS clarify_item ( id INTEGER PRIMARY KEY AUTOINCREMENT, req_id TEXT NOT NULL, seq TEXT NOT NULL, level TEXT NOT NULL, theme TEXT DEFAULT '', question TEXT NOT NULL, ctx TEXT DEFAULT '', answer TEXT DEFAULT '', answered_at TEXT, quote TEXT DEFAULT '', anchor TEXT DEFAULT '', status TEXT DEFAULT '', note TEXT DEFAULT '', UNIQUE (req_id, seq) );
+CREATE TABLE IF NOT EXISTS clarify_item ( id INTEGER PRIMARY KEY AUTOINCREMENT, req_id TEXT NOT NULL, seq TEXT NOT NULL, level TEXT NOT NULL, theme TEXT DEFAULT '', question TEXT NOT NULL, ctx TEXT DEFAULT '', answer TEXT DEFAULT '', answered_at TEXT, quote TEXT DEFAULT '', anchor TEXT DEFAULT '', status TEXT DEFAULT '', note TEXT DEFAULT '', origin TEXT DEFAULT '', UNIQUE (req_id, seq) );
 CREATE TABLE IF NOT EXISTS artifact ( req_id TEXT NOT NULL, type TEXT NOT NULL, markdown TEXT DEFAULT '', content_json TEXT DEFAULT '', version INTEGER NOT NULL DEFAULT 1, pushed_at TEXT, PRIMARY KEY (req_id, type) );
 CREATE TABLE IF NOT EXISTS fr_point ( req_id TEXT NOT NULL, id TEXT NOT NULL, name TEXT DEFAULT '', source TEXT DEFAULT '', group_name TEXT DEFAULT '', module TEXT DEFAULT '', anchor TEXT DEFAULT '', PRIMARY KEY (req_id, id) );
 CREATE TABLE IF NOT EXISTS media ( req_id TEXT NOT NULL, media_id TEXT NOT NULL, sha256 TEXT DEFAULT '', name TEXT DEFAULT '', mime TEXT DEFAULT '', bytes INTEGER NOT NULL DEFAULT 0, created_at TEXT, PRIMARY KEY (req_id, media_id) );
@@ -24,6 +24,39 @@ CREATE TABLE IF NOT EXISTS iteration ( name TEXT PRIMARY KEY, note TEXT DEFAULT 
 CREATE TABLE IF NOT EXISTS gate_round ( id INTEGER PRIMARY KEY AUTOINCREMENT, req_id TEXT NOT NULL, round_no INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'pending', checks_json TEXT DEFAULT '', baseline_json TEXT DEFAULT '', released_at TEXT, released_by TEXT DEFAULT '', created_by TEXT DEFAULT '', opened_at TEXT, UNIQUE (req_id, round_no) );
 CREATE TABLE IF NOT EXISTS gate_issue ( id INTEGER PRIMARY KEY AUTOINCREMENT, round_id INTEGER NOT NULL, code TEXT NOT NULL, sev TEXT DEFAULT '', theme TEXT DEFAULT '', role TEXT DEFAULT '', scene TEXT DEFAULT '', quote TEXT DEFAULT '', loc TEXT DEFAULT '', basis TEXT DEFAULT '', div_flag INTEGER DEFAULT 0, tradeoff INTEGER DEFAULT 0, merged_unit INTEGER DEFAULT 0, filed INTEGER DEFAULT 0, verdict TEXT DEFAULT '', verdict_note TEXT DEFAULT '', verdict_by TEXT DEFAULT '', verdict_at TEXT, rev_location TEXT DEFAULT '', rev_status TEXT DEFAULT '' );
 CREATE INDEX IF NOT EXISTS idx_gate_issue_round ON gate_issue(round_id);
+-- v4.1 需求平台权威化（DESIGN-v4 §2.2）：原文块表——一行一块，锚点（块 ID）即主键；导入沿用飞书块 ID，
+-- 平台编辑新发 blk-<ulid>（禁内容哈希——重复文本是常态）；派生字段（path/ordinal）读时推导不落库；
+-- comment 不入块表（评论单一权威在 req_comment）；seq 间隔 1000，重排=事务内整体重排属常规操作
+CREATE TABLE IF NOT EXISTS req_block (
+  req_id TEXT NOT NULL,
+  block_id TEXT NOT NULL,
+  seq INTEGER NOT NULL,
+  type TEXT NOT NULL,
+  text TEXT DEFAULT '',
+  attrs_json TEXT DEFAULT '',
+  version INTEGER NOT NULL DEFAULT 1,
+  updated_at TEXT,
+  updated_by TEXT,
+  deleted TEXT DEFAULT '',
+  PRIMARY KEY (req_id, block_id)
+);
+CREATE INDEX IF NOT EXISTS idx_req_block_req_seq ON req_block(req_id, seq);
+-- v4.1 评论表（DESIGN-v4 §4.2）：块级（block_id 非空）/卡片级（空）双锚；origin 区分平台评论与飞书导入；
+-- external_id = 飞书 comment-id，幂等重导的唯一定位键
+CREATE TABLE IF NOT EXISTS req_comment (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  req_id TEXT NOT NULL,
+  block_id TEXT DEFAULT '',
+  origin TEXT DEFAULT 'platform',
+  external_id TEXT DEFAULT '',
+  author TEXT DEFAULT '',
+  text TEXT NOT NULL,
+  reply_to INTEGER,
+  resolved INTEGER DEFAULT 0,
+  created_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_req_comment_req ON req_comment(req_id);
+CREATE INDEX IF NOT EXISTS idx_req_comment_ext ON req_comment(req_id, external_id);
 
 -- 反向索引等读时聚合不落库；存量库补列逻辑见 SchemaMigrator
 

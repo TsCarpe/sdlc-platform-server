@@ -29,9 +29,9 @@ class ClarifyItemRepo:
 
     def insert(self, c: ClarifyItem) -> None:
         self.db.execute(
-            "INSERT INTO clarify_item(req_id,seq,level,theme,question,ctx,answer,answered_at,quote,anchor,status,note)"
-            " VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
-            (c.req_id, c.seq, c.level, c.theme, c.question, c.ctx, c.answer, c.answered_at, c.quote, c.anchor, c.status, c.note),
+            "INSERT INTO clarify_item(req_id,seq,level,theme,question,ctx,answer,answered_at,quote,anchor,status,note,origin)"
+            " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (c.req_id, c.seq, c.level, c.theme, c.question, c.ctx, c.answer, c.answered_at, c.quote, c.anchor, c.status, c.note, c.origin),
         )
 
     def insert_many(self, items: list[ClarifyItem]) -> None:
@@ -39,9 +39,9 @@ class ClarifyItemRepo:
         if not items:
             return
         self.db.executemany(
-            "INSERT INTO clarify_item(req_id,seq,level,theme,question,ctx,answer,answered_at,quote,anchor,status,note)"
-            " VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
-            [(c.req_id, c.seq, c.level, c.theme, c.question, c.ctx, c.answer, c.answered_at, c.quote, c.anchor, c.status, c.note)
+            "INSERT INTO clarify_item(req_id,seq,level,theme,question,ctx,answer,answered_at,quote,anchor,status,note,origin)"
+            " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            [(c.req_id, c.seq, c.level, c.theme, c.question, c.ctx, c.answer, c.answered_at, c.quote, c.anchor, c.status, c.note, c.origin)
              for c in items],
         )
 

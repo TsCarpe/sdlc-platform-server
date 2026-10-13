@@ -13,6 +13,8 @@ from platform_sdlc.repositories.fr_point_repo import FrPointRepo
 from platform_sdlc.repositories.gate_repo import GateRepo
 from platform_sdlc.repositories.iteration_repo import IterationRepo
 from platform_sdlc.repositories.media_repo import MediaRepo
+from platform_sdlc.repositories.req_block_repo import ReqBlockRepo
+from platform_sdlc.repositories.req_comment_repo import ReqCommentRepo
 from platform_sdlc.repositories.requirement_repo import RequirementRepo
 from platform_sdlc.repositories.task_repo import TaskRepo
 from platform_sdlc.repositories.test_case_repo import TestCaseRepo
@@ -33,6 +35,8 @@ class Repos:
     draft: DraftRepo
     iteration: IterationRepo
     gate: GateRepo
+    req_block: ReqBlockRepo
+    req_comment: ReqCommentRepo
 
     @classmethod
     def create(cls, db: Database) -> Repos:
@@ -48,4 +52,6 @@ class Repos:
             draft=DraftRepo(db),
             iteration=IterationRepo(db),
             gate=GateRepo(db),
+            req_block=ReqBlockRepo(db),
+            req_comment=ReqCommentRepo(db),
         )

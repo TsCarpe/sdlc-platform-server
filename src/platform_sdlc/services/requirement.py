@@ -134,6 +134,8 @@ class RequirementService:
                     ctx=jtext(n, "ctx", ""), answer=jtext(n, "answer", ""),
                     answered_at=None, quote=jtext(n, "quote", ""), anchor=jtext(n, "anchor", ""),
                     status="pending",  # 重建行基线（D21）：携带/skill 自带 answer 分支另行覆写
+                    origin="skill",  # v4.1（DESIGN-v4 §6.3/§10）：重推产生的机器行来源标记，
+                    # 与账本回填同批——否则首次重推把存量回填冲零，「按来源合并」匹配不到任何行
                 )
                 if seq in seqs:
                     raise ApiException(400, f"澄清清单 seq 重复：{seq}")
