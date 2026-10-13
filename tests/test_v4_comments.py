@@ -202,6 +202,8 @@ def test_comment_and_escalate_on_published(env: tuple[TestClient, Database, Repo
         "digest": {"md": "", "summary": "s", "roles": [], "features": [], "flows": [], "states": []},
         "audit": {"md": "", "red": 0, "yellow": 0, "blue": 0, "items": []},
         "items": [{"seq": "P1", "level": "yellow", "theme": "t", "question": "q"}]})
+    # v4-9 后 L 行经重推幸存，计入发布守卫（澄清全处置）——L01 也须处置才可发布
+    client.put(f"/api/requirements/{req_id}/answers/L01", json={"answer": "已处置"})
     client.put(f"/api/requirements/{req_id}/answers/P1", json={"answer": "a"})
     client.post(f"/api/requirements/{req_id}/publish", json={"standardMd": "# x"})
 
@@ -211,3 +213,55 @@ def test_comment_and_escalate_on_published(env: tuple[TestClient, Database, Repo
     pub_e = client.post(f"/api/requirements/{req_id}/comments/{pub_cm['id']}/escalate", json={})
     assert pub_e.status_code == 200
     assert db.query_scalar("SELECT status FROM requirement WHERE id=?", (req_id,)) == "published"
+
+
+# ---------- v4-9：push_artifacts 按来源合并（§12 二期判据：L 系行经重推不丢） ----------
+
+def test_l_series_survives_repush(env: tuple[TestClient, Database, Repos]) -> None:
+    """机器行按来源合并：重推删 skill+incremental、保留 local；已答保留规则不变
+    （P 系同 seq 同文本携带、漂移不携带）。"""
+    client, db, repos = env
+    req_id = _mk_card(client)
+    _seed_block(repos, req_id)
+
+    def _push(items: list[dict[str, str]]) -> Any:
+        return client.post(f"/api/requirements/{req_id}/artifacts", json={
+            "digest": {"md": "", "summary": "s", "roles": [], "features": [], "flows": [], "states": []},
+            "audit": {"md": "", "red": 0, "yellow": 0, "blue": 0, "items": []},
+            "items": items,
+        })
+
+    # 首推 P1/P2 → 升级评论得 L01 → 作答 L01 与 P1
+    _push([{"seq": "P1", "level": "yellow", "theme": "t", "question": "q1"},
+           {"seq": "P2", "level": "yellow", "theme": "t", "question": "q2"}])
+    cm = _post_comment(client, req_id, blockId="c-p1", author="张三", text="口径疑问").json()
+    assert client.post(f"/api/requirements/{req_id}/comments/{cm['id']}/escalate",
+                       json={}).json()["seq"] == "L01"
+    client.put(f"/api/requirements/{req_id}/answers/L01", json={"answer": "按口径 A"})
+    client.put(f"/api/requirements/{req_id}/answers/P1", json={"answer": "已答一"})
+
+    # 重推：P1 文本漂移（不携带）、P2 同文本（携带已答？P2 未答——零答行重建）、L01 不在新清单
+    out = _push([{"seq": "P1", "level": "yellow", "theme": "t", "question": "q1 已改"},
+                 {"seq": "P2", "level": "yellow", "theme": "t", "question": "q2"},
+                 {"seq": "P3", "level": "yellow", "theme": "t", "question": "q3"}]).json()
+    assert out["ok"] is True and out["changedQuestions"] == 1
+
+    answers = {a["seq"]: a for a in client.get(f"/api/requirements/{req_id}/answers").json()}
+    # L01 经重推不丢：已答内容原样保留 + origin 出参区分两族
+    assert set(answers) == {"P1", "P2", "P3", "L01"}
+    assert answers["L01"]["answer"] == "按口径 A" and answers["L01"]["origin"] == "local"
+    # P1 文本漂移不携带旧答；P 系重建行 origin=skill
+    assert answers["P1"]["answer"] == "" and answers["P1"]["question"] == "q1 已改"
+    assert answers["P2"]["origin"] == "skill" and answers["P3"]["origin"] == "skill"
+
+    # detail.items 同步带 origin（_WIRE 契约键）
+    detail = client.get(f"/api/requirements/{req_id}").json()
+    origins = {i["seq"]: i.get("origin") for i in detail["items"]}
+    assert origins["L01"] == "local" and origins["P1"] == "skill"
+
+    # 再升一条 L02：next_local_seq 从幸存 L01 续编（不是从 1 重来）
+    cm2 = _post_comment(client, req_id, author="李四", text="新疑问").json()
+    assert client.post(f"/api/requirements/{req_id}/comments/{cm2['id']}/escalate",
+                       json={}).json()["seq"] == "L02"
+    assert db.query_scalar("SELECT COUNT(*) FROM clarify_item WHERE req_id=? AND seq LIKE 'L%'",
+                           (req_id,)) == 2

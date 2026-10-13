@@ -101,8 +101,9 @@ class RequirementService:
         return r
 
     def push_artifacts(self, req_id: str, body: dict[str, Any]) -> dict[str, Any]:
-        """推送质检产物。全量替换语义，但按 seq+问题文本保留平台已答内容——重推不冲掉人工作答；
-        seq 相同而问题文本已变（P 编号漂移）时不携带，防旧答复张冠李戴。tx 全程持锁。"""
+        """推送质检产物。机器行按来源合并（v4-9，DESIGN-v4 §6.3/§9）：重推删 skill+incremental 行、
+        保留 local 行（评论升级 L 系经重推不丢）；已答保留按 seq+问题文本不变携带——seq 相同而
+        问题文本已变（P 编号漂移）时不携带，防旧答复张冠李戴。tx 全程持锁。"""
         with self.db.tx():
             r = self.repos.requirement.find(req_id)
             if r is None:
@@ -176,7 +177,7 @@ class RequirementService:
                     c.answered_at = Times.now()
                     c.status = "answered"
 
-            self.repos.clarify_item.delete_by_req(req_id)
+            self.repos.clarify_item.delete_machine_by_req(req_id)
             self.repos.clarify_item.insert_many(parsed)  # 批量重建（AUDIT D2-4：循环逐条消除）
 
             at = Times.now()
@@ -240,6 +241,7 @@ class RequirementService:
             out.append({
                 "seq": c.seq, "level": c.level, "theme": c.theme, "question": c.question,
                 "answer": c.answer, "answeredAt": c.answered_at, "status": c.status, "note": c.note,
+                "origin": c.origin,  # v4-9：P/L 两族呈现区分（skill/incremental=机器，local=评论升级）
             })
         return out
 

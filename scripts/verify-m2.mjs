@@ -39,7 +39,7 @@ let tierBad = false
 try { await call('POST', '/api/requirements', { name: 'tier 非法值演练', sourceType: 'text', sourceText: 'x', risk_tier: 'D' }) }
 catch (e) { tierBad = e.message.includes('非法 risk_tier') }
 check('risk_tier：非法值 400', tierBad, true)
-await call('POST', `/api/requirements/${created.id}/artifacts`, {
+const pushPayload = {
   digest: {
     summary: req.digest.summary, roles: req.digest.roles, features: req.digest.features || [],
     fr_points: req.digest.fr.map(f => ({ id: f.id, name: f.name })), md: '',
@@ -49,8 +49,20 @@ await call('POST', `/api/requirements/${created.id}/artifacts`, {
   items: req.checklist.map(c => ({
     seq: c.id, level: c.level, theme: c.theme, question: c.q, ctx: c.ctx, answer: c.answer || '', quote: c.quote || ''
   }))
-})
+}
+await call('POST', `/api/requirements/${created.id}/artifacts`, pushPayload)
 console.log('演练副本：', created.id)
+
+// 1.0 v4-9 判据（DESIGN-v4 §12 二期）：L 系行经重推不丢——评论升级 → 作答 → 重推机器行 → local 幸存
+const lc = await call('POST', `/api/requirements/${created.id}/comments`, { author: 'dev', text: '演练：范围边界疑问' })
+await call('POST', `/api/requirements/${created.id}/comments/${lc.id}/escalate`, {})
+await call('PUT', `/api/requirements/${created.id}/answers/L01`, { answer: '演练：按口径 A' })
+const repush = await call('POST', `/api/requirements/${created.id}/artifacts`, pushPayload)
+const afterRepush = await call('GET', `/api/requirements/${created.id}/answers`)
+const l01 = afterRepush.find(a => a.seq === 'L01')
+check('v4-9：L01 经重推不丢（已答保留 + origin=local）', [l01.answer, l01.origin], ['演练：按口径 A', 'local'])
+check('v4-9：机器行重建 origin=skill（两族区分）', afterRepush.find(a => a.seq === req.checklist[0].id).origin, 'skill')
+check('v4-9：重推 carriedAnswers=机器行零答基线', repush.carriedAnswers, 0)
 
 // 1.1 risk_tier 后到覆盖：digest.risk_tier=A 应覆盖建卡值 B（DESIGN-v2.2 D19）
 const tier1 = await call('GET', `/api/requirements/${created.id}`)
@@ -79,15 +91,15 @@ for (const it of defItems) {
   await call('PUT', `/api/requirements/${created.id}/answers/${it.seq}`, { status: 'deferred', note: '演练：下期处理' })
 }
 const after = await call('GET', `/api/requirements/${created.id}`)
-check('混合处置（答+驳+挂）后 answered=31', after.answered, 31)
+check('混合处置（答+驳+挂）后 answered=32（含 L01）', after.answered, 32)
 check('驳回落库 status/note', [after.items.find(i => i.seq === rejItem.seq).status, after.items.find(i => i.seq === rejItem.seq).answer], ['rejected', ''])
 
 // 4. 拉回答复（sdlc-sync pull 的 API 侧）+ 发布（本地重算 digest 后合成标准文档推回）
 const answers = await call('GET', `/api/requirements/${created.id}/answers`)
-check('拉回答复：条数', answers.length, 31)
+check('拉回答复：条数（30 P + L01）', answers.length, 32)
 check('拉回答复：输出含处置状态', [answers.find(a => a.seq === rejItem.seq).status, answers.find(a => a.seq === defItems[0].seq).status], ['rejected', 'deferred'])
 const answeredList = answers.filter(a => a.answer)
-check('拉回答复：已答条数', answeredList.length, 28)
+check('拉回答复：已答条数（含 L01）', answeredList.length, 29)
 const md = [
   '# 标准需求文档 · ' + req.name + '（演练）', '',
   '## 澄清结论', '',

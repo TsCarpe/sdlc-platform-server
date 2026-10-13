@@ -24,8 +24,12 @@ class ClarifyItemRepo:
                 out[c.seq] = c
         return out
 
-    def delete_by_req(self, req_id: str) -> None:
-        self.db.execute("DELETE FROM clarify_item WHERE req_id=?", (req_id,))
+    def delete_machine_by_req(self, req_id: str) -> None:
+        """按来源合并（v4-9，DESIGN-v4 §6.3/§9）：重推删机器行（skill+incremental），保留 local
+        （评论升级 L 系行经重推不丢——§12 二期判据；增量接编的 P 系行在全量新清单无同 seq 项时
+        回填无目标即丢，属 §6.3 如实表述的预期语义）。"""
+        self.db.execute(
+            "DELETE FROM clarify_item WHERE req_id=? AND origin IN ('skill','incremental')", (req_id,))
 
     def insert(self, c: ClarifyItem) -> None:
         self.db.execute(

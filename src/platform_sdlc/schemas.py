@@ -33,7 +33,7 @@ _WIRE: dict[type[Any], tuple[str, ...]] = {
     Requirement: ("id", "name", "iter", "source_type", "source_url", "source_text", "status",
                   "submitted_by", "standard_doc", "created_at", "synced_at", "risk_tier"),
     ClarifyItem: ("id", "req_id", "seq", "level", "theme", "question", "ctx", "answer",
-                  "answered_at", "quote", "anchor", "status", "note"),
+                  "answered_at", "quote", "anchor", "status", "note", "origin"),  # origin=v4.9 契约增键
     Artifact: ("req_id", "type", "markdown", "content_json", "version", "pushed_at"),
     FrPoint: ("req_id", "id", "name", "source", "group", "module", "anchor"),
     MediaFile: ("req_id", "media_id", "sha256", "name", "mime", "bytes", "created_at"),
