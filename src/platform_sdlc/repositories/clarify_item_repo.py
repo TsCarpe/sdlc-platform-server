@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from platform_sdlc.db import Database
 from platform_sdlc.models import ClarifyItem
+from platform_sdlc.states import CLARIFY_DISPOSED_SQL
 
 
 class ClarifyItemRepo:
@@ -53,8 +54,8 @@ class ClarifyItemRepo:
     def counts(self, req_id: str) -> dict[str, int]:
         """answered = 已处置数（status 口径，D21/D22：显式写入 + 启动回填，无 answer 读时降级）。"""
         row = self.db.query_one(
-            "SELECT COUNT(*) AS total, SUM(CASE WHEN status IN ('answered','rejected','deferred') THEN 1 ELSE 0 END)"
-            " AS answered FROM clarify_item WHERE req_id=?",
+            "SELECT COUNT(*) AS total, SUM(CASE WHEN status IN " + CLARIFY_DISPOSED_SQL + " THEN 1 ELSE 0 END)"
+            " AS answered FROM clarify_item WHERE req_id=?",  # 处置口径与 states.py 同源（D21/D25）
             (req_id,),
         )
         total = int(row["total"]) if row is not None else 0

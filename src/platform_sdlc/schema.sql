@@ -14,6 +14,9 @@ CREATE TABLE IF NOT EXISTS task ( id INTEGER PRIMARY KEY AUTOINCREMENT, req_id T
 CREATE INDEX IF NOT EXISTS idx_task_req ON task(req_id);
 CREATE TABLE IF NOT EXISTS draft_artifact ( req_id TEXT NOT NULL, type TEXT NOT NULL, md TEXT DEFAULT '', content_json TEXT DEFAULT '', task_id INTEGER, updated_at TEXT, PRIMARY KEY (req_id, type) );
 CREATE TABLE IF NOT EXISTS seq_case_no ( id INTEGER PRIMARY KEY CHECK (id = 1), val INTEGER NOT NULL DEFAULT 0 );
+-- 批次6（AUDIT D2-2）：迁移账本——一次性迁移步骤已应用即跳过（省去每次启动的空转全表扫描；
+-- 判列补列/建表/索引本身幂等，不入账本）
+CREATE TABLE IF NOT EXISTS schema_version ( name TEXT PRIMARY KEY, applied_at TEXT );
 -- v2.4 迭代实体（DESIGN-v2.4 D32）：迭代名即主键；requirement.iter 为指向迭代名的弱引用（不建 FK）；
 -- 1:1 = 存活需求按 iter 唯一，服务层守卫 + 存量库检测干净后补 partial unique index（见 SchemaMigrator）
 CREATE TABLE IF NOT EXISTS iteration ( name TEXT PRIMARY KEY, note TEXT DEFAULT '', created_by TEXT DEFAULT '', created_at TEXT );

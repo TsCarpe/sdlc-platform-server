@@ -6,6 +6,7 @@ from contextlib import suppress
 
 from platform_sdlc.db import Database
 from platform_sdlc.models import Requirement, RequirementListRow
+from platform_sdlc.states import CLARIFY_DISPOSED_SQL
 
 
 class RequirementRepo:
@@ -59,7 +60,7 @@ class RequirementRepo:
         sql = (
             "SELECT r.id, r.name, r.iter, r.source_type, r.status, r.submitted_by, r.created_at, r.synced_at, r.risk_tier,"
             " (SELECT COUNT(*) FROM clarify_item c WHERE c.req_id=r.id) AS total_q,"
-            " (SELECT COUNT(*) FROM clarify_item c WHERE c.req_id=r.id AND c.status IN ('answered','rejected','deferred')) AS answered_q,"
+            " (SELECT COUNT(*) FROM clarify_item c WHERE c.req_id=r.id AND c.status IN " + CLARIFY_DISPOSED_SQL + ") AS answered_q,"
             " (SELECT COUNT(*) FROM test_case tc WHERE tc.req_id=r.id) AS case_count"
             " FROM requirement r WHERE r.deleted_at=''"
         )

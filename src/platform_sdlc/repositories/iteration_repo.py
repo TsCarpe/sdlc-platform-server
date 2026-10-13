@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from platform_sdlc.db import Database
 from platform_sdlc.models import Iteration, IterationListRow, Row
+from platform_sdlc.states import CLARIFY_DISPOSED_SQL
 
 # 绑定需求摘要子查询（D33）：最新一条存活行；聚合口径与 RequirementRepo.list_all 一致
 _REQ_JOIN = (
@@ -16,7 +17,7 @@ _ROW_SELECT = (
     "SELECT i.name, i.note, i.created_by, i.created_at,"
     " r.id AS req_id, r.name AS req_name, r.status AS req_status, r.risk_tier, r.submitted_by,"
     " (SELECT COUNT(*) FROM clarify_item c WHERE c.req_id=r.id) AS total_q,"
-    " (SELECT COUNT(*) FROM clarify_item c WHERE c.req_id=r.id AND c.status IN ('answered','rejected','deferred')) AS answered_q,"
+    " (SELECT COUNT(*) FROM clarify_item c WHERE c.req_id=r.id AND c.status IN " + CLARIFY_DISPOSED_SQL + ") AS answered_q,"
     " (SELECT COUNT(*) FROM test_case tc WHERE tc.req_id=r.id) AS case_count,"
     " CASE WHEN r.id IS NULL THEN 'none'"
     "  WHEN r.design_final_json LIKE '%\"skipDeclared\"%' THEN 'skipped'"

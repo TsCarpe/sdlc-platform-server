@@ -19,6 +19,7 @@ from platform_sdlc.models import Artifact, ClarifyItem, FrPoint, Requirement, st
 from platform_sdlc.repositories import Repos
 from platform_sdlc.schemas import wire
 from platform_sdlc.services.iteration import NAME_MAX
+from platform_sdlc.states import req_can_transition
 
 log = logging.getLogger(__name__)
 
@@ -283,8 +284,7 @@ class RequirementService:
     def set_status(self, req_id: str, body: dict[str, Any]) -> None:
         target = jrequired(body, "status")
         r = self.require(req_id)
-        ok = (r.status == "submitted" and target == "reviewing") or (r.status == "reviewing" and target == "clarifying")
-        if not ok:
+        if not req_can_transition(r.status, target):  # 流转表见 states.py（AUDIT D3-1 收口）
             raise ApiException(409, f"不允许的状态流转：{r.status} → {target}")
         self.repos.requirement.set_status(req_id, target)
 

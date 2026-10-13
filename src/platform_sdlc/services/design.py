@@ -12,6 +12,7 @@ from typing import Any
 from platform_sdlc.common import ApiException, Times, jrequired, jtext
 from platform_sdlc.db import Database
 from platform_sdlc.models import DraftArtifact, Requirement
+from platform_sdlc.models import parse_json_obj as _parse  # JSON 口径统一收口（AUDIT D2-5）
 from platform_sdlc.repositories import Repos
 
 A_DESIGN = "design"
@@ -176,15 +177,6 @@ class DesignService:
         if r is None:
             raise ApiException(404, f"需求不存在：{req_id}")
         return r
-
-
-def _parse(json_str: str) -> dict[str, Any]:
-    """坏值降级空对象：设计域字段缺失按未声明处理，不阻塞读面。"""
-    try:
-        v = json.loads(json_str.strip() or "{}")
-        return v if isinstance(v, dict) else {}
-    except Exception:
-        return {}
 
 
 def _text(v: Any) -> str:

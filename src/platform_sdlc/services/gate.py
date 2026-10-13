@@ -13,6 +13,7 @@ from typing import Any
 from platform_sdlc.common import ApiException, Times, jbool, jint_or_400, jrequired, jtext
 from platform_sdlc.db import Database
 from platform_sdlc.models import GateIssue, GateRound, TestCase, string_list
+from platform_sdlc.models import parse_json_obj as _parse  # JSON 口径统一收口（AUDIT D2-5）
 from platform_sdlc.repositories import Repos
 from platform_sdlc.services import task as task_mod
 from platform_sdlc.services.design import A_DESIGN, DesignService
@@ -352,12 +353,7 @@ class GateService:
         return r
 
 
-def _parse(json_str: str) -> dict[str, Any]:
-    try:
-        v = json.loads(json_str.strip() or "{}")
-        return v if isinstance(v, dict) else {}
-    except Exception:
-        return {}
+
 
 
 def _json(o: Any) -> str:

@@ -8,6 +8,7 @@ PRAGMA table_info 判列，缺则 ALTER TABLE ADD COLUMN。
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from pathlib import Path
 
 from platform_sdlc.db import Database
@@ -101,13 +102,28 @@ def run_migrations(db: Database) -> None:
             log.info("schema 迁移：%s 增加列 %s", table, column)
     for ddl in _TABLES:
         db.execute(ddl)
-    _backfill_clarify_status(db)
-    _backfill_case_no(db)
-    _init_case_no_seq(db)  # 账本初值取回填后的 MAX——先回填后建账，硬删/软删均不再复用已发放号
-    _backfill_iterations(db)
-    _backfill_target_repos(db)
-    _migrate_gate_values(db)
+    # 一次性迁移走账本（AUDIT D2-2）：已应用即跳过——原「每次启动全量空转」（_backfill_case_no
+    # 的 SELECT JOIN 全表扫等）随库增长线性劣化。顺序固定：case_no 回填先于序号账本初始化。
+    steps: list[tuple[str, Callable[[Database], None]]] = [
+        ("backfill_clarify_status", _backfill_clarify_status),
+        ("backfill_case_no", _backfill_case_no),
+        ("init_case_no_seq", _init_case_no_seq),
+        ("backfill_iterations", _backfill_iterations),
+        ("backfill_target_repos", _backfill_target_repos),
+        ("migrate_gate_values", _migrate_gate_values),
+    ]
+    for name, fn in steps:
+        if _migration_applied(db, name):
+            continue
+        fn(db)
+        db.execute("INSERT OR IGNORE INTO schema_version(name, applied_at) VALUES(?, datetime('now', 'localtime'))", (name,))
+        log.info("迁移账本：步骤 %s 已应用并登记", name)
+    # 唯一索引不入账本：存量脏数据时有意跳过（每次启动重试，干净后建；CREATE IF NOT EXISTS 幂等）
     _try_unique_req_iter_index(db)
+
+
+def _migration_applied(db: Database, name: str) -> bool:
+    return bool(db.query_scalar("SELECT EXISTS(SELECT 1 FROM schema_version WHERE name=?)", (name,)))
 
 
 def _columns_of(db: Database, table: str) -> list[str]:

@@ -40,6 +40,17 @@ def string_list(json_str: str | None) -> list[str]:
         return []
 
 
+def parse_json_obj(json_str: str) -> dict[str, Any]:
+    """JSON 对象列行内反序列化；坏值/非对象降级空 dict（design/gate 域口径：字段缺失按
+    未声明处理，不阻塞读面——AUDIT D2-5 统一收口）。requirement._artifact_view 的
+    「content 键缺失」语义更严（suppress 不附加键），保留原地不强行统一。"""
+    try:
+        v = json.loads(json_str.strip() or "{}")
+        return v if isinstance(v, dict) else {}
+    except Exception:
+        return {}
+
+
 # ---------- 需求域 ----------
 
 
