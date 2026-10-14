@@ -53,14 +53,15 @@ async function api(method, p, body) {
 // ---------- 任务通道共享规则（AUDIT D1-5）：启动从平台拉单一来源（draftTypes 映射 + selfCheck 阈值），
 // 拉取失败回退内置同款默认——阈值/映射变更只改平台 task_rules.py，双通道不再各自漂移 ----------
 const DEFAULT_RULES = {
-  draftTypes: { quality_check: 'digest_bundle', standard_doc: 'standard', design_gen: 'design', design_rev: 'design', gate_review: 'gate_issues', case_gen: 'cases' },
+  draftTypes: { quality_check: 'digest_bundle', standard_doc: 'standard', design_gen: 'design', design_rev: 'design', gate_review: 'gate_issues', case_gen: 'cases', incremental_check: 'incremental_bundle' },
   noDraftTypes: ['source_import'],
   selfCheck: {
     standard: { minMd: 200 },
     design: { minMd: 200, requireHeading: '§0' },
     gate_issues: { minMd: 100 },
     digest_bundle: {},
-    cases: {}
+    cases: {},
+    incremental_bundle: { structure: ['changeId', 'sections', 'digestRows', 'invalidate'], sectionsNonEmpty: true }
   }
 }
 let RULES = DEFAULT_RULES
@@ -114,6 +115,24 @@ SDLC_TASK_RESULT {"关键统计": "..."}
 7. 把最终 payload 原样写入临时 json 文件，然后（payload 较大时务必用 --data-binary @文件）：
    curl -X PUT ${PLATFORM}/api/requirements/${task.reqId}/drafts/digest_bundle -H 'Content-Type: application/json' --data-binary @<payload.json>
 8. 确认响应 200 后输出 SDLC_TASK_RESULT 行（含问题数/需求点数/锚点命中统计）。`
+  }
+
+  if (task.type === 'incremental_check') {
+    return `${common}
+执行变更后局部质检（sdlc-intent 增量梳理；v4：受影响章节切片，产出 incremental_bundle 草稿）。
+
+1. 读取增量规范：${REPO}/skills/sdlc-intent/references/incremental-guide.md（受影响章节重梳理、作废行清单、anchor 越界纪律——必须逐项遵守）。
+2. 拉取输入（块表权威 + 变更单冻结面）：
+   curl -s ${PLATFORM}/api/requirements/${task.reqId}/doc.json -o intake/doc-inc.json   （编辑后全文块模型）
+   curl -s ${PLATFORM}/api/requirements/${task.reqId}/changes | python3 -c "import sys,json;d=json.load(sys.stdin);print(json.dumps([c for c in d if c['status']=='confirmed'][0],ensure_ascii=False))" > raw/change.json
+   curl -s ${PLATFORM}/api/requirements/${task.reqId}/changes/$(python3 -c "import json;print(json.load(open('raw/change.json'))['id'])")/impact > raw/impact.json
+   curl -s ${PLATFORM}/api/requirements/${task.reqId} > raw/card.json   （digest/audit 结构行 + 保留澄清项及已答）
+   curl -s ${PLATFORM}/api/requirements/${task.reqId}/comments.json -o raw/comments.json
+3. 按 incremental-guide 只重梳理受影响章节：新版本 digest 行/audit 条目/FR 点，作废行清单（原文已删/口径已变），新澄清问题（机器 P 系——seq 由平台合并时分配，不携带）。
+4. 组装增量包（严格结构）：{changeId, sections:[受影响章节 heading 的 block_id——禁 seq 数值], digestRows:{features,flows,states,auditItems,frUpserts,frRemoves}, invalidate:{digestAnchors,auditIds}, clarify:{items}, summary, riskTier}
+   红线：新行 anchor 必须全部 ∈ impact.blocks（越界即拒）；空 anchor 行不产不废（全局行增量永不触碰）。
+5. 写临时 json 后回传：curl -X PUT ${PLATFORM}/api/requirements/${task.reqId}/drafts/incremental_bundle -H 'Content-Type: application/json' --data-binary @bundle.json
+6. 输出 SDLC_TASK_RESULT 行（受影响章节数/新行数/作废数/新澄清数）。`
   }
 
   if (task.type === 'standard_doc') {
