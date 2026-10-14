@@ -110,7 +110,7 @@ SDLC_TASK_RESULT {"关键统计": "..."}
    （doc.json 404 = 原文未导入：如实终止报错，禁止以卡内 sourceText 降级替代；媒体已在平台，无上传步。）
 3. 第一段梳理：按 digest-template 产出 digest（出处尽量写到条款级，用 python3 ${INTENT}/scripts/list_clauses.py --doc intake/doc-task.json 查条款树）。
 4. 第二段体检：按 dimensions 六层逐层检查，产出 audit 与澄清清单（每个澄清问题 seq 用体检 P 编号，theme 必填）。
-5. 组装 v1.2 payload（严格按 payload-schema）：{snapshot:{md 原文全文}, domains:[全局需求域顺序], digest:{summary,roles,features,fr_points,md}, audit:{red,yellow,blue,items}, items:[澄清清单], doc:{blocks,media}}——doc 的 blocks/media 直接取自 intake/doc-task.json。
+5. 组装 v1.2 payload（严格按 payload-schema）：{snapshot:{md 原文全文}, domains:[全局需求域顺序], digest:{summary,roles,features,fr_points,md}, audit:{red,yellow,blue,items}, items:[澄清清单]}——不含 doc：原文块表权威已落库，透传会在采纳时被剥除（intake/doc-task.json 仍用于第 3 步条款树与第 6 步锚点解析）。
 6. 用 python3 ${INTENT}/scripts/resolve_anchors.py 给 payload 附加 anchor（--doc intake/doc-task.json --comments raw/comments.json）。
 7. 把最终 payload 原样写入临时 json 文件，然后（payload 较大时务必用 --data-binary @文件）：
    curl -X PUT ${PLATFORM}/api/requirements/${task.reqId}/drafts/digest_bundle -H 'Content-Type: application/json' --data-binary @<payload.json>
@@ -208,6 +208,9 @@ SDLC_TASK_RESULT {"blocks": "...", "comments": "...", "media": "..."}
 2. 本任务无草稿回传（不推 drafts 端点）；媒体文件照常先逐个 POST media（mediaId 与 doc.media[].id 一致）。
 3. 忠实原文：逐字转录不评价不脑补；拉取/解析失败如实报错终止，禁止降级自造产物。
 4. raw/ 原始文件一律不整读（只经脚本消费，防上下文膨胀）。
+5. parse_doc 必须 exit 0 才可回传任务完成（exit 1=媒体下载失败、exit 2=守恒自检失败，均中止任务并按其输出提示修复后重跑，禁止带病回传）。
+6. doc.json 顶层 guard 是平台落库终检依据（缺失或与产物不一致任务将 failed），不得手工增删改 guard 与产物内容。
+7. 媒体必须全部 upload 成功后才可报 done（块引用的媒体不在平台将 missingMedia 阻断拒绝落库）。
 按以下步骤执行原文导入：
 1. mkdir -p raw intake/media
 `

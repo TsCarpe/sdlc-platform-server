@@ -29,6 +29,13 @@ class ConflictException(ApiException):
         self.conflicts = conflicts
 
 
+class IntegrityException(ApiException):
+    """产物完整性终检失败（v4 守恒门第二道）：固定 409，走全局 ApiException 处理器转 {error}。"""
+
+    def __init__(self, msg: str) -> None:
+        super().__init__(409, msg)
+
+
 class ErrorResult(BaseModel):
     """统一错误响应体 {error}（键名 = 既有契约）。"""
 

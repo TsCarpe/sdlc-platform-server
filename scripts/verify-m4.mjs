@@ -59,11 +59,15 @@ const blocks = [
   { id: 'doxcnLi1', type: 'list-item', marker: '1. ', ordinal: '1', depth: 1, text: '比赛管理列表：按创建时间倒序', path: '需求功能详述 › 6 › 1', parent: 'doxcnRow6' },
   { id: 'doxcnImg', type: 'image', media: PNG_ID, name: 'proto.png', alt: '比赛管理原型', path: '需求功能详述 › 6', parent: 'doxcnRow6' }
 ]
-const media = [{ id: PNG_ID, name: 'proto.png', mime: 'image/png', bytes: PNG.length, sha256: pngSha, kind: 'media', status: 'ok' }]
+const media = [{ id: PNG_ID, token: 'm4-img-token', name: 'proto.png', mime: 'image/png', bytes: PNG.length, sha256: pngSha, kind: 'media', status: 'ok' }]
+// 守恒终检 guard（v4 守恒门）：textSha 为平台 conservation-v1 同款算法（剔除 */~ 与空白后排序
+// sha256）对上方 blocks 的预计算值——与 parse_doc --self-test 固定向量算法一致，由主会话核对。
+const guard = { algo: 'conservation-v1', source: 'xml', mediaTokens: ['m4-img-token'],
+                textSha: 'cc44a8335300e61cfa37d8fe3fcd5249ac74aeb3568e649c8961f495f8979819' }
 const pushed = await call('POST', `/api/requirements/${id}/artifacts`, {
   snapshot: { md: '# M4 快照\n\n详述6 比赛管理列表' },
   domains: ['查询与展示口径'],
-  doc: { generator: 'parse_doc.py 0.2', source: { url: '', documentId: 'm4', revisionId: 1 }, blocks, media },
+  doc: { generator: 'parse_doc.py 0.2', source: { url: '', documentId: 'm4', revisionId: 1 }, blocks, media, guard },
   digest: {
     summary: 'M4 夹具', roles: ['区管'],
     features: [{ role: '区域管理员', m: '⭐ 管理列表', func: '列表', cov: '✅', src: '详述6', anchor: 'doxcnRow6' }],
@@ -91,13 +95,13 @@ check('flows/states 透传（v1.4）：gap/anchor/obj', [detail.digest.content.f
 
 // ===== 3. 重推 doc → 版本递增；引用不存在媒体 → missingMedia 统计不 500 =====
 const pushed2 = await call('POST', `/api/requirements/${id}/artifacts`, {
-  doc: { blocks, media },
+  doc: { blocks, media, guard },
   digest: { summary: 'M4 夹具', roles: ['区管'], features: [], fr_points: [{ id: '需求.FR-01', name: 'x', anchor: 'doxcnLi1' }] },
   audit: { red: 0, yellow: 0, blue: 0, items: [] },
   items: [{ seq: 'P01', level: 'yellow', theme: '查询与展示口径', question: '排序口径？', answer: '', ctx: '', quote: '' }]
 })
 check('重推 doc：docUpdated 仍 true', pushed2.docUpdated, true)
-check('重推 doc：引用缺失媒体如实计数', pushed2.missingMedia, 0)
+check('重推 doc：媒体齐全 missingMedia=0（缺失即 409 阻断）', pushed2.missingMedia, 0)
 
 // ===== 4. 降级：无 doc 的 v1.1 payload 推新卡 → detail 无 doc 键、anchor 空，不 500 =====
 const { id: id2 } = await call('POST', '/api/requirements', {

@@ -62,6 +62,7 @@ check('建卡自动排：不排质检', tasks1.filter(t => t.type === 'quality_c
 // ===== 2. 自建自领自落文件全链：完成回调落库 → 块表权威导出 =====
 const imp = await call('POST', '/api/tasks/next?runner=verify-v4')
 check('领取导入任务', [imp.type, imp.reqId, imp.status], ['source_import', req, 'running'])
+// text 源产物 → parse_doc --md 的 guard 形状即 markdown-fallback（守恒终检仅结构校验）
 dropDoc(imp.id, {
   blocks: [
     { id: 'v4-h1', type: 'heading', level: 1, text: 'V4', path: 'V4' },
@@ -69,7 +70,7 @@ dropDoc(imp.id, {
     { id: 'v4-cm1', type: 'comment', ref: 'c1', anchorBlockId: 'v4-p1', quote: '原文。',
       thread: [{ user: '张三', text: '评论一' }, { user: '李四', text: '回复' }], reactions: null, path: '评论区' },
     { id: 'v4-li1', type: 'list-item', marker: '1. ', depth: 1, parent: null, text: '项一', path: 'V4' }
-  ], media: []
+  ], media: [], guard: { algo: 'markdown-fallback' }
 })
 const done = await call('POST', `/api/tasks/${imp.id}/done`, { result: 'agent 摘要' })
 check('导入 done：result 为落库统计（agent 摘要被覆盖）',
@@ -110,7 +111,7 @@ check('质检 failed：引导文案 + reason',
 const impB2 = await call('POST', `/api/requirements/${reqB}/tasks`, { type: 'source_import', note: '人工重试导入' })
 check('导入失败后人工重试合法（封存只看块表痕迹）', impB2.status, 'queued')
 const claimed = await call('POST', '/api/tasks/next?runner=verify-v4')
-dropDoc(claimed.id, { blocks: [{ id: 'v4b-h1', type: 'heading', level: 1, text: 'B' }], media: [] })
+dropDoc(claimed.id, { blocks: [{ id: 'v4b-h1', type: 'heading', level: 1, text: 'B' }], media: [], guard: { algo: 'markdown-fallback' } })
 await call('POST', `/api/tasks/${claimed.id}/done`, { result: 'b import' })
 const retryQ = await call('POST', `/api/tasks/${q.id}/retry`)
 check('质检 retry 重新排队', retryQ.status, 'queued')

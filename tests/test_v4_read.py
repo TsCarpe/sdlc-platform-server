@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -17,7 +18,14 @@ from platform_sdlc.db import Database
 from platform_sdlc.main import create_app
 from platform_sdlc.models import MediaFile, ReqBlock, ReqComment
 from platform_sdlc.repositories import Repos
-from platform_sdlc.services.block import BlockService
+from platform_sdlc.services.block import BlockService, doc_text_stream, normalize_text_fingerprint
+
+
+def _guard_for(doc: dict[str, Any]) -> dict[str, Any]:
+    """POST /artifacts 推 doc 夹具挂合法 guard（守恒终检前置校验会拒无 guard 的 doc）：
+    textSha 用平台同款算法现算；本夹具无媒体，mediaTokens 恒空。"""
+    return {"algo": "conservation-v1", "source": "xml", "mediaTokens": [],
+            "textSha": normalize_text_fingerprint(doc_text_stream(doc["blocks"]))}
 
 
 @pytest.fixture()
@@ -130,13 +138,15 @@ def test_doc_view_and_detail_fallback(env: tuple[TestClient, Database, Repos, Bl
                                                      "sourceText": "# 原文"}).json()
     req_id = created["id"]
     # 块表空 + doc artifact 存在 → 回退 artifact（verify-m4 夹具同款路径）
+    doc_fixture: dict[str, Any] = {
+        "generator": "parse_doc.py 0.2", "source": {"url": "", "documentId": "m4", "revisionId": 1},
+        "blocks": [{"id": "doxcnH1", "type": "heading", "level": 2, "text": "详述", "path": "详述"}],
+        "media": []}
     client.post(f"/api/requirements/{req_id}/artifacts", json={
         "digest": {"md": "", "summary": "s", "roles": [], "features": [], "flows": [], "states": []},
         "audit": {"md": "", "red": 0, "yellow": 0, "blue": 0, "items": []},
         "items": [{"seq": "P1", "level": "yellow", "theme": "t", "question": "q"}],
-        "doc": {"generator": "parse_doc.py 0.2", "source": {"url": "", "documentId": "m4", "revisionId": 1},
-                "blocks": [{"id": "doxcnH1", "type": "heading", "level": 2, "text": "详述", "path": "详述"}],
-                "media": []},
+        "doc": {**doc_fixture, "guard": _guard_for(doc_fixture)},
     })
     detail = client.get(f"/api/requirements/{req_id}").json()
     assert detail["doc"]["content"]["source"]["documentId"] == "m4"  # 回退路径保留 artifact 原形状
@@ -148,6 +158,23 @@ def test_doc_view_and_detail_fallback(env: tuple[TestClient, Database, Repos, Bl
     detail2 = client.get(f"/api/requirements/{req_id}").json()
     assert detail2["doc"]["content"]["blocks"][0]["id"] == "fs-1"
     assert detail2["doc"]["markdown"] == "" and detail2["doc"]["version"] == 1
+
+
+def test_artifacts_doc_without_guard_rejected(env: tuple[TestClient, Database, Repos, BlockService]) -> None:
+    """守恒门不受 approve 剥除影响：HTTP 直推（sdlc-sync 外部导入通道）带无 guard 的 doc
+    → 409 拒（剥除只发生在质检草稿采纳链，外部导入通道仍全量终检）。"""
+    client, _, _, _ = env
+    created = client.post("/api/requirements", json={"name": "守恒门直推验证", "sourceType": "text",
+                                                     "sourceText": "# 原文"}).json()
+    req_id = created["id"]
+    r = client.post(f"/api/requirements/{req_id}/artifacts", json={
+        "digest": {"md": "", "summary": "s", "roles": [], "features": [], "flows": [], "states": []},
+        "audit": {"md": "", "red": 0, "yellow": 0, "blue": 0, "items": []},
+        "items": [{"seq": "P1", "level": "yellow", "theme": "t", "question": "q"}],
+        "doc": {"blocks": [{"id": "x", "type": "paragraph", "text": "无 guard"}], "media": []},
+    })
+    assert r.status_code == 409
+    assert "缺守恒参照（guard）" in r.json()["error"]
 
 
 # ---------- HTTP：doc.json / comments.json 端点 ----------

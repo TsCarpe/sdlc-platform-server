@@ -6,10 +6,13 @@ parse_doc：heading 栈面包屑 ' › ' 分隔、list-item ordinal 按 parent �
 OriginTab 消费零适配），宿主块 comment-refs 同步补回；锚定软删块的评论追加尾部（信息不丢）。
 media 从 media 表组装（id/name/mime/bytes/sha256；kind/status 属导入态展示，块表权威卡不输出）。
 写入通道（source_import 完成回调落库）在 v4-3 接入，workspace_root 参数为彼预置。
+守恒终检（v4 守恒门第二道）：doc 落库前 verify_doc_guard 对账产物顶层 guard（conservation-v1
+文本指纹 + 媒体 token 双向相等 + status 全 ok；markdown-fallback 仅结构校验），missingMedia 阻断。
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
@@ -19,12 +22,94 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from platform_sdlc.common import ApiException, Times, is_json_list, is_json_obj, jint, jrequired, jtext
+from platform_sdlc.common import ApiException, IntegrityException, Times, is_json_list, is_json_obj, jint, jrequired, jtext
 from platform_sdlc.db import Database
 from platform_sdlc.models import BLOCK_ATTR_EXCLUDED, ReqBlock, ReqComment, Task
 from platform_sdlc.repositories import Repos
 
 log = logging.getLogger(__name__)
+
+
+# ---------- 守恒终检（conservation-v1 平台侧复算，与 parse_doc ≥0.4 产物侧自检同契约） ----------
+
+def normalize_text_fingerprint(chars: str) -> str:
+    """conservation-v1 归一化：剔除 markdown 修饰字符 * ~ 与全部空白，剩余字符排序后 sha256——
+    字符多重集合的规范指纹（顺序/空白/加粗删除线修饰不敏感，只对「哪些字符各多少个」守恒）。"""
+    kept = sorted(c for c in chars if c not in "*~" and not c.isspace())
+    return hashlib.sha256("".join(kept).encode("utf-8")).hexdigest()
+
+
+def doc_text_stream(blocks: list[Any]) -> str:
+    """产物侧文本流（守恒面）：全部块的 text、cells（全列，仅字符串列）、image 块 caption。
+    不收 path/rowLabel/ordinal/marker 与 media name/alt；head 不收（parse_table 给每行挂同一
+    head 数组，收了必然多重计数误杀——head/thead 双侧对称排除是契约，不是疏漏）。"""
+    parts: list[str] = []
+    for b in blocks:
+        if not is_json_obj(b):
+            continue
+        parts.append(str(b.get("text") or ""))
+        cells = b.get("cells")
+        if is_json_list(cells):
+            parts.extend(c for c in cells if isinstance(c, str))
+        if b.get("type") == "image":
+            parts.append(str(b.get("caption") or ""))
+    return "".join(parts)
+
+
+def verify_doc_guard(doc: dict[str, Any]) -> None:
+    """平台侧守恒终检（第二道门，两条落库入口共用：source_import 完成回调 / push_artifacts）。
+    与 agent 侧自检（exit 2 门）判定分离：平台在 agent 口径（textSha 相等 + mediaTokens 双向
+    相等）之上加 media status 全 ok——离线跑 status 恒 pending 不阻断 agent，落库必须全 ok。
+    markdown-fallback（--md 回退）无原文可对账，仅结构校验。失败抛 IntegrityException（409）。"""
+    guard = doc.get("guard")
+    if not is_json_obj(guard):
+        raise IntegrityException("doc 产物缺守恒参照（guard）——请用 sdlc-intent parse_doc ≥0.4 重产后重试")
+    algo = str(guard.get("algo") or "")
+    blocks = doc.get("blocks")
+    if not is_json_list(blocks) or not blocks:
+        raise IntegrityException("doc 产物 blocks 为空或非数组——请重跑 parse_doc 后重试")
+    for i, b in enumerate(blocks):
+        if not is_json_obj(b):
+            raise IntegrityException(
+                f"doc 产物 blocks[{i}] 不是对象（类型：{type(b).__name__}）——请重跑 parse_doc 后重试")
+    media = doc.get("media")
+    media_entries = media if is_json_list(media) else []
+    _verify_media_status(media_entries)
+    if algo == "markdown-fallback":
+        return
+    if algo != "conservation-v1":
+        raise IntegrityException(
+            f"doc 产物 guard 未知守恒算法：{algo or '(空)'}（仅支持 conservation-v1|markdown-fallback）"
+            "——请用 sdlc-intent parse_doc ≥0.4 重产后重试")
+    declared = guard.get("mediaTokens")
+    if not is_json_list(declared):
+        raise IntegrityException("doc 产物 guard.mediaTokens 缺失或非数组——请用 sdlc-intent parse_doc ≥0.4 重产后重试")
+    tokens = {str(m.get("token")) for m in media_entries if is_json_obj(m) and m.get("token")}
+    declared_tokens = {str(t) for t in declared if t}
+    if tokens != declared_tokens:
+        raise IntegrityException(
+            "doc 产物媒体对账失败（guard.mediaTokens 与 media[].token 不一致："
+            f"仅产物 {sorted(tokens - declared_tokens)}，仅 guard {sorted(declared_tokens - tokens)}）"
+            "——请重跑 parse_doc 后重试")
+    text_sha = guard.get("textSha")
+    if not isinstance(text_sha, str) or normalize_text_fingerprint(doc_text_stream(blocks)) != text_sha:
+        raise IntegrityException(
+            "doc 产物文本守恒校验失败（textSha 不一致）：产物与原文字符指纹不符——"
+            "请重跑 parse_doc 重产（勿手工改写 doc.json）后重试")
+
+
+def _verify_media_status(media_entries: list[Any]) -> None:
+    """media 若存在则 status 须全 ok（parse_doc 下载失败标 failed:...，离线未下载标 pending——
+    两者都不可落库；文案带 token 定位）。"""
+    bad: list[str] = []
+    for i, m in enumerate(media_entries):
+        if is_json_obj(m) and str(m.get("status") or "") == "ok":
+            continue
+        bad.append(str(m.get("token") or m.get("id")) if is_json_obj(m) else f"#{i}")
+    if bad:
+        raise IntegrityException(
+            f"doc 产物媒体未全部就绪（status 非 ok：{bad}）——媒体须全部下载/上传成功后才可落库，"
+            "请按任务提示补齐后重试")
 
 
 class BlockService:
@@ -143,8 +228,10 @@ class BlockService:
     def import_from_output(self, task: Task) -> dict[str, Any]:
         """任务完成回调直读输出文件落库——内容不经 LLM 上下文（「确定性」判据可验证：
         落库内容 = 脚本输出文件字节），落库成功才置 done（挂点 = TaskService.finish，两通道汇合）。
-        幂等语义（§3）：重跑 = 全量替换该卡块 + origin=feishu 评论行，平台侧评论不动；
-        missingMedia 同款校验（块引用 mediaId ∈ media 表，缺失计数——宽松落库，前端渲染占位）。"""
+        幂等语义（§3）：重跑 = 全量替换该卡块 + origin=feishu 评论行，平台侧评论不动。
+        守恒终检（v4 守恒门第二道）：结构校验后、落库前 verify_doc_guard(raw)——guard 缺失/对账
+        不符/媒体 status 非 ok 一律 IntegrityException 拒落库；块引用媒体不在库（missingMedia）
+        同款阻断（先补媒体上传再重试 done，不再宽松计数落库）。"""
         out_path = self.workspace_root / "tasks" / str(task.id) / "out" / "doc.json"
         if not out_path.is_file():
             raise ApiException(409, f"导入输出文件不存在：{out_path}（服务端工作区根={self.workspace_root}；"
@@ -158,15 +245,17 @@ class BlockService:
         blocks = raw.get("blocks")
         if not is_json_list(blocks) or not blocks:
             raise ApiException(409, f"导入输出文件 blocks 为空：{out_path}")
+        verify_doc_guard(raw)
 
         req_id = task.req_id
         block_rows: list[ReqBlock] = []
         comment_chains: list[list[ReqComment]] = []
         wanted_media: list[str] = []
         seq = 0
-        for b in blocks:
-            if not is_json_obj(b):
-                continue
+        for i, b in enumerate(blocks):
+            if not is_json_obj(b):  # verify_doc_guard 已拦形状，此处兜底拒绝（不再静默跳过）
+                raise IntegrityException(
+                    f"doc 产物 blocks[{i}] 不是对象（类型：{type(b).__name__}）——请重跑 parse_doc 后重试")
             seq += 1000
             btype = str(b.get("type") or "")
             if btype == "comment":
@@ -185,6 +274,10 @@ class BlockService:
             ))
         present = set(self.repos.media.ids_of(req_id, wanted_media))
         missing = [m for m in wanted_media if m not in present]
+        if missing:
+            raise IntegrityException(
+                f"doc 产物引用的媒体未上传（missingMedia={len(missing)}：{missing[:5]}）——"
+                "先补齐媒体上传（mediaId 与 doc.media[].id 一致）再重试 done")
         n_comments = 0
         with self.db.tx():
             self.repos.req_block.replace_all(req_id, block_rows)
@@ -195,7 +288,7 @@ class BlockService:
                     c.id = self.repos.req_comment.insert(_dataclass_with(c, reply_to=prev))
                     prev = c.id
                     n_comments += 1
-        out = {"blocks": len(block_rows), "comments": n_comments, "missingMedia": len(missing)}
+        out = {"blocks": len(block_rows), "comments": n_comments, "missingMedia": 0}
         log.info("source_import 落库 %s（任务 #%s）：%s", req_id, task.id, out)
         return out
 

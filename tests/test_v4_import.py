@@ -1,8 +1,10 @@
-"""v4-3 验收：source_import 任务通道（DESIGN-v4 §3）——封存守卫、finish 完成回调落库、
-noDraftTypes 两处代码分支、task_rules 出参、三处一致性守护纯函数。"""
+"""v4-3 验收：source_import 任务通道（DESIGN-v4 §3）——封存守卫、finish 完成回调落库（含
+守恒终检 guard 对账）、noDraftTypes 两处代码分支、task_rules 出参、三处一致性守护纯函数。
+固定向量用例与 claude-sdlc-skills parse_doc --self-test 同源（双仓算法一致性锁）。"""
 
 from __future__ import annotations
 
+import copy
 import importlib.util
 import json
 from pathlib import Path
@@ -11,12 +13,14 @@ from typing import Any
 import pytest
 
 from platform_sdlc.agent.loop import AgentLoop
+from platform_sdlc.common import is_json_obj
 from platform_sdlc.config import Settings
 from platform_sdlc.db import Database
 from platform_sdlc.migrations import run_migrations
-from platform_sdlc.models import Requirement
+from platform_sdlc.models import MediaFile, Requirement
 from platform_sdlc.repositories import Repos
 from platform_sdlc.services import Services
+from platform_sdlc.services.block import doc_text_stream, normalize_text_fingerprint
 
 _spec = importlib.util.spec_from_file_location(
     "check_task_templates", Path(__file__).resolve().parent.parent / "scripts" / "check_task_templates.py")
@@ -33,8 +37,26 @@ _DOC = {
          "reactions": None, "path": "评论区"},
         {"id": "wk-img", "type": "image", "media": "m-ghost", "text": "", "path": "背景"},
     ],
-    "media": [],
+    "media": [{"id": "m-ghost", "token": "tok-ghost", "kind": "media", "name": "img.png",
+               "mime": "image/png", "bytes": 10, "sha256": "0" * 64, "status": "ok"}],
 }
+
+
+def _with_guard(doc: dict[str, Any]) -> dict[str, Any]:
+    """夹具挂合法 guard（conservation-v1）：textSha/mediaTokens 用平台同款算法现算（不硬编码）——
+    media[].token 去重排序覆盖 guard.mediaTokens，指纹 = normalize(doc_text_stream(blocks))。"""
+    d = copy.deepcopy(doc)
+    media: list[Any] = d.get("media") or []
+    tokens = sorted({str(m["token"]) for m in media if is_json_obj(m) and m["token"]})
+    d["guard"] = {"algo": "conservation-v1", "source": "xml", "mediaTokens": tokens,
+                  "textSha": normalize_text_fingerprint(doc_text_stream(d["blocks"]))}
+    return d
+
+
+def _seed_media(repos: Repos, req_id: str) -> None:
+    """补齐 _DOC 引用的媒体行（m-ghost 已上传语义）——missingMedia=0 的前置。"""
+    repos.media.insert(MediaFile(req_id=req_id, media_id="m-ghost", sha256="0" * 64,
+                                 name="img.png", mime="image/png", bytes=10))
 
 
 @pytest.fixture()
@@ -107,21 +129,22 @@ def test_import_seal_guards(env: tuple[Database, Repos, Services, Path]) -> None
         services.tasks.create_guarded("REQ-2026-002", "source_import", "", "")
 
 
-# ---------- finish 完成回调落库 ----------
+# ---------- finish 完成回调落库（守恒终检） ----------
 
-def test_finish_imports_blocks_and_comments(env: tuple[Database, Repos, Services, Path]) -> None:
+def test_finish_import_success_with_guard(env: tuple[Database, Repos, Services, Path]) -> None:
+    """合法 guard（对账通过）+ 媒体齐全 → done 落库；result 为落库统计（agent 摘要被覆盖）。"""
     _, repos, services, ws = env
     _mk_card(repos)
+    _seed_media(repos, "REQ-2026-001")
     t = services.tasks.create_guarded("REQ-2026-001", "source_import", "", "")
     claimed = services.tasks.claim("test-runner")
     assert claimed is not None and claimed.id == t.id
-    _mk_out(ws, t.id, _DOC)
+    _mk_out(ws, t.id, _with_guard(_DOC))
 
     out = services.tasks.finish(t.id, True, {"result": "agent 摘要"})
     assert out.status == "done"
-    # result 被落库统计覆盖（agent 摘要不进正式面）
     stats = json.loads(out.result)
-    assert stats == {"blocks": 3, "comments": 2, "missingMedia": 1}
+    assert stats == {"blocks": 3, "comments": 2, "missingMedia": 0}
 
     blocks = repos.req_block.list_by_req("REQ-2026-001")
     assert [b.block_id for b in blocks] == ["wk-h1", "wk-p1", "wk-img"]
@@ -130,6 +153,105 @@ def test_finish_imports_blocks_and_comments(env: tuple[Database, Repos, Services
     cms = repos.req_comment.list_by_req("REQ-2026-001")
     assert len(cms) == 2 and cms[0].origin == "feishu" and cms[0].external_id == "cm-1"
     assert cms[1].reply_to == cms[0].id
+
+
+def test_finish_ghost_media_blocked(env: tuple[Database, Repos, Services, Path]) -> None:
+    """幽灵媒体（guard 对账全过、块引用媒体未上传）→ 阻断：任务 failed（reason=integrity-failed），
+    块表不落（守恒门口径：missingMedia>0 拒绝，不再宽松计数落库）。"""
+    _, repos, services, ws = env
+    _mk_card(repos)
+    t = services.tasks.create_guarded("REQ-2026-001", "source_import", "", "")
+    services.tasks.claim("test-runner")
+    _mk_out(ws, t.id, _with_guard(_DOC))  # 媒体行未补（m-ghost 不在库）
+
+    out = services.tasks.finish(t.id, True, {})
+    assert out.status == "failed"
+    m = json.loads(out.result)
+    assert m["reason"] == "integrity-failed"
+    assert "媒体未上传" in m["error"]
+    assert repos.req_block.empty("REQ-2026-001")  # 拒绝落库，块表保持空
+
+
+def test_finish_rejects_missing_guard(env: tuple[Database, Repos, Services, Path]) -> None:
+    """guard 缺失 → 409 拒（提示升级 parse_doc ≥0.4 重产），reason=integrity-failed。"""
+    _, repos, services, ws = env
+    _mk_card(repos)
+    t = services.tasks.create_guarded("REQ-2026-001", "source_import", "", "")
+    services.tasks.claim("test-runner")
+    _mk_out(ws, t.id, _DOC)  # 无 guard（parse_doc <0.4 产物形状）
+
+    out = services.tasks.finish(t.id, True, {})
+    assert out.status == "failed"
+    m = json.loads(out.result)
+    assert m["reason"] == "integrity-failed"
+    assert "缺守恒参照（guard）" in m["error"] and "parse_doc" in m["error"]
+
+
+def test_finish_rejects_text_sha_mismatch(env: tuple[Database, Repos, Services, Path]) -> None:
+    """textSha 不符（产物块文本与 guard 指纹不一致）→ 拒：防解析丢失/产物篡改。"""
+    _, repos, services, ws = env
+    _mk_card(repos)
+    _seed_media(repos, "REQ-2026-001")
+    t = services.tasks.create_guarded("REQ-2026-001", "source_import", "", "")
+    services.tasks.claim("test-runner")
+    doctored = _with_guard(_DOC)
+    doctored["blocks"][1]["text"] = "被改写的段落"  # guard 按原文算，产物文本漂移
+    _mk_out(ws, t.id, doctored)
+
+    out = services.tasks.finish(t.id, True, {})
+    assert out.status == "failed"
+    m = json.loads(out.result)
+    assert m["reason"] == "integrity-failed"
+    assert "textSha 不一致" in m["error"]
+
+
+def test_finish_rejects_media_status_failed(env: tuple[Database, Repos, Services, Path]) -> None:
+    """media status=failed（exit 1 带病回传）→ 拒：平台口径比 agent 侧多查 status 全 ok。"""
+    _, repos, services, ws = env
+    _mk_card(repos)
+    t = services.tasks.create_guarded("REQ-2026-001", "source_import", "", "")
+    services.tasks.claim("test-runner")
+    doctored = copy.deepcopy(_DOC)
+    doctored["media"][0]["status"] = "failed: lark-cli not found"
+    _mk_out(ws, t.id, _with_guard(doctored))
+
+    out = services.tasks.finish(t.id, True, {})
+    assert out.status == "failed"
+    m = json.loads(out.result)
+    assert m["reason"] == "integrity-failed"
+    assert "status 非 ok" in m["error"]
+
+
+def test_finish_allows_markdown_fallback(env: tuple[Database, Repos, Services, Path]) -> None:
+    """markdown-fallback（--md 回退）无原文可对账 → 仅结构校验：结构合法 + 媒体齐全即放行。"""
+    _, repos, services, ws = env
+    _mk_card(repos)
+    _seed_media(repos, "REQ-2026-001")
+    t = services.tasks.create_guarded("REQ-2026-001", "source_import", "", "")
+    services.tasks.claim("test-runner")
+    _mk_out(ws, t.id, {**copy.deepcopy(_DOC), "guard": {"algo": "markdown-fallback"}})
+
+    out = services.tasks.finish(t.id, True, {})
+    assert out.status == "done"
+    assert json.loads(out.result) == {"blocks": 3, "comments": 2, "missingMedia": 0}
+
+
+def test_finish_rejects_non_object_block(env: tuple[Database, Repos, Services, Path]) -> None:
+    """blocks 混入非对象元素 → 拒（给 index 与类型；不再静默跳过）。"""
+    _, repos, services, ws = env
+    _mk_card(repos)
+    _seed_media(repos, "REQ-2026-001")
+    t = services.tasks.create_guarded("REQ-2026-001", "source_import", "", "")
+    services.tasks.claim("test-runner")
+    doctored = _with_guard(_DOC)
+    doctored["blocks"].insert(2, "not-a-block")
+    _mk_out(ws, t.id, doctored)
+
+    out = services.tasks.finish(t.id, True, {})
+    assert out.status == "failed"
+    m = json.loads(out.result)
+    assert m["reason"] == "integrity-failed"
+    assert "blocks[2] 不是对象" in m["error"] and "str" in m["error"]
 
 
 def test_finish_no_output_file_fails(env: tuple[Database, Repos, Services, Path]) -> None:
@@ -148,19 +270,61 @@ def test_finish_no_output_file_fails(env: tuple[Database, Repos, Services, Path]
 
 
 def test_finish_import_idempotent(env: tuple[Database, Repos, Services, Path]) -> None:
-    """幂等重跑（§3）：无平台数据的卡重导 = 全量替换块 + feishu 评论，不叠加；
+    """幂等重跑（§3）：无平台数据的卡重导 = 全量替换块 + feishu 评论，不叠加（带合法 guard、
+    媒体齐全的干净夹具，两轮 finish 仍 done）；
     （有平台评论的卡重导被封存守卫拒——见 test_import_seal_guards，两测试互补覆盖 §2.4/§3 边界。）"""
     _, repos, services, ws = env
     _mk_card(repos, source_type="feishu")
+    _seed_media(repos, "REQ-2026-001")
     for i in (1, 2):
         t = services.tasks.create_guarded("REQ-2026-001", "source_import", f"round-{i}", "")
         services.tasks.claim("test-runner")
-        _mk_out(ws, t.id, _DOC)
-        services.tasks.finish(t.id, True, {})
+        _mk_out(ws, t.id, _with_guard(_DOC))
+        out = services.tasks.finish(t.id, True, {})
+        assert out.status == "done"
     blocks = repos.req_block.list_by_req("REQ-2026-001")
     assert len(blocks) == 3  # 替换不叠加
     cms = repos.req_comment.list_by_req("REQ-2026-001")
     assert len(cms) == 2 and all(c.origin == "feishu" for c in cms)  # feishu 行替换不叠加
+
+
+# ---------- approve 剥 doc：守恒门只守外部导入（source_import / sdlc-sync） ----------
+
+def test_approve_strips_legacy_doc_without_guard(env: tuple[Database, Repos, Services, Path]) -> None:
+    """存量质检草稿带 doc（平台导出回环、无 guard）→ 采纳成功：doc 在 approve 链被剥除
+    （不进守恒终检、不落 artifact），digest/audit 正常落库，存量 doc artifact 不被覆盖。"""
+    _, repos, services, _ = env
+    _mk_card(repos)
+    repos.artifact.upsert("REQ-2026-001", "doc", "",
+                          '{"blocks":[{"id":"legacy","type":"paragraph","text":"存量"}],"media":[]}', "2026-01-01")
+    payload: dict[str, Any] = {
+        "digest": {"md": "", "summary": "s", "roles": [], "features": [], "flows": [], "states": [], "fr_points": []},
+        "audit": {"md": "", "red": 0, "yellow": 0, "blue": 0, "items": []},
+        "items": [{"seq": "P1", "level": "yellow", "theme": "t", "question": "q"}],
+        "doc": {"blocks": [{"id": "x", "type": "paragraph", "text": "回环"}], "media": []},  # 无 guard（平台导出形状）
+    }
+    services.tasks.put_draft("REQ-2026-001", "digest_bundle",
+                             {"contentJson": json.dumps(payload, ensure_ascii=False)})
+    out = services.tasks.approve("REQ-2026-001", "digest_bundle", "tester")
+    assert out["ok"] is True and out["docUpdated"] is False and out["draftApproved"] is True
+    assert repos.artifact.find("REQ-2026-001", "digest") is not None  # digest/audit 正常落库
+    assert repos.artifact.find("REQ-2026-001", "audit") is not None
+    kept_row = repos.artifact.find("REQ-2026-001", "doc")
+    assert kept_row is not None
+    kept = json.loads(kept_row.content_json or "{}")
+    assert kept["blocks"][0]["id"] == "legacy"  # 存量 doc 未被草稿回环 doc 覆盖
+
+
+# ---------- 守恒算法固定向量（与 claude-sdlc-skills parse_doc --self-test 同源） ----------
+
+def test_conservation_vector() -> None:
+    """双仓算法一致性锁：同一段 blocks 在平台侧与 skills 侧 --self-test 必须得出同一 textSha
+    （期望值 = claude-sdlc-skills parse_doc --self-test 的 FIXED_VECTOR_SHA 常量）。"""
+    blocks = [{"type": "paragraph", "text": "活动链接：必填"},
+              {"type": "list-item", "text": "生效范围"},
+              {"type": "image", "caption": "PC端原型图"}]
+    assert normalize_text_fingerprint(doc_text_stream(blocks)) == \
+        "61be48ea05d60cc30664afae48879306f5504495306cadaf48ec0d324c4716d9"
 
 
 # ---------- noDraftTypes 与 self_check 跳过 ----------

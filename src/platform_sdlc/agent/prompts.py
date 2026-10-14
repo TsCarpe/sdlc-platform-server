@@ -123,6 +123,11 @@ def _source_import_steps(common: str, card: Requirement, repo: str, out_dir: Pat
         "2. 本任务无草稿回传（不 put_draft）；媒体文件照常先逐个 upload_media（mediaId 与 doc.media[].id 一致）。\n"
         "3. 忠实原文：逐字转录不评价不脑补；拉取/解析失败如实报错终止，禁止降级自造产物。\n"
         "4. raw/ 原始文件一律不整读（只经脚本消费，防上下文膨胀）。\n"
+        "5. parse_doc 必须 exit 0 才可回传任务完成（exit 1=媒体下载失败、exit 2=守恒自检失败，"
+        "均中止任务并按其输出提示修复后重跑，禁止带病回传）。\n"
+        "6. doc.json 顶层 guard 是平台落库终检依据（缺失或与产物不一致任务将 failed），"
+        "不得手工增删改 guard 与产物内容。\n"
+        "7. 媒体必须全部 upload 成功后才可报 done（块引用的媒体不在平台将 missingMedia 阻断拒绝落库）。\n"
     )
     steps = "按以下步骤执行原文导入：\n1. run_command: mkdir -p raw intake/media\n"
     if feishu:
@@ -197,8 +202,8 @@ def _quality_check_steps(repo: str, card: Requirement) -> str:
             f"{repo}/skills/sdlc-intent/references/digest-template.md）。\n"
             "5. 第二段体检：按速查卡「七层/五章/三层」产出 intake/audit-<YYYYMMDD>.md 与 intake/pm-checklist-<YYYYMMDD>.md（细节才 read_file "
             f"{repo}/skills/sdlc-intent/references/dimensions.md、references/report-template.md）。\n"
-            "6. 组装 payload.json（严格按速查卡「payload 字段」；含 doc，其 blocks/media 直接取自 intake/doc-*.json——"
-            "媒体已在平台（导入时已上传），本任务无媒体上传步）。\n"
+            "6. 组装 payload.json（严格按速查卡「payload 字段」；不含 doc——原文块表权威已落库，透传会在采纳时被剥除；"
+            "intake/doc-*.json 仍用于第 3 步条款树与第 7 步锚点解析）。\n"
             f"7. run_command 执行 python3 {repo}/skills/sdlc-intent/scripts/resolve_anchors.py --doc intake/doc-<YYYYMMDD>.json"
             " --comments raw/comments.json --payload payload.json --out payload-anchored.json。\n"
             "8. put_draft(type=digest_bundle, contentJsonPath=payload-anchored.json)，确认返回 ok 后输出 SDLC_TASK_RESULT 行"
@@ -221,8 +226,7 @@ def _quality_quick_ref() -> str:
         "states[{obj(取§6图题对象名),from,on,to,gap(断点行=true且to填?),src}], "
         "fr_points[{id:\"需求.FR-xx\",name,source,group,module}], md}、"
         "audit{red,yellow,blue,items[{id:\"体检.Pxx\",level:red|yellow|blue,title,where,go,group,quote}], md}、"
-        "items[{seq:\"Pxx\",level,theme(必填，取值=需求域),question,ctx,answer,quote}]、"
-        "doc{blocks,media}(块表权威——取自卡内 doc 键/intake/doc-*.json，双源统一)。\n"
+        "items[{seq:\"Pxx\",level,theme(必填，取值=需求域),question,ctx,answer,quote}]。\n"
         "出处条款级写法：详述N·<小节名> 或 详述N·<序数>；定位不到回退章节名，禁止编造条款号/序数。"
     )
 

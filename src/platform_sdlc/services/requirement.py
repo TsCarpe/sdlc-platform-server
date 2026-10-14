@@ -13,12 +13,24 @@ from contextlib import suppress
 from datetime import datetime
 from typing import Any
 
-from platform_sdlc.common import ApiException, Times, is_json_list, is_json_obj, jarray, jbool, jint, jrequired, jstrings, jtext
+from platform_sdlc.common import (
+    ApiException,
+    IntegrityException,
+    Times,
+    is_json_list,
+    is_json_obj,
+    jarray,
+    jbool,
+    jint,
+    jrequired,
+    jstrings,
+    jtext,
+)
 from platform_sdlc.db import Database
 from platform_sdlc.models import Artifact, ClarifyItem, FrPoint, Requirement, string_list
 from platform_sdlc.repositories import Repos
 from platform_sdlc.schemas import wire
-from platform_sdlc.services.block import BlockService
+from platform_sdlc.services.block import BlockService, verify_doc_guard
 from platform_sdlc.services.iteration import NAME_MAX
 from platform_sdlc.states import req_can_transition
 
@@ -105,7 +117,12 @@ class RequirementService:
     def push_artifacts(self, req_id: str, body: dict[str, Any]) -> dict[str, Any]:
         """推送质检产物。机器行按来源合并（v4-9，DESIGN-v4 §6.3/§9）：重推删 skill+incremental 行、
         保留 local 行（评论升级 L 系经重推不丢）；已答保留按 seq+问题文本不变携带——seq 相同而
-        问题文本已变（P 编号漂移）时不携带，防旧答复张冠李戴。tx 全程持锁。"""
+        问题文本已变（P 编号漂移）时不携带，防旧答复张冠李戴。tx 全程持锁。
+        doc 守恒终检前置到 tx 之前（v4 守恒门）：doc 是可选键，guard 校验失败不得进事务
+        回滚整批 digest/audit；doc 引用媒体未传齐（missingMedia>0）同样阻断拒绝。"""
+        doc = body.get("doc")
+        if is_json_obj(doc) and is_json_list(doc.get("blocks")) and doc.get("blocks"):
+            verify_doc_guard(doc)
         with self.db.tx():
             r = self.repos.requirement.find(req_id)
             if r is None:
@@ -203,7 +220,6 @@ class RequirementService:
 
             doc_updated = False
             missing_media = 0
-            doc = body.get("doc")
             if is_json_obj(doc) and is_json_list(doc.get("blocks")) and doc.get("blocks"):
                 doc_out: dict[str, Any] = {"blocks": doc.get("blocks"), "media": doc.get("media") or []}
                 if doc.get("source") is not None:
@@ -212,8 +228,12 @@ class RequirementService:
                     doc_out["generator"] = doc.get("generator")
                 wanted = [mid for mid in (jtext(mf, "id", "") for mf in doc_out["media"]) if mid]
                 present = set(self.repos.media.ids_of(req_id, wanted))  # 一次 IN 查询（AUDIT D2-4）
-                missing_media = len([mid for mid in wanted if mid not in present])
-                # 宽松策略：doc 始终落库（缺失媒体由 missingMedia 如实计数，前端渲染占位）
+                missing = [mid for mid in wanted if mid not in present]
+                if missing:
+                    # 守恒终检（v4 守恒门）：媒体未传齐阻断拒绝（不再宽松计数落库）
+                    raise IntegrityException(
+                        f"doc 引用的媒体未上传（missingMedia={len(missing)}：{missing[:5]}）——"
+                        "先补齐媒体上传（mediaId 与 doc.media[].id 一致）再重推")
                 self.repos.artifact.upsert(req_id, "doc", "", _json(doc_out), at)
                 doc_updated = True
 

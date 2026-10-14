@@ -10,7 +10,7 @@ import json
 import logging
 from typing import Any
 
-from platform_sdlc.common import ApiException, Times, is_json_obj, jint_or_400, jrequired, jtext
+from platform_sdlc.common import ApiException, IntegrityException, Times, is_json_obj, jint_or_400, jrequired, jtext
 from platform_sdlc.db import Database
 from platform_sdlc.models import DraftArtifact, Task
 from platform_sdlc.repositories import Repos
@@ -174,6 +174,11 @@ class TaskService:
             try:
                 imported = self.blocks.import_from_output(t)
                 body = {"result": _json(imported)}
+            except IntegrityException as e:
+                # 守恒终检未过（guard 对账/媒体状态/missingMedia）：与一般导入失败分流，引导按文案修复
+                ok = False
+                body = {"error": str(e), "reason": "integrity-failed",
+                        "hint": "守恒终检未过：按错误内文案修复后 retry"}
             except ApiException as e:
                 ok = False
                 body = {"error": str(e), "reason": "import-failed", "hint": "确认任务工作区 out/doc.json 已由 parse_doc 产出后重试"}
@@ -303,8 +308,11 @@ class TaskService:
             # 采纳原子性：副作用（内层 tx 可重入加入外层）与草稿删除同事务，异常整体回滚（草稿保留可重试）
             d = self.get_draft(req_id, type_)
             if type_ == D_DIGEST:
-                # 草稿 contentJson → 推送请求（与 HTTP 通道同一绑定口径：宽松 dict + 服务层校验）
-                out = self.requirements.push_artifacts(req_id, _parse_object(d.content_json, "推送产物"))
+                # 草稿 contentJson → 推送请求（与 HTTP 通道同一绑定口径：宽松 dict + 服务层校验）；
+                # doc 为平台导出回环（块表权威）不再落 artifact；守恒门只守外部导入（source_import / sdlc-sync）
+                payload = _parse_object(d.content_json, "推送产物")
+                payload.pop("doc", None)
+                out = self.requirements.push_artifacts(req_id, payload)
             elif type_ == D_CASES:
                 out = self.cases.sync_upsert(req_id, _parse_object(d.content_json, "cases 推送"))
             elif type_ == D_DESIGN:
