@@ -119,7 +119,8 @@ class RequirementService:
         保留 local 行（评论升级 L 系经重推不丢）；已答保留按 seq+问题文本不变携带——seq 相同而
         问题文本已变（P 编号漂移）时不携带，防旧答复张冠李戴。tx 全程持锁。
         doc 守恒终检前置到 tx 之前（v4 守恒门）：doc 是可选键，guard 校验失败不得进事务
-        回滚整批 digest/audit；doc 引用媒体未传齐（missingMedia>0）同样阻断拒绝。"""
+        回滚整批 digest/audit；doc 引用媒体未传齐即 IntegrityException 阻断拒绝（缺失计数
+        见 409 文案；成功出参 missingMedia 在阻断语义下恒 0，键保留为契约兼容）。"""
         doc = body.get("doc")
         if is_json_obj(doc) and is_json_list(doc.get("blocks")) and doc.get("blocks"):
             verify_doc_guard(doc)
@@ -279,8 +280,17 @@ class RequirementService:
         """澄清项处置统一入口（D21/D2=A）：作答/驳回/挂起/重开共用；answered_at = 最近处置时间。"""
         r = self.require(req_id)
         if r.status not in ("clarifying", "changed"):
-            # v4-15（§5.1 矩阵）：changed 下允许作答——只面对重开+新增项，未受影响项保留已答
-            raise ApiException(409, f"仅待澄清/变更中状态可作答（当前：{r.status}）")
+            # v4-15（§5.1 矩阵）：changed 下允许作答——只面对重开+新增项，未受影响项保留已答。
+            # 例外（published）：评论升级无状态门禁，升级出的 L 系（origin=local）在 published
+            # 卡上仍须有处置出口——否则升级即死巷；机器行维持终态锁定
+            if r.status == "published":
+                row = next((c for c in self.repos.clarify_item.list_by_req(req_id) if c.seq == seq), None)
+                if row is not None and row.origin == "local":
+                    pass  # L 系放行
+                else:
+                    raise ApiException(409, f"已发布卡仅评论升级的 L 系问题可处置（当前：{r.status}）")
+            else:
+                raise ApiException(409, f"仅待澄清/变更中状态可作答（当前：{r.status}）")
         ans = jtext(body, "answer", "")
         st = jtext(body, "status", "").strip()
         note = jtext(body, "note", "").strip()

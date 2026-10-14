@@ -54,6 +54,11 @@ class MediaService:
         with self.db.tx():
             existing = self.repos.media.find(req_id, media_id)
             if existing is not None:
+                # 同 id 不同内容 = 调用方误用（显式 mediaId 的内容契约是稳定的）——拒绝而非
+                # 静默沿用旧值（历史行 sha 为空时无从比对，保持幂等返回）
+                if existing.sha256 and existing.sha256 != sha:
+                    raise ApiException(409, f"mediaId 已被不同内容占用：{media_id}"
+                                        "（显式 id 的内容须稳定；换内容请换 id）")
                 return existing
 
             f = MediaFile(req_id=req_id, media_id=media_id, sha256=sha, name=_safe_name(name),

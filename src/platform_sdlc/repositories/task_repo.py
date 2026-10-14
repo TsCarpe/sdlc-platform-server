@@ -98,6 +98,13 @@ class TaskRepo:
             args.extend(sorted(exclude_types))
         return self.db.execute(sql, tuple(args))
 
+    def cancel_queued_of_type(self, req_id: str, type_: str, result_json: str, at: str) -> int:
+        """定向取消同需求某类型 queued 任务（abort 放弃变更单——增量质检随单作废；单条 UPDATE）。"""
+        return self.db.execute(
+            "UPDATE task SET status='failed', result=?, updated_at=?"
+            " WHERE req_id=? AND type=? AND status='queued'",
+            (result_json, at, req_id, type_))
+
     def exists_by_type(self, req_id: str, type_: str, since: str | None = None) -> bool:
         """该需求是否建过某类型任务（不限状态）——无 LIMIT 的存在性直查（L2 只自动一次的判断依据）。
         v4-15（§8 窗口化）：since 非空时只看该时点之后创建的任务（澄清完备窗口起点——
@@ -106,8 +113,18 @@ class TaskRepo:
             return bool(self.db.query_scalar(
                 "SELECT EXISTS(SELECT 1 FROM task WHERE req_id=? AND type=?)", (req_id, type_)))
         return bool(self.db.query_scalar(
+            # 同秒边界（窗口起点同秒建的旧任务算窗外）保留为已知边角：真实流程两事件间隔
+            # 分钟级；>= 会把快速串行流里上一窗的同秒任务误判窗内、抑制 v4-15 窗口化重排
             "SELECT EXISTS(SELECT 1 FROM task WHERE req_id=? AND type=? AND created_at>?)",
             (req_id, type_, since)))
+
+    def latest_of_types(self, req_id: str, types: Collection[str]) -> Task | None:
+        """同需求若干类型的最新一条（id 倒序 LIMIT 1——无滑窗；design/gate 六态推导用，
+        替代 list(req_id, None) 的默认 LIMIT 100：任务史溢出会漏判最新任务）。"""
+        sql = (f"SELECT * FROM task WHERE req_id=? AND type IN ({','.join('?' * len(types))})"
+               " ORDER BY id DESC LIMIT 1")
+        row = self.db.query_one(sql, (req_id, *sorted(types)))
+        return Task.from_row(row) if row is not None else None
 
     def expire_stale_running(self, cutoff: str, fail_result: str, at: str, runner: str | None = None) -> int:
         """执行器启动恢复：把超时仍 running 的任务置 failed（执行器崩溃遗留）。

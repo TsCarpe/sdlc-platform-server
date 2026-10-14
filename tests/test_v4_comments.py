@@ -207,12 +207,50 @@ def test_comment_and_escalate_on_published(env: tuple[TestClient, Database, Repo
     client.put(f"/api/requirements/{req_id}/answers/P1", json={"answer": "a"})
     client.post(f"/api/requirements/{req_id}/publish", json={"standardMd": "# x"})
 
-    # published：评论可发、可解决、可升级（漏网问题 → 三期变更单通道处置）
+    # published：评论可发、可解决、可升级；升级出的 L 系可就地处置（升级无门禁 → 处置不能
+    # 无出口——set_answer 对 origin=local 行放行），机器行维持终态锁定
     pub_cm = _post_comment(client, req_id, author="李四", text="发布后漏网问题").json()
     assert pub_cm["id"] > 0
     pub_e = client.post(f"/api/requirements/{req_id}/comments/{pub_cm['id']}/escalate", json={})
     assert pub_e.status_code == 200
+    l_seq = pub_e.json()["seq"]
+    assert client.put(f"/api/requirements/{req_id}/answers/{l_seq}",
+                      json={"answer": "发布后漏网处置"}).status_code == 200  # L 系出口
+    assert client.put(f"/api/requirements/{req_id}/answers/P1",
+                      json={"answer": "x"}).status_code == 409  # 机器行终态锁
     assert db.query_scalar("SELECT status FROM requirement WHERE id=?", (req_id,)) == "published"
+
+
+def test_reconcile_skips_platform_comment_echo(env: tuple[TestClient, Database, Repos]) -> None:
+    """E7 回归：对账导入粘平台导出 doc.json——前端 parseRecJson 已滤 origin=platform 评论块，
+    后端 upsert 对显式声明 origin=platform 的行同样跳过（防手工构造 body）：平台自身评论
+    （external_id 空，幂等键永不匹配）不被复制成 feishu 行；普通飞书评论照常导入。
+    （source_import 通道不达此场景——封存守卫先拒有平台评论的重导。）"""
+    from platform_sdlc.models import ReqComment
+    client, db, repos = env
+    req_id = _mk_card(client)
+    _seed_block(repos, req_id)
+    pcm_id = repos.req_comment.insert(ReqComment(
+        id=0, req_id=req_id, block_id="c-p1", origin="platform", external_id="",
+        author="张三", text="平台上的疑问"))
+
+    out = client.post(f"/api/requirements/{req_id}/changes/reconcile", json={
+        "kind": "reconcile", "proposedBy": "王五",
+        "blocks": [
+            {"id": "c-h1", "type": "heading", "level": 2, "text": "背景"},
+            {"id": "c-p1", "type": "paragraph", "text": "一段说明（飞书已修订）"},
+        ],
+        "comments": [
+            {"externalId": f"cm-{pcm_id}", "blockId": "c-p1", "author": "张三",
+             "text": "平台上的疑问", "origin": "platform"},   # 平台回声（导出打标透传）
+            {"externalId": "7280001", "blockId": "c-p1", "author": "李四",
+             "text": "飞书新评论"},                             # 正常飞书评论
+        ]})
+    assert out.status_code == 200
+    cms = repos.req_comment.list_by_req(req_id)
+    assert len([c for c in cms if c.origin == "platform"]) == 1          # 回声未复制
+    assert len([c for c in cms if c.origin == "feishu"]) == 1            # 飞书照常导入
+    assert all(c.text != "平台上的疑问" or c.id == pcm_id for c in cms)  # 原行唯一
 
 
 # ---------- v4-9：push_artifacts 按来源合并（§12 二期判据：L 系行经重推不丢） ----------

@@ -46,12 +46,6 @@ def router(ctx: AppContext) -> APIRouter:
         （双通道各恢复自己，防跨通道互杀——AUDIT D1-3；超时阈值用服务端单一配置）。"""
         n = await asyncio.to_thread(svc.expire_stale, ctx.settings.agent_timeout_min, runner or None)
         return {"ok": True, "expired": n}
-        t = await asyncio.to_thread(svc.claim, runner)
-        if t is None:
-            return Response(status_code=204)
-        import json
-
-        return Response(content=json.dumps(wire(t), ensure_ascii=False), media_type="application/json")
 
     @r.post("/api/tasks/{task_id}/done", response_model=TaskOut)
     async def done(task_id: int, request: Request) -> dict[str, Any]:

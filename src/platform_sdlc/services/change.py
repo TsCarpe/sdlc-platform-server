@@ -231,6 +231,10 @@ class ChangeService:
             ext = jtext(c, "externalId", "") or jtext(c, "id", "")
             if not ext:
                 continue
+            if jtext(c, "origin", "") == "platform":
+                # 平台自身评论回环（导出体打标，前端 parseRecJson 透传）：不作为 feishu 评论
+                # 导入——否则原 platform 行（external_id 空）永不匹配幂等键，同评论复制成双份
+                continue
             self.repos.req_comment.upsert_feishu(
                 req_id, ext, jtext(c, "blockId", "") or jtext(c, "anchorBlockId", ""),
                 jtext(c, "author", ""), jtext(c, "text", ""), Times.now())
@@ -335,6 +339,15 @@ class ChangeService:
         for i in _arr(inv.get("auditIds")):
             if str(i) not in audit_ids:
                 raise ApiException(400, f"作废清单 audit 条目不存在：{i}（清单里的行必须真实存在）")
+        # FR 作废清单存在性（digestRows.frRemoves 主位 + frPoints.remove 兼容）——防 LLM 幻觉 id
+        fp_v = bundle.get("frPoints")
+        fr_remove = [str(x) for x in (_arr(rows.get("frRemoves"))
+                                      + (_arr(fp_v.get("remove")) if is_json_obj(fp_v) else []))]
+        if fr_remove:
+            fr_ids = {fp.id for fp in self.repos.fr_point.list_by_req(req_id)}
+            ghost = [x for x in fr_remove if x not in fr_ids]
+            if ghost:
+                raise ApiException(400, f"作废清单 FR 不存在：{ghost[:5]}（清单里的行必须真实存在）")
         return dict(bundle)
 
     def merge_incremental(self, req_id: str, d: Any, by: str) -> dict[str, Any]:
@@ -406,7 +419,9 @@ class ChangeService:
 
             frs = self.repos.fr_point.list_by_req(req_id)
             fp_v = bundle.get("frPoints")
+            # FR 作废两契约位：digestRows.frRemoves（v4-14 prompts/前端主位）+ 顶层 frPoints.remove（兼容）
             remove_ids: set[str] = {str(x) for x in _arr(fp_v.get("remove"))} if is_json_obj(fp_v) else set()
+            remove_ids |= {str(x) for x in _arr(rows.get("frRemoves"))}
             kept_frs: list[Any] = []
             for fp in frs:
                 if fp.anchor and fp.anchor in section_ids:
@@ -422,9 +437,12 @@ class ChangeService:
                                module=jtext(f, "module", ""), anchor=jtext(f, "anchor", ""))
                        for f in _arr(rows.get("frUpserts")) if is_json_obj(f) and jtext(f, "id", "")]
 
-            clarify_kept: list[Any] = []
+            clarify_kept: list[Any] = []  # 仅机器行（skill/incremental）——local 行不删不重插（原样
+            # 保留：仍在库中重插会撞 UNIQUE(req_id,seq)，§6.3/§12 一期判据「L 系经合并不丢」）
             for item in self.repos.clarify_item.list_by_req(req_id):
-                if item.anchor and item.anchor in section_ids and item.origin in ("skill", "incremental"):
+                if item.origin not in ("skill", "incremental"):
+                    continue
+                if item.anchor and item.anchor in section_ids:
                     stats["removedRows"] += 1
                     continue
                 clarify_kept.append(item)
@@ -458,7 +476,9 @@ class ChangeService:
     def abort(self, req_id: str, change_id: int, body: dict[str, Any]) -> dict[str, Any]:
         """放弃 = 当无事发生（除变更单留痕）的全量逆向回滚，一个事务：
         ①守卫：confirmed 单 ∧ changed 态 ∧ 无已采纳 incremental_bundle（v4-14 前以草稿不存在近似）
-        ∧ 为最新 confirmed 单（串行 confirm 下即唯一未消化单，LIFO——只能从最新弃起）；
+        ∧ 为最新 confirmed 单（串行 confirm 下即唯一未消化单，LIFO——只能从最新弃起）
+        ∧ 无执行中增量质检（queued 随单定向取消——confirm 侧 count_active 拦截的对称面，
+        防 Runner 基于已回滚块态空转）；
         ②块乐观锁：逆向 edit 前逐条校验块现值 == new_text（confirm 后无人再动过），不符 409；
         ③逆向应用：edit 逆（new→old，version 再 +1，updated_by=放弃人）、insert 逆（软删——不构成
         §2.4 封存痕迹，判定排除 deleted 行）、delete 逆（复活清 deleted）、move 逆（按快照 baseline
@@ -482,6 +502,15 @@ class ChangeService:
                          if x.status == "confirmed")
             if latest != change_id:
                 raise ApiException(409, f"只能放弃最新的 confirmed 单（当前最新：#{latest}），LIFO")
+            # ①补：增量质检任务对称处置——queued 随单定向取消（事务内）；running 拦放弃
+            # （Runner 已领取，等其回报终态后再来，防状态被从脚下抽走）
+            self.repos.task.cancel_queued_of_type(
+                req_id, "incremental_check",
+                _json_compact({"reason": "change-aborted",
+                               "hint": f"变更单 #{change_id} 已放弃，增量任务随单作废"}), Times.now())
+            if self.repos.task.count_active(req_id, "incremental_check") > 0:
+                raise ApiException(409, "存在执行中的增量质检任务（Runner 已领取），"
+                                        "请等其结束（完成/失败）后再放弃")
             aborted_by = jrequired(body, "abortedBy")
             items = self.repos.req_change.list_items(change_id)
             snapshot = _load_snapshot(c.snapshot_json)

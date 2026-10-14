@@ -86,6 +86,45 @@ def test_preview_diff_four_ops(env: tuple[TestClient, Database, Repos]) -> None:
     assert [b.block_id for b in repos.req_block.list_by_req(req_id)] == ["e-h1", "e-p1", "e-li1", "e-li2"]
 
 
+def test_window1_optimistic_lock_and_rev_bump(env: tuple[TestClient, Database, Repos]) -> None:
+    """P2-3 回归：窗口 1 保存带 baseContentRev 乐观锁——基线不符 409（后保存者不再静默覆盖
+    前者）；保存成功 content_rev+1（幂等重发 diff 空不 bump）；缺省 baseContentRev 兼容直通
+    （脚本/旧客户端）。"""
+    client, _, repos = env
+    req_id = _mk_card(client)
+    _seed(repos, req_id)
+
+    def blocks(text: str) -> list[dict]:
+        return [
+            {"id": "e-h1", "type": "heading", "level": 2, "text": "背景"},
+            {"id": "e-p1", "type": "paragraph", "text": text},
+            {"id": "e-li1", "type": "list-item", "marker": "1. ", "depth": 1, "text": "列表项一"},
+            {"id": "e-li2", "type": "list-item", "marker": "a. ", "depth": 2, "parent": "e-li1", "text": "子项 a"},
+        ]
+
+    def rev() -> int:
+        return client.get(f"/api/requirements/{req_id}").json()["card"]["contentRev"]
+
+    # 首次保存（无 baseContentRev，兼容直通）→ rev 0→1
+    assert client.put(f"/api/requirements/{req_id}/blocks",
+                      json={"updatedBy": "张三", "blocks": blocks("第一次改动")}).status_code == 200
+    assert rev() == 1
+    # 第二人持旧基线（0）保存 → 409 拒绝覆盖
+    r2 = client.put(f"/api/requirements/{req_id}/blocks",
+                    json={"updatedBy": "李四", "baseContentRev": 0, "blocks": blocks("基于旧态的改动")})
+    assert r2.status_code == 409 and "已被他人保存" in r2.json()["error"]
+    # 持正确基线（1）保存 → 过，rev 1→2
+    assert client.put(f"/api/requirements/{req_id}/blocks",
+                      json={"updatedBy": "李四", "baseContentRev": 1,
+                            "blocks": blocks("第二次改动")}).status_code == 200
+    assert rev() == 2
+    # 幂等重发（同数组）→ diff 空，rev 不 bump
+    assert client.put(f"/api/requirements/{req_id}/blocks",
+                      json={"updatedBy": "李四", "baseContentRev": 2,
+                            "blocks": blocks("第二次改动")}).status_code == 200
+    assert rev() == 2
+
+
 def test_lis_single_move_only_one_item(env: tuple[TestClient, Database, Repos]) -> None:
     """[A,B,C,D]→[A,C,D,B]：朴素逐位对比判 3 个 move，LIS 只判 B——「挪 1 块只 1 move」。"""
     client, _, repos = env

@@ -286,6 +286,9 @@ def test_finish_import_idempotent(env: tuple[Database, Repos, Services, Path]) -
     assert len(blocks) == 3  # 替换不叠加
     cms = repos.req_comment.list_by_req("REQ-2026-001")
     assert len(cms) == 2 and all(c.origin == "feishu" for c in cms)  # feishu 行替换不叠加
+    # 注：平台评论回环（导出体粘回）不在此通道——封存守卫先拒（有 platform 评论的飞书源卡
+    # 全量重导 409，见 _guard_import_sealed）；回环防御在 reconcile 通道
+    # （test_v4_comments.py::test_reconcile_skips_platform_comment_echo）
 
 
 # ---------- approve 剥 doc：守恒门只守外部导入（source_import / sdlc-sync） ----------

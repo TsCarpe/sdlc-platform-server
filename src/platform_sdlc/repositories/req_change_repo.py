@@ -76,6 +76,8 @@ class ReqChangeRepo:
             if n == 0:
                 continue  # 影响面为空的单无产物面，不阻塞后单
             if digest_pushed_at is None or (c.confirmed_at or "") > digest_pushed_at:
+                # 同秒漏判（confirm 与合并同秒 → 误判已消化）保留为已知边角：真实流程两事件
+                # 间隔分钟级；>= 会在快速串行流（合并后同秒 confirm）误拦合法消化，取舍不采用
                 out.append(c.id or 0)
         return out
 

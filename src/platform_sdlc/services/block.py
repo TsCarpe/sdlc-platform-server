@@ -206,16 +206,18 @@ class BlockService:
                     ref_no += 1
                     refs.append(f"c{ref_no}")
                     out.append({
-                        "id": g["id"], "type": "comment", "ref": refs[-1], "anchorBlockId": b.block_id,
-                        "quote": "", "thread": g["thread"], "reactions": None, "path": "评论区",
+                        "id": g["id"], "origin": g["origin"], "type": "comment", "ref": refs[-1],
+                        "anchorBlockId": b.block_id, "quote": "", "thread": g["thread"],
+                        "reactions": None, "path": "评论区",
                     })
                 blk["comments"] = ",".join(refs)
         for host_id, host_groups in groups.items():  # 宿主已软删的评论：追加尾部（§4.3 信息不丢）
             for g in host_groups:
                 ref_no += 1
                 out.append({
-                    "id": g["id"], "type": "comment", "ref": f"c{ref_no}", "anchorBlockId": host_id,
-                    "quote": "", "thread": g["thread"], "reactions": None, "path": "评论区（原块已删除）",
+                    "id": g["id"], "origin": g["origin"], "type": "comment", "ref": f"c{ref_no}",
+                    "anchorBlockId": host_id, "quote": "", "thread": g["thread"],
+                    "reactions": None, "path": "评论区（原块已删除）",
                 })
         return out
 
@@ -250,6 +252,7 @@ class BlockService:
         req_id = task.req_id
         block_rows: list[ReqBlock] = []
         comment_chains: list[list[ReqComment]] = []
+        skipped_echo = 0
         wanted_media: list[str] = []
         seq = 0
         for i, b in enumerate(blocks):
@@ -260,6 +263,11 @@ class BlockService:
             btype = str(b.get("type") or "")
             if btype == "comment":
                 chain = _comment_chain(req_id, b)
+                if chain and self._is_platform_echo(b):
+                    # 平台自身评论回环（导出 → 误粘回导）：不复制——否则同评论双份
+                    # （原 platform 行 + 重导 feishu 行，幂等键空间不同永不合并）
+                    skipped_echo += 1
+                    continue
                 if chain:
                     comment_chains.append(chain)
                 continue
@@ -288,9 +296,20 @@ class BlockService:
                     c.id = self.repos.req_comment.insert(_dataclass_with(c, reply_to=prev))
                     prev = c.id
                     n_comments += 1
+        # missingMedia：阻断语义（缺失即 IntegrityException 拒落库）下成功路径恒 0——键保留为
+        # 契约兼容，计数只出现在 409 文案中（push-artifacts 出参同款语义）
         out = {"blocks": len(block_rows), "comments": n_comments, "missingMedia": 0}
+        if skipped_echo:
+            log.info("source_import 跳过平台评论回环 %s（任务 #%s）：%d 条", req_id, task.id, skipped_echo)
         log.info("source_import 落库 %s（任务 #%s）：%s", req_id, task.id, out)
         return out
+
+    def _is_platform_echo(self, cb: dict[str, Any]) -> bool:
+        """doc.json 里的平台评论回声识别（导出侧打标）：平台导出体 comment 块携带
+        origin=platform（_render_blocks 注入；飞书导出体无此键——cm-N 序号形态两侧共用，
+        不可作判据）。回粘重导时跳过——否则同评论双份（原 platform 行 + 重导 feishu 行，
+        幂等键空间不同永不合并）。"""
+        return str(cb.get("origin") or "") == "platform"
 
     # ---------- 写面：窗口 1 块级直接编辑（DESIGN-v4 §5.3/§1 表，EXEC v4-7；三期变更单 draft 复用同一 diff） ----------
 
@@ -301,11 +320,26 @@ class BlockService:
         delete 软删留痕；应用后按提交序整体重排 seq。幂等：同数组重发 diff 为空、零写入。"""
         with self.db.tx():
             self._guard_edit(req_id)
+            r = self.repos.requirement.find(req_id)
+            # 乐观锁（并发保护）：编辑会话基于的 contentRev 与现值不符 = 他人已保存——拒绝
+            # 覆盖（409），前端刷新重看；缺省（脚本/旧客户端）兼容直通。窗口 1 保存本身
+            # bump content_rev（§5.7 单调递增语义：原文内容代数，与变更单 confirm 同通道）。
+            bcr = body.get("baseContentRev")
+            if bcr is not None:
+                try:
+                    bcr_i = int(bcr)
+                except (TypeError, ValueError) as e:
+                    raise ApiException(400, f"baseContentRev 须为整数（收到：{bcr!r}）") from e
+                if r is None or r.content_rev != bcr_i:
+                    raise ApiException(409, f"原文已被他人保存（contentRev 期望 {bcr_i}，"
+                                            f"当前 {r.content_rev if r else '?'}）——请刷新后基于最新内容重编")
             updated_by = jrequired(body, "updatedBy")  # 手填身份必填（§9：全量留痕，防误操作不防故意）
             submitted = self.parse_blocks(body)
             current = self.repos.req_block.list_by_req(req_id)
             items = self.diff_blocks(req_id, submitted, current)
             self.apply_edits(req_id, submitted, current, updated_by)
+            if items:
+                self.repos.requirement.bump_content_rev(req_id)  # 幂等重发（diff 空）不 bump
         log.info("块级直接编辑 %s（by=%s）：%s", req_id, updated_by, _counts_of(items))
         return self._diff_view(items)
 
@@ -657,6 +691,7 @@ def _thread_groups(comments: list[ReqComment]) -> dict[str, list[dict[str, Any]]
             stack = [*children.get(cur.id, []), *stack]
         groups.setdefault(root.block_id, []).append({
             "id": root.external_id or f"cm-{root.id}",
+            "origin": root.origin,  # 导出侧打标：platform 行回粘重导时按此识别回环（不复制）
             "thread": [{"user": c.author, "text": c.text} for c in chain],
         })
     return groups

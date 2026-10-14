@@ -240,6 +240,34 @@ def test_l2_only_once_and_settle(env: tuple[Repos, Services]) -> None:
     assert len([t for t in repos.task.list(req_id, None) if t.type == "case_gen"]) == 1
 
 
+def test_l2_case_gen_windowed_after_rechange(env: tuple[Repos, Services]) -> None:
+    """P3-5 回归：case_gen「只自动一次」窗口化（v4-15 与 standard_doc 同款口径）——首发排过
+    （含被取消）后，变更轮（存在晚于首发任务的 confirmed 变更单）重新发布 → 自动排用例重新
+    获得机会（重新发布后新增 FR 不再漏排；人工通道不受影响）。"""
+    repos, services = env
+    req_id = make_req(repos, services)
+    services.requirements.push_artifacts(req_id, {
+        "digest": {"md": "# d"}, "audit": {"md": "# a"},
+        "items": [{"seq": "P01", "level": "red", "theme": "t", "question": "q"}]})
+    services.requirements.set_answer(req_id, "P01", {"answer": "a"})
+    services.orchestration.on_answered(req_id)
+    services.requirements.publish(req_id, {"standardMd": "# s"})
+    services.orchestration.on_published(req_id)
+    first = [t for t in repos.task.list(req_id, None) if t.type == "case_gen"]
+    assert len(first) == 1
+    repos.task.cancel_queued(first[0].id, "{}", NOW)  # 首发用例任务被取消（历史终局）
+
+    # 变更轮：晚于首发任务的 confirmed 变更单开新窗口 → 重新自动排
+    from platform_sdlc.models import ReqChange
+    repos.req_change.insert(ReqChange(
+        id=None, req_id=req_id, kind="change", title="口径变更", detail="",
+        proposed_by="张三", confirmed_by="李四", status="confirmed", blocks_json="[]",
+        created_at="2999-01-01 00:00:00", confirmed_at="2999-01-01 00:00:01"))
+    services.orchestration.on_published(req_id)
+    cgs = [t for t in repos.task.list(req_id, None) if t.type == "case_gen"]
+    assert len(cgs) == 2  # 新窗口重排（修复前：全史判断 → 永不重排）
+
+
 def test_settle_terminal_cancels_queued(env: tuple[Repos, Services]) -> None:
     """发布收尾：queued 的质检任务作废（superseded-by-publish），running 不动。"""
     repos, services = env

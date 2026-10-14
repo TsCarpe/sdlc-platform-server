@@ -59,10 +59,10 @@ class DesignService:
             out["tierProposal"] = proposal
 
         # 六态推导输入：最新 design_gen/design_rev 任务（含终态，UI 据此亮「失败可重试」）
-        for t in self.repos.task.list(req_id, None):
-            if t.type in ("design_gen", "design_rev"):
-                out["activeTask"] = {"id": t.id, "type": t.type, "status": t.status, "createdAt": t.created_at}
-                break  # list 按 id 倒序，首个即最新
+        # latest_of_types 无滑窗（list 默认 LIMIT 100，任务史溢出会漏判最新）
+        t = self.repos.task.latest_of_types(req_id, ("design_gen", "design_rev"))
+        if t is not None:
+            out["activeTask"] = {"id": t.id, "type": t.type, "status": t.status, "createdAt": t.created_at}
 
         if "skipDeclared" in out:
             out["phase"] = "skipped"

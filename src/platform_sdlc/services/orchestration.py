@@ -90,9 +90,12 @@ class OrchestrationService:
                 log.info("[L2] %s 发布收尾：取消 %d 个终态残留排队任务（质检/合成）", req_id, cancelled)
         except Exception as e:  # noqa: BLE001  # 不影响发布
             log.warning("[L2] %s 发布收尾取消残留任务失败（不影响发布）：%s", req_id, e)
-        # 第二段：自动排队 case_gen（cancel 仅对 queued 生效，是人手中的逃生门）
+        # 第二段：自动排队 case_gen（cancel 仅对 queued 生效，是人手中的逃生门）。
+        # 窗口化（与 on_answered 的 standard_doc 同款）：首发轮不限（_clarify_window_start
+        # 返回 None）；变更轮 confirmed_at 开新窗——重新发布后新增 FR 重新获得自动排用例机会
         try:
-            if self.tasks.any_task_of_type(req_id, task_mod.T_CASES):
+            if self.tasks.any_task_of_type(req_id, task_mod.T_CASES,
+                                           since=self._clarify_window_start(req_id)):
                 return
             t = self.tasks.create_auto(req_id, task_mod.T_CASES, "auto:published", "标准文档已发布，L2 自动排队")
             log.info("[L2] %s 已发布 → 自动创建 #%s case_gen", req_id, t.id)

@@ -102,8 +102,10 @@ def test_doc_payload_comment_threads(env: tuple[TestClient, Database, Repos, Blo
     blocks_out = out["blocks"]
     by_id = {b["id"]: b for b in blocks_out}
     # comment 块插宿主后：thread 摊平、anchorBlockId 回链、ref 按宿主文档序编号
-    # （fs-h1 seq 在 fs-p1 前 → 王五组先编 c1，张三组 c2——对齐 parse_doc 的文档序 ref）
-    assert by_id["7280001"] == {"id": "7280001", "type": "comment", "ref": "c2", "anchorBlockId": "fs-p1",
+    # （fs-h1 seq 在 fs-p1 前 → 王五组先编 c1，张三组 c2——对齐 parse_doc 的文档序 ref）；
+    # origin 打标（platform 行回粘重导的回环识别键，飞书行亦携带）
+    assert by_id["7280001"] == {"id": "7280001", "origin": "feishu", "type": "comment", "ref": "c2",
+                                "anchorBlockId": "fs-p1",
                                 "quote": "", "thread": [{"user": "张三", "text": "这里要改"},
                                                         {"user": "李四", "text": "同意"}],
                                 "reactions": None, "path": "评论区"}

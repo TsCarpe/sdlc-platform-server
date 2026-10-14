@@ -598,6 +598,77 @@ def _dumps_py(o: object) -> str:
     return json.dumps(o, ensure_ascii=False)
 
 
+# ---------- 回归：增量合并 local 行保留 + frRemoves 契约消费；abort 增量任务对称处置 ----------
+
+def test_merge_keeps_local_clarify_and_consumes_fr_removes(
+        env: tuple[TestClient, Database, Repos]) -> None:
+    """P1×2 回归：
+    ① 含评论升级 L 系 local 行的卡增量采纳不再撞 UNIQUE(req_id,seq)——local 行不删不重插、
+       原样保留（答复/处置不丢），且 kept_seqs 不混 L 系（P 系编号不被 L07 抬到 P8）；
+    ② digestRows.frRemoves 被 merge 真消费（空 anchor 的 FR-3 不进区间、只能靠清单删），
+       幻觉 id 在 put_draft 即 400。"""
+    from platform_sdlc.models import ClarifyItem
+    client, db, repos = env
+    req_id = _mk_card(client)
+    _seed(repos, req_id)
+    _publish_card(client, repos, req_id)
+    cid = _draft_edit_p1(client, req_id)["id"]
+    db.execute("UPDATE artifact SET pushed_at='2026-10-13 00:00:00' WHERE req_id=? AND type='digest'",
+               (req_id,))
+    assert client.post(f"/api/requirements/{req_id}/changes/{cid}/confirm",
+                       json={"confirmedBy": "李四"}).status_code == 200
+    # changed 期间：评论升级出 L07（local，已处置）；FR-3 空 anchor 永不进区间 → 只能靠 frRemoves 删
+    repos.clarify_item.insert(ClarifyItem(
+        id=0, req_id=req_id, seq="L07", level="yellow", theme="t", question="评论升级问题",
+        anchor="p1", answer="已有答复", status="answered", origin="local", src_comment_id=1))
+    repos.fr_point.replace_all(req_id, [
+        _fp(req_id, "需求.FR-1", "注册", "p1"), _fp(req_id, "需求.FR-2", "计费", "li2"),
+        _fp(req_id, "需求.FR-3", "导出", "")])
+
+    ghost = _bundle(cid, "h1", "p1")
+    ghost["digestRows"]["frRemoves"] = ["需求.FR-GHOST"]
+    r_bad = client.put(f"/api/requirements/{req_id}/drafts/incremental_bundle",
+                       json={"contentJson": _dumps_py(ghost)})
+    assert r_bad.status_code == 400 and "FR 不存在" in r_bad.json()["error"]
+
+    good = _bundle(cid, "h1", "p1")
+    good["digestRows"]["frRemoves"] = ["需求.FR-3"]
+    assert client.put(f"/api/requirements/{req_id}/drafts/incremental_bundle",
+                      json={"contentJson": _dumps_py(good)}).status_code == 200
+    appr = client.post(f"/api/requirements/{req_id}/drafts/incremental_bundle/approve",
+                       json={"by": "采纳人"}).json()
+    assert appr["ok"] is True  # 修复前：L07 仍在库被重插 → UNIQUE 冲突 500
+
+    answers = {a["seq"]: a for a in client.get(f"/api/requirements/{req_id}/answers").json()}
+    assert answers["L07"]["answer"] == "已有答复" and answers["L07"]["status"] == "answered"
+    inc = [a for a in answers.values() if a["origin"] == "incremental"]
+    assert len(inc) == 1 and inc[0]["seq"] == "P4"  # P3 存量 → 接 max+1=P4；L07 不抬号
+    frs = client.get(f"/api/fr-points?req_id={req_id}").json()["points"]
+    assert frs == ["需求.FR-1"]  # FR-2 区间删、FR-3 frRemoves 删（契约消费坐实）
+
+
+def test_abort_incremental_task_handling(env: tuple[TestClient, Database, Repos]) -> None:
+    """P2 回归：abort 对增量质检任务对称处置——running 拦放弃（Runner 已领取，防状态被从
+    脚下抽走）；queued 随单定向取消（failed + reason=change-aborted）后放弃成功。"""
+    client, db, repos = env
+    req_id = _mk_card(client)
+    _seed(repos, req_id)
+    cid = _confirm_first(client, req_id)
+    tid = next(t["id"] for t in client.get(f"/api/tasks?req_id={req_id}").json()
+               if t["type"] == "incremental_check")
+
+    db.execute("UPDATE task SET status='running' WHERE id=?", (tid,))
+    assert client.post(f"/api/requirements/{req_id}/changes/{cid}/abort",
+                       json={"abortedBy": "王五"}).status_code == 409
+    db.execute("UPDATE task SET status='queued' WHERE id=?", (tid,))
+
+    out = client.post(f"/api/requirements/{req_id}/changes/{cid}/abort",
+                      json={"abortedBy": "王五"}).json()
+    assert out["status"] == "aborted"
+    row = db.query_one("SELECT status, result FROM task WHERE id=?", (tid,))
+    assert row is not None and row["status"] == "failed" and "change-aborted" in (row["result"] or "")
+
+
 # ---------- v4-15：changed 守卫矩阵 + 发布双重守卫 + on_answered 窗口化 ----------
 
 def test_changed_guard_matrix(env: tuple[TestClient, Database, Repos]) -> None:

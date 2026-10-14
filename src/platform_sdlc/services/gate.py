@@ -294,13 +294,15 @@ class GateService:
         cur_cases = self._cases_max_updated(req_id)
         if cur_md != str(b.get("designMd", "")):
             reasons.append(f"设计文档内容变更（v{d.version if d else 0} ≠ 基线 v{int(b.get('designVer') or 0)}）")
-        if cur_cases > str(b.get("casesMaxUpdated", "")):
+        if cur_cases >= str(b.get("casesMaxUpdated", "")) and cur_cases:
+            # >=（秒级时间戳保守取向）：基线同秒的用例更新也计「已更新」——宁可多提醒不漏判
             reasons.append("用例在基线后有更新")
         out: dict[str, Any] = {"changed": bool(reasons), "reasons": reasons,
                                "window": "released" if latest.status == "released" else "in-review"}
         if latest.status == "released" and latest.released_at:
             req_changes = [c for c in self.repos.req_change.list_by_req(req_id)
-                           if c.status == "confirmed" and (c.confirmed_at or "") > (latest.released_at or "")]
+                           # >=：开闸同秒 confirm 的变更单也计「内容已变更」（秒级时间戳保守取向）
+                           if c.status == "confirmed" and (c.confirmed_at or "") >= (latest.released_at or "")]
             if req_changes:
                 out["changed"] = True
                 out["reqChangeIds"] = [c.id for c in req_changes]
@@ -334,10 +336,9 @@ class GateService:
             out["issues"] = issue_blocks
             out["units"] = list(units.values())
         out["change"] = self.change_status(req_id)
-        for t in self.repos.task.list(req_id, None):
-            if t.type == task_mod.T_GATE:
-                out["activeTask"] = {"id": t.id, "type": t.type, "status": t.status, "createdAt": t.created_at}
-                break  # list 按 id 倒序，首个即最新
+        t = self.repos.task.latest_of_types(req_id, (task_mod.T_GATE,))  # 无滑窗（LIMIT 100 任务史溢出漏判）
+        if t is not None:
+            out["activeTask"] = {"id": t.id, "type": t.type, "status": t.status, "createdAt": t.created_at}
         out["phase"] = self._derive_phase(out, latest)
         return out
 
