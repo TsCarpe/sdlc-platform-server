@@ -74,6 +74,59 @@ def test_push_artifacts_keeps_answers(env: tuple[Repos, Services]) -> None:
     assert answers["P02"]["answer"] == "" and answers["P02"]["status"] == "pending"
 
 
+def test_push_artifacts_platform_disposition_wins(env: tuple[Repos, Services]) -> None:
+    """红线（DESIGN-v5 B5/D17）：平台已处置（驳回/挂起）一律以平台为准携带——skill 清单自带
+    answer（pull-answers 回写后重推的常态）不得把平台处置顶回 answered。"""
+    repos, services = env
+    req_id = make_req(repos, services)
+    payload: dict[str, Any] = {"digest": {"md": "# d", "fr_points": []},
+                               "audit": {"md": "# a", "red": 0, "yellow": 1, "blue": 0, "items": []},
+                               "items": [
+                                   {"seq": "P01", "level": "red", "theme": "登录", "question": "密码规则？"},
+                                   {"seq": "P02", "level": "yellow", "theme": "登录", "question": "验证码？"},
+                               ]}
+    services.requirements.push_artifacts(req_id, payload)
+    services.requirements.set_answer(req_id, "P01", {"status": "rejected", "note": "原文已明确"})
+    services.requirements.set_answer(req_id, "P02", {"status": "deferred", "note": "下期再议"})
+    # 重推清单带 answer（skill 侧已被回写答复）——平台 rejected/deferred 不得被覆盖
+    payload2: dict[str, Any] = {**payload, "items": [
+        {"seq": "P01", "level": "red", "theme": "登录", "question": "密码规则？", "answer": "旧答复文本"},
+        {"seq": "P02", "level": "yellow", "theme": "登录", "question": "验证码？", "answer": "旧答复文本"},
+    ]}
+    out = services.requirements.push_artifacts(req_id, payload2)
+    assert out["carriedAnswers"] == 2
+    answers = {a["seq"]: a for a in services.requirements.answers(req_id)}
+    assert answers["P01"]["status"] == "rejected" and answers["P01"]["note"] == "原文已明确"
+    assert answers["P01"]["answer"] == ""   # 驳回行平台 answer 为空——不被 skill 自带 answer 顶入
+    assert answers["P02"]["status"] == "deferred" and answers["P02"]["note"] == "下期再议"
+
+
+def test_push_artifacts_carries_reopened_note(env: tuple[Repos, Services]) -> None:
+    """红线（DESIGN-v5 D17/r3 二审#5）：重开行（answer=''、status='pending'、note=变更单重开备注）
+    必须进携带 map——否则重推丢 note 且 skill 自带 answer 会把重开态顶回 answered。"""
+    repos, services = env
+    req_id = make_req(repos, services)
+    payload: dict[str, Any] = {"digest": {"md": "# d", "fr_points": []},
+                               "audit": {"md": "# a", "red": 0, "yellow": 0, "blue": 0, "items": []},
+                               "items": [
+                                   {"seq": "P01", "level": "red", "theme": "登录", "question": "密码规则？"},
+                               ]}
+    services.requirements.push_artifacts(req_id, payload)
+    services.requirements.set_answer(req_id, "P01", {"answer": "8 位", "status": "answered"})
+    # 变更单重开走 change.py 真实通道（reopen_items：answer 清空回 pending，note 带原答复备注）——
+    # 注意与 set_answer 的重开不同（其会从库回填 answer），真实重开行 answer 确实为空
+    repos.clarify_item.reopen_items(
+        req_id, [("P01", "因变更单#1 重开，原答复：8 位", None)])
+    payload2: dict[str, Any] = {**payload, "items": [
+        {"seq": "P01", "level": "red", "theme": "登录", "question": "密码规则？", "answer": "8 位"},
+    ]}
+    out = services.requirements.push_artifacts(req_id, payload2)
+    assert out["carriedAnswers"] == 1
+    row = {a["seq"]: a for a in services.requirements.answers(req_id)}["P01"]
+    assert row["status"] == "pending" and row["note"] == "因变更单#1 重开，原答复：8 位"
+    assert row["answer"] == ""   # 重开行保持待处置——skill 自带 answer 不生效
+
+
 def test_published_terminal_lock(env: tuple[Repos, Services]) -> None:
     """红线：发布后锁定——拒推产物、拒写质检草稿、拒建质检任务、拒作答。"""
     repos, services = env

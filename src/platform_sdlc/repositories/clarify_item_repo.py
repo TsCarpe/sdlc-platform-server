@@ -15,12 +15,14 @@ class ClarifyItemRepo:
         return [ClarifyItem.from_row(r) for r in self.db.query_all("SELECT * FROM clarify_item WHERE req_id=? ORDER BY id", (req_id,))]
 
     def disposition_map_by_seq(self, req_id: str) -> dict[str, ClarifyItem]:
-        """seq -> 已处置项（有答复或有处置状态；pending 纯净行不携带。空答复的驳回也携带——D23）。"""
+        """seq -> 有平台处置痕迹的行（DESIGN-v5 D17：answer 非空 ∨ status≠pending ∨ note 非空。
+        空答复的驳回也携带——D23；note 非空的 pending 重开行（变更单重开带原答复备注）同样携带——
+        否则重开行被重推当全新行，note 丢失且 skill 自带 answer 会把重开态顶回 answered）。"""
         out: dict[str, ClarifyItem] = {}
         for c in self.list_by_req(req_id):
             has_answer = bool(c.answer)
             has_status = bool(c.status) and c.status != "pending"
-            if has_answer or has_status:
+            if has_answer or has_status or bool(c.note):
                 out[c.seq] = c
         return out
 

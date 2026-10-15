@@ -185,13 +185,16 @@ class RequirementService:
                 fr_ids.add(p.id)
                 frs.append(p)
 
-            # 保留已有处置（A2/D23）：answer+status+note；问题文本已变 = P 编号漂移，不携带并计数
+            # 保留已有处置（A2/D23；DESIGN-v5 B5/D17 修正：平台处置权威）：平台有处置痕迹的行一律以
+            # 平台 answer+status+note 为准携带，skill 自带 answer 仅在平台无处置时生效——否则重推会把
+            # 平台侧驳回/挂起/重开态整行覆写回 answered（pull-answers 回写后重推即触发）。问题文本
+            # 已变 = P 编号漂移，不携带并计数。
             existing = self.repos.clarify_item.disposition_map_by_seq(req_id)
             carried = 0
             changed = 0
             for c in parsed:
                 old = existing.get(c.seq)
-                if old is not None and not c.answer:
+                if old is not None:
                     if old.question.strip() != c.question.strip():
                         changed += 1
                         continue
@@ -413,8 +416,17 @@ class RequirementService:
             out["snapshot"] = {"md": snap.markdown, "at": snap.pushed_at, "version": snap.version}
         # v4.2 读面切源（DESIGN-v4 §2.3）：块表非空 → 块表组装（权威）；空且 doc artifact 存在 → 回退
         # （未导入卡/verify 夹具过渡安全网——doc artifact 写面已随块表权威退役，仅存读兜底）
-        out["doc"] = self.blocks.doc_view(req_id) or self._artifact_view(req_id, "doc")
+        doc_v = self.blocks.doc_view(req_id)
+        out["doc"] = doc_v or self._artifact_view(req_id, "doc")
         out["domains"] = self._resolve_domains(req_id, audit_view, items)
+        # v4.19：原文/产物时点机械判定（读时推导不落库，刷新不失忆）——块表最后编辑晚于 digest
+        # 最近推送 = 产物基于旧块集（窗口 1 直接编辑后无任何持久标记的脱节，发布守卫不拦）。仅
+        # 块表权威面判（回退视图无编辑面）；无 digest 不判（无产物即无脱节可言）。changed 态为真
+        # 属流程中间态（增量合并前），呈现口径由前端按状态裁剪。
+        dg_view = out.get("digest")
+        if doc_v is not None and isinstance(dg_view, dict) and dg_view.get("pushedAt") \
+                and doc_v.get("pushedAt"):
+            out["docStale"] = str(doc_v["pushedAt"]) > str(dg_view["pushedAt"])
 
         fr_maps: list[dict[str, Any]] = []
         for p in frs:
