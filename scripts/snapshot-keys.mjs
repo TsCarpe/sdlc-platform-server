@@ -68,7 +68,7 @@ async function build() {
     audit: { red: 0, yellow: 1, blue: 0, items: [{ id: 'P01', level: 'yellow', title: 't', where: 'w', go: '', group: '域一', quote: '「q」', anchor: '' }], md: '# audit md' },
     items: [{ seq: 'P01', level: 'yellow', theme: '域一', question: '问题一', answer: '已答' }],
     snapshot: { md: '# 原文快照\n\n段落。' },
-    doc: { blocks: [{ id: 'blk-1', type: 'paragraph', text: '原文段落' }], media: [] },
+    doc: { blocks: [{ id: 'blk-1', type: 'paragraph', text: '原文段落' }], media: [], guard: { algo: 'markdown-fallback' } },
     domains: ['域一']
   })
   await call('POST', `/api/requirements/${A}/publish`, { standardMd: '# 标准文档\n\n正文。' })
