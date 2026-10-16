@@ -358,6 +358,7 @@ class ReqChange:
     snapshot_json: str = ""  # v4.13（§5.6）：confirm 时点快照（baseline 块序 + 重开澄清原值）
     aborted_by: str = ""
     aborted_at: str | None = None
+    merged_at: str | None = None  # v4.19：增量合并采纳时点（abort 守卫判「已采纳」的真值位）
     created_at: str | None = None
     confirmed_at: str | None = None
 
@@ -377,6 +378,7 @@ class ReqChange:
             snapshot_json=_s(row, "snapshot_json"),
             aborted_by=_s(row, "aborted_by"),
             aborted_at=_sn(row, "aborted_at"),
+            merged_at=_sn(row, "merged_at"),
             created_at=_sn(row, "created_at"),
             confirmed_at=_sn(row, "confirmed_at"),
         )

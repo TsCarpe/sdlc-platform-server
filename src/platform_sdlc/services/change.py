@@ -268,8 +268,9 @@ class ChangeService:
     def validate_bundle(self, req_id: str, content_json: str) -> dict[str, Any]:
         """incremental_bundle 的 selfCheck 机械校验（§6.1，put_draft 服务端单点——runner/进程内
         两通道的草稿都经此处）：①章节区间 = heading 的 block_id，禁 seq 数值（纯数字/非 heading 集
-        即拒——整体重排会改写全表 seq，冻结数值即失真）；②新行 anchor 全部 ∈ 受影响块集
-        （防 LLM 越界重写）；③作废清单的行真实存在（digest 行按 anchor、audit 条目按 id）。"""
+        即拒——整体重排会改写全表 seq，冻结数值即失真）；②新行 anchor 全部 ∈ 受影响块集 ∩ 存活块集
+        （防 LLM 越界重写；已删块不是合法新锚点——落地即悬空僵尸行，v4.19）；③作废清单的行真实存在
+        （digest 行按 anchor、audit 条目按 id）。"""
         try:
             bundle: Any = json.loads(content_json)
         except json.JSONDecodeError as e:
@@ -289,6 +290,7 @@ class ChangeService:
             raise ApiException(400, "变更单影响面为空，无增量面")
 
         blocks = self.repos.req_block.list_by_req(req_id)
+        live_ids = {b.block_id for b in blocks}
         heading_ids = {b.block_id for b in blocks if b.type == "heading"}
         sections = [str(x) for x in _arr(bundle.get("sections"))]
         if not sections:
@@ -313,6 +315,13 @@ class ChangeService:
         if out_of_range:
             raise ApiException(400, f"新行 anchor 越界（不在受影响块集）：{out_of_range[:5]}"
                                     f"（共 {len(out_of_range)} 个，防越界重写）")
+        # v4.19：合法锚点域再交存活块集——target 含 confirm 已软删的 delete 块（影响面在应用前
+        # 冻结），新行锚上去 = 落地即悬空，且软删块永不进未来变更单的替换域（僵尸行，唯全量
+        # 重推可清）。替换行应锚定存留/新增块。
+        dead_anchored = sorted(a for a in anchors if a and a in target and a not in live_ids)
+        if dead_anchored:
+            raise ApiException(400, f"新行 anchor 锚定本单已删除的块：{dead_anchored[:5]}"
+                                    f"（共 {len(dead_anchored)} 个，替换行须锚定存留/新增块）")
 
         inv_v = bundle.get("invalidate")
         inv: dict[str, Any] = dict(inv_v) if is_json_obj(inv_v) else {}
@@ -455,6 +464,8 @@ class ChangeService:
             stats["newRows"] += len(new_clarify)
 
             at = Times.now()
+            # v4.19：采纳时点落 merged_at——abort 守卫的真值位（产物已按新块态重写，块回滚即分裂）
+            self.repos.req_change.set_merged(change_id, at)
             self.repos.artifact.upsert(req_id, "digest", _render_digest_md(dv), _json_compact(dv), at)
             self.repos.artifact.upsert(req_id, "audit", _render_audit_md(av), _json_compact(av), at)
             self.repos.fr_point.replace_all(req_id, [*kept_frs, *new_frs])
@@ -475,7 +486,9 @@ class ChangeService:
 
     def abort(self, req_id: str, change_id: int, body: dict[str, Any]) -> dict[str, Any]:
         """放弃 = 当无事发生（除变更单留痕）的全量逆向回滚，一个事务：
-        ①守卫：confirmed 单 ∧ changed 态 ∧ 无已采纳 incremental_bundle（v4-14 前以草稿不存在近似）
+        ①守卫：confirmed 单 ∧ changed 态 ∧ 无未采纳 incremental_bundle 草稿 ∧ merged_at 为空
+        （v4.19 前以草稿不存在近似「未采纳」，采纳即删草稿致恒空转——已采纳单放弃 = 块回滚而
+        产物保持合并态的分裂数据，现按 merged_at 真值判）
         ∧ 为最新 confirmed 单（串行 confirm 下即唯一未消化单，LIFO——只能从最新弃起）
         ∧ 无执行中增量质检（queued 随单定向取消——confirm 侧 count_active 拦截的对称面，
         防 Runner 基于已回滚块态空转）；
@@ -498,6 +511,12 @@ class ChangeService:
                 raise ApiException(409, f"放弃是 changed 态的逃生门（当前：{r.status}）")
             if self.repos.draft.find(req_id, "incremental_bundle") is not None:
                 raise ApiException(409, "存在未采纳的 incremental_bundle 草稿，请先处理后再放弃")
+            if c.merged_at:
+                # v4.19：已采纳的单不可放弃——merge 已按新块态重写 digest/FR/澄清（touch_synced
+                # + pushed_at 刷新），此后逆向回滚块表会产出「块回滚、产物保持合并态」的分裂数据，
+                # 且 merge 新增的 incremental 澄清行在 published 态不可处置（死巷）。此前以「草稿
+                # 不存在」近似判「未采纳」，而采纳即删草稿，近似恒空转。
+                raise ApiException(409, "该单已采纳增量合并，不可放弃——产物修正请提新变更单")
             latest = max((x.id or 0) for x in self.repos.req_change.list_by_req(req_id)
                          if x.status == "confirmed")
             if latest != change_id:

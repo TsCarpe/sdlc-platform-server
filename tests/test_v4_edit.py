@@ -344,3 +344,35 @@ def test_edit_guards(env: tuple[TestClient, Database, Repos]) -> None:
     r4 = client.put(f"/api/requirements/{other}/blocks",
                     json={"updatedBy": "x", "blocks": [{"id": "g-1", "type": "paragraph", "text": "a"}]})
     assert r4.status_code == 409 and "基线过期" in r4.json()["error"]
+
+
+def test_detail_doc_stale_after_window1_edit(env: tuple[TestClient, Database, Repos]) -> None:
+    """v4.19 回归（P2）：窗口 1 编辑后 detail 输出 docStale=true（服务端读时机械判定
+    MAX(块表.updated_at) > digest.pushed_at，刷新/重进不失忆——替代仅存于组件内 ref 的
+    staleCheck 会话横幅）；重推产物后转 false。发布守卫不拦脱节，此标志是唯一持久提示面。"""
+    client, db, repos = env
+    req_id = _mk_card(client)
+    _seed(repos, req_id)
+    # 推产物（digest.pushed_at 钉到过去——编辑在推送之后才构成脱节，且免同秒比较不稳定）
+    push = {"digest": {"md": "", "summary": "s", "roles": [], "features": [], "flows": [], "states": []},
+            "audit": {"md": "", "red": 0, "yellow": 0, "blue": 0, "items": []},
+            "items": [{"seq": "P1", "level": "yellow", "theme": "t", "question": "q1"}]}
+    assert client.post(f"/api/requirements/{req_id}/artifacts", json=push).status_code == 200
+    db.execute("UPDATE artifact SET pushed_at='2020-01-01 00:00:00' WHERE req_id=? AND type='digest'",
+               (req_id,))
+    assert "docStale" not in client.get(f"/api/requirements/{req_id}").json()  # 编辑前不脱节
+    # 窗口 1 编辑（块表 updated_at 前进）→ docStale=true
+    r = client.put(f"/api/requirements/{req_id}/blocks", json={
+        "updatedBy": "张三",
+        "blocks": [
+            {"id": "e-h1", "type": "heading", "level": 2, "text": "背景"},
+            {"id": "e-p1", "type": "paragraph", "text": "一段说明（修订）"},
+            {"id": "e-li1", "type": "list-item", "marker": "1. ", "depth": 1, "text": "列表项一"},
+            {"id": "e-li2", "type": "list-item", "marker": "a. ", "depth": 2, "parent": "e-li1",
+             "text": "子项 a"},
+        ]})
+    assert r.status_code == 200
+    assert client.get(f"/api/requirements/{req_id}").json()["docStale"] is True
+    # 重推产物（pushed_at 刷新，不碰块表）→ false；此后编辑前不再输出 true
+    assert client.post(f"/api/requirements/{req_id}/artifacts", json=push).status_code == 200
+    assert client.get(f"/api/requirements/{req_id}").json()["docStale"] is False

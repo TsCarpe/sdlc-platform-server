@@ -669,6 +669,64 @@ def test_abort_incremental_task_handling(env: tuple[TestClient, Database, Repos]
     assert row is not None and row["status"] == "failed" and "change-aborted" in (row["result"] or "")
 
 
+# ---------- v4.19 回归：merge 后 abort 守卫真值化 + 新行锚点合法域收紧 ----------
+
+def test_abort_rejected_after_merge(env: tuple[TestClient, Database, Repos]) -> None:
+    """P1 回归：merge 后 abort 按 merged_at 真值拒绝。修复前以「草稿不存在」近似判「未采纳」，
+    而采纳即删草稿（approve → merge → draft.delete 同事务），近似恒空转——merge 后放弃会产出
+    分裂数据：块全量回滚而 digest/FR/澄清保持合并态，且 merge 新增的 incremental 澄清行在
+    published 态不可处置（死巷）。"""
+    client, db, repos = env
+    req_id = _mk_card(client)
+    _seed(repos, req_id)
+    _publish_card(client, repos, req_id)
+    cid = _draft_edit_p1(client, req_id)["id"]
+    db.execute("UPDATE artifact SET pushed_at='2026-10-13 00:00:00' WHERE req_id=? AND type='digest'",
+               (req_id,))
+    assert client.post(f"/api/requirements/{req_id}/changes/{cid}/confirm",
+                       json={"confirmedBy": "李四"}).status_code == 200
+    assert client.put(f"/api/requirements/{req_id}/drafts/incremental_bundle",
+                      json={"contentJson": _dumps_py(_bundle(cid, "h1", "p1"))}).status_code == 200
+    appr = client.post(f"/api/requirements/{req_id}/drafts/incremental_bundle/approve",
+                       json={"by": "采纳人"}).json()
+    assert appr["ok"] is True
+    row = db.query_one("SELECT merged_at FROM req_change WHERE id=?", (cid,))
+    assert row is not None and row["merged_at"]  # 采纳时点已落值（守卫真值位）
+
+    # 放弃被拒 + 文案指引新变更单
+    r = client.post(f"/api/requirements/{req_id}/changes/{cid}/abort", json={"abortedBy": "王五"})
+    assert r.status_code == 409 and "不可放弃" in r.json()["error"] and "新变更单" in r.json()["error"]
+    # 数据不分裂：状态仍 changed、块保持 confirm 后态（p1 修订文本未被逆向）
+    assert client.get(f"/api/requirements/{req_id}").json()["card"]["status"] == "changed"
+    p1 = next(b for b in repos.req_block.list_by_req(req_id) if b.block_id == "p1")
+    assert p1.text == "一段说明（修订）"
+    # 修复前该链路直接放行（草稿已删、块乐观锁照过）→ aborted + published + 产物保持合并态
+
+
+def test_bundle_rejects_dead_block_anchor(env: tuple[TestClient, Database, Repos]) -> None:
+    """P3 回归：新行锚定本单已删除的块（∈ 冻结影响面但 confirm 已软删）→ put_draft 400。
+    修复前仅校验 ∈ target，LLM 把替换行锚到已删块即落地悬空——软删块永不进未来变更单的
+    替换域（僵尸行，唯全量重推可清）。"""
+    client, db, repos = env
+    req_id = _mk_card(client)
+    _seed(repos, req_id)
+    _publish_card(client, repos, req_id)
+    cid = _draft_edit_p1(client, req_id)["id"]  # tr1/trc1 delete（confirm 后软删）
+    db.execute("UPDATE artifact SET pushed_at='2026-10-13 00:00:00' WHERE req_id=? AND type='digest'",
+               (req_id,))
+    assert client.post(f"/api/requirements/{req_id}/changes/{cid}/confirm",
+                       json={"confirmedBy": "李四"}).status_code == 200
+    # trc1 ∈ 冻结影响面（tr1 子孙递归 CTE）∧ 已软删 → 新行锚点非法
+    bad = _bundle(cid, "h1", "trc1")
+    r = client.put(f"/api/requirements/{req_id}/drafts/incremental_bundle",
+                   json={"contentJson": _dumps_py(bad)})
+    assert r.status_code == 400 and "已删除的块" in r.json()["error"]
+    # 存活块锚点照常放行（合法域 = target ∩ 活块，非仅活块——越界面仍由 target 拦）
+    good = _bundle(cid, "h1", "p1")
+    assert client.put(f"/api/requirements/{req_id}/drafts/incremental_bundle",
+                      json={"contentJson": _dumps_py(good)}).status_code == 200
+
+
 # ---------- v4-15：changed 守卫矩阵 + 发布双重守卫 + on_answered 窗口化 ----------
 
 def test_changed_guard_matrix(env: tuple[TestClient, Database, Repos]) -> None:

@@ -211,13 +211,19 @@ class BlockService:
                         "reactions": None, "path": "评论区",
                     })
                 blk["comments"] = ",".join(refs)
-        for host_id, host_groups in groups.items():  # 宿主已软删的评论：追加尾部（§4.3 信息不丢）
+        # 宿主不在活块的评论：追加尾部（§4.3 信息不丢）；归类按全表（含软删）区分——v4.19：
+        # 在全表 = 块真被删过（窗口 1 编辑 / 变更单 confirm）→「原块已删除」；不在全表 = 锚点
+        # 从未落过块表（对账清单的前瞻锚点 draft 期块未应用、或锚点幻觉）→「未匹配原文块」，
+        # 不再一律误称已删除
+        all_ids = {b.block_id for b in self.repos.req_block.list_all(req_id)}
+        for host_id, host_groups in groups.items():
+            host_path = "评论区（原块已删除）" if host_id in all_ids else "评论区（未匹配原文块）"
             for g in host_groups:
                 ref_no += 1
                 out.append({
                     "id": g["id"], "origin": g["origin"], "type": "comment", "ref": f"c{ref_no}",
                     "anchorBlockId": host_id, "quote": "", "thread": g["thread"],
-                    "reactions": None, "path": "评论区（原块已删除）",
+                    "reactions": None, "path": host_path,
                 })
         return out
 

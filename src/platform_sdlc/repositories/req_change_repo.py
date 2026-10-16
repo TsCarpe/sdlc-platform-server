@@ -54,6 +54,11 @@ class ReqChangeRepo:
             "UPDATE req_change SET status='aborted', aborted_by=?, aborted_at=? WHERE id=? AND status='confirmed'",
             (aborted_by, at, change_id))
 
+    def set_merged(self, change_id: int, at: str) -> None:
+        """增量合并采纳时点落库（v4.19）：merge_incremental 事务内写入——abort 守卫据此判「已采纳」
+        （此前以草稿不存在近似恒空转：approve 采纳即删草稿，「已采纳」与「从未有草稿」不可区分）。"""
+        self.db.execute("UPDATE req_change SET merged_at=? WHERE id=?", (at, change_id))
+
     def confirmed_undigested(self, req_id: str, digest_pushed_at: str | None) -> list[int]:
         """影响面未消化的前序 confirmed 单（§5.1 串行 confirm）：digest/FR 非空 ∧ 消化时点早于
         confirm 时点。digest_pushed_at = digest artifact 最近推送时间（None = 从未推送，视为未消化）。"""
