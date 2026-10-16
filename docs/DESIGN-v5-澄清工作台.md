@@ -176,10 +176,10 @@ v4 完成需求平台权威化后，PM 在澄清阶段的体验存在三个结�
 | 〃 | `services/requirement.py` | `push_artifacts` 解析 options/module/layer（宽松）；`_audit_view` 透传 layer；`set_answer` 宽进判别；`answers()`/detail 出参增 `answerText`；**携带规则修正（r2 B5 + r3 二审#5）：平台已处置一律以平台为准携带，skill 自带 answer 仅在平台无处置时生效**——修复重开/挂起态被本地同步 answer 吞掉的既有缺陷（选择题化会放大其触发面） |
 | 〃 | **`repositories/clarify_item_repo.py`**（r3 二审#5） | `disposition_map_by_seq` 收录口径扩为 `answer 非空 ∨ status≠pending ∨ note 非空`——**重开行（answer=''、status='pending'、note='因变更单#N 重开…'）必须进携带 map**，否则携带规则修正对 B5 点名的主场景无效（"照单必漏改"复发点，单独列行） |
 | 〃 | **`services/change.py`**（r2 审查 A4/B6） | ① `_reopen_rows` note 拼 `answerText`（解构后文本，防 JSON 串进 note 与增量合成输入）；② 增量合并 `_machine_clarify` 补 options/module/layer 字段（否则静默丢弃，增量新行永远降级）；③ 增量 auditItems 合并与 `_audit_view` 白名单**统一显式字段清单**（layer 不再一路隐式保留一路显式构造） |
-| 〃 | `runner/runner.mjs` | ① 质检 prompt：澄清问题带 options+recommended+理由、items 带 module/layer，**纠正现状"六层"过时文案为七层**；② incremental prompt：产出新字段 ∧ **输入侧消费 detail 的 `answerText` 字段**（r3 二审#4——增量输入直拉 detail 的 items[].answer，不切 answerText 则结构化 JSON 流入增量合成链）；③ standard_doc prompt：answer 消费切 `answerText` + 条款后缀〔Pxx〕。**期次拆分（r3 二审#8）：③ 随二期，①② 随三期**（①② 是 v1.6 字段生产端，依赖 payload-schema 契约） |
+| 〃 | `runner/runner.mjs` | ① 质检 prompt：澄清问题带 options+recommended+理由、items 带 module/layer，**纠正现状"六层"过时文案为七层**；② incremental prompt：产出新字段 ∧ **输入侧消费 detail 的 `answerText` 字段**（r3 二审#4——增量输入直拉 detail 的 items[].answer，不切 answerText 则结构化 JSON 流入增量合成链）；③ standard_doc prompt：answer 消费切 `answerText` + 条款后缀〔Pxx〕。期次拆分（r3 二审#8，**二期 r4 修订**）：③ 与 **② 的消费半边（增量输入取 answerText 指令+数据源）随二期批 2 前移**——堵前端切结构化 JSON（§8「二期切换」）到三期生产端上线之间的 D15 漏点窗口；① 与 ② 的生产端（产出新字段）仍随三期（依赖 payload-schema 契约） |
 | claude-sdlc-skills | `sdlc-sync/references/payload-schema.md` | v1.6：§6.1/6.2 字段 + answer 判别规则 + `answerText` 出参 + **incremental_bundle 的 clarify.items/auditItems 结构同步入契约**（r2 审查 B6） |
 | 〃 | **`sdlc-sync/references/standard-doc-spec.md`**（r2 审查 A3） | 合成消化规则：answerText 消费 + 澄清固化条款后缀〔Pxx〕 + 挂起项〔Pxx·挂起〕（runner 与本地 publish 双通道共遵） |
-| 〃 | `sdlc-sync/SKILL.md` | pull-answers 回写格式：答复列写 `answerText` |
+| 〃 | `sdlc-sync/SKILL.md` | pull-answers 回写格式：答复列写 `answerText`（**二期 r4 修订：前移批 2〔D-H〕**——堵前端切结构化 JSON 后他通道 pull-answers 回写裸 JSON 的窗口；①② 生产端仍三期） |
 | 〃 | `sdlc-intent/references/report-template.md` | pm-checklist 增选项/module/layer 产出约定（双通道一致） |
 | 〃 | `sdlc-intent/references/dimensions.md` | 层号枚举落 items 的产出纪律 |
 | sdlc-platform-web | ReqDetail/WorkbenchTab/DigestTab/OriginTab/StdTab/trace-jump/group-collapse | §1-§5 全部前端改造（含 audit 组名映射，r2 A1 + r4 二审#13：`revealGrpFor('audit', id)` 的组解析域 = **check 组 ∪ 已定论组**（两侧组集因"增量质检"组与 L 系行分叉，不假设同源同序）；组名 miss 时 **expandAll 展开工作台全部分组（含已定论折叠组）**——只展开 check 列表会让 audit-only 目标卡困在折叠容器里，flashEl 的 scrollIntoView 静默失效）。**tab 键名保留 `'checklist'` 不改**（r3 二审#3）——仅组件/文案更名，`TABS` 数组、load() 的 def 回退、trace-jump 的 check 分支零改动，消除"换键名 → check: 跳转与默认页指向幽灵 tab → 内容区空白"路径 |
@@ -204,8 +204,8 @@ v4 完成需求平台权威化后，PM 在澄清阶段的体验存在三个结�
 | **一期（前端 + server 热修小包）** | 工作台双栏+侧栏+已定论卡+空态 / audit 合并 / tab 分组（置灰仅设计/门禁）/ 摘要重定位（理解卡+泳道+假设独立；模块角标/断点直达按字段有无降级）/ 反向角标 / trace-jump audit 分支 | 现有数据即可 |
 | **一期热修（r3 二审#9）：B5 携带规则修正** | `clarify_item_repo.disposition_map_by_seq` 口径扩展 + `push_artifacts` 携带分支——**纯 service 逻辑、零新字段依赖，随一期先行**：选择题 UI（放大触发面）与携带修正不得存在上线窗口差，否则窗口期内 PM 平台作答 → pull-answers 回写 → push-artifacts 重推会吞答复/吞驳回 | 无（5 行级改动） |
 | **一期作答形态（r2 B1）** | 选择题 UI 上线，**answer 写 optionText 纯文本**（`【A】选项全文` 格式）——在二期结构化上线前，所有下游（合成/回写/note）消费的仍是合法纯文本，**零污染窗口** | 无 |
-| **二期（server 批次）** | migrations / push_artifacts 解析新字段 / views / set_answer / **answerText 出参** / change.py 三处（A4/B6）/ **runner ③ + standard-doc-spec 合成切 answerText 同批** | 一期已验证 |
-| **三期（skills + runner ①② 批次，r3 二审#8）** | payload-schema v1.6（含 incremental_bundle 契约）/ standard-doc-spec / report-template / dimensions / sdlc-sync SKILL.md pull-answers / **runner ①②（v1.6 字段生产端，依赖契约）** | 与二期同节奏合入 |
+| **二期（server 批次）** | migrations / push_artifacts 解析新字段 / views / set_answer / **answerText 出参** / change.py 三处（A4/B6）/ **runner ③ + standard-doc-spec 合成切 answerText 同批**（r4 修订：**SKILL.md pull-answers 与 incremental-guide 的 answerText 消费亦前移本批〔D-H〕**，堵「二期切换→三期」窗口的 D15 漏点） | 一期已验证 |
+| **三期（skills + runner ①② 批次，r3 二审#8）** | payload-schema v1.6（含 incremental_bundle 契约）/ standard-doc-spec / report-template / dimensions / **runner ①② 生产端（v1.6 字段，依赖契约）**。**二期 r4 边界记档（D-L/D-M）**：D-L——增量新行 pids 引用悬空 seq（P 系编号平台合并时才分配、合并不回填），引用完整性规则（仅允许引用存量 seq / 平台合并后回填）在本期 payload-schema v1.6 起草时定义，二期仅白名单透传（无生产方无害）；D-M——agent incremental 分支提示 curl 但 `_CMD_ALLOW` 不含 curl（既有死路），本期 agent 通道全面梳理时处理 | 与二期同节奏合入 |
 | 二期切换 | 前端 answer 写入从纯文本切结构化 JSON（读侧 answerText 不变） | 二期上线后 |
 | 存量刷新 | 需要新字段的卡重推一次 quality_check（依赖三期 runner ①② 上线后自然产出） | 不重推走降级 |
 

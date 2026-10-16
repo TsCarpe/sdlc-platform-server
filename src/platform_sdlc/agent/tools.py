@@ -82,7 +82,8 @@ async def get_requirement_card(wrapper: RunContextWrapper[TaskRunContext]) -> st
 
 @function_tool
 async def list_clarify_items(wrapper: RunContextWrapper[TaskRunContext]) -> str:
-    """列出澄清问题清单（含 PM 已填答复 answer，standard_doc 合成时以此消化定论）。"""
+    """列出澄清问题清单（含 PM 已填答复；合成时答复一律消费 answerText——服务端解构后的
+    纯文本，answer 原文可能是结构化 JSON 串〔DESIGN-v5 D15〕，不要直接消费）。"""
     def impl() -> str:
         c = wrapper.context
         from platform_sdlc.schemas import wire

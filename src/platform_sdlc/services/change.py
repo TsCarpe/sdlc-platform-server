@@ -11,9 +11,23 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Callable
 from typing import Any
 
-from platform_sdlc.common import ApiException, Times, is_json_list, is_json_obj, jint_or_400, jrequired, jtext
+from platform_sdlc.common import (
+    ApiException,
+    Times,
+    answer_text_of,
+    audit_item_view,
+    digest_flow_view,
+    is_json_list,
+    is_json_obj,
+    jarray,
+    jint_or_400,
+    jrequired,
+    jtext,
+    normalize_layer,
+)
 from platform_sdlc.db import Database
 from platform_sdlc.models import ReqChange, ReqChangeItem, TestCase
 from platform_sdlc.repositories import Repos
@@ -396,7 +410,12 @@ class ChangeService:
                 "summary": "", "roles": [], "features": [], "flows": [], "states": []}
             stats = {"removedRows": 0, "newRows": 0}
             for key in ("features", "flows", "states"):
-                kept = _merge_rows(_arr(dv.get(key)), _arr(rows.get(key)), section_ids, inv_anchors, stats)
+                # v1.6（D-K）：仅 flows 的 new 行过共享视图（digest_flow_view，pids 白名单+数组化）——
+                # view 必须在调用点按 key 传（函数内无条件应用会剥掉 features 的 m/func/cov、
+                # states 的 obj/from/on/to 等正当字段）；kept 行不改写（空 anchor/global 行
+                # 「增量合并永不触碰」承诺，混合口径由三期 rebaseline/重推自然收敛）
+                kept = _merge_rows(_arr(dv.get(key)), _arr(rows.get(key)), section_ids, inv_anchors,
+                                   stats, view=digest_flow_view if key == "flows" else None)
                 dv[key] = kept
             if jtext(bundle, "summary", ""):
                 dv["summary"] = jtext(bundle, "summary", "")
@@ -417,8 +436,11 @@ class ChangeService:
                 if iid and iid in inv_audit:
                     stats["removedRows"] += 1
                     continue
-                kept_items.append(it_raw)
-            new_audit = [x for x in _arr(rows.get("auditItems")) if is_json_obj(x)]
+                # v1.6（B6/D-J）：audit 行全量归一过共享构造器（kept+new 同口径——补默认 layer、
+                # 剥未知私货键；与 push 侧 _audit_view 单一构造器，两套字段清单会漂移）。audit 行
+                # 小结构、无「永不触碰」契约，与 flows 仅 new 行归一的策略有意不对称（r4 rationale）
+                kept_items.append(audit_item_view(it_raw))
+            new_audit = [audit_item_view(x) for x in _arr(rows.get("auditItems")) if is_json_obj(x)]
             av["items"] = [*kept_items, *new_audit]
             stats["newRows"] += len(new_audit)
             av["yellow"] = sum(1 for x in _arr(av.get("items"))
@@ -630,7 +652,10 @@ class ChangeService:
         for item in self.repos.clarify_item.list_by_req(req_id):
             if item.seq not in seqs or item.status == "pending":
                 continue
-            note = f"因变更单#{change_id} 重开，原答复：{item.answer}" if item.answer else f"因变更单#{change_id} 重开"
+            # v1.6（D15/A4）：note 拼解构后文本（answer_text_of）——结构化作答后 answer 原文是
+            # JSON 串，直接拼会把裸 JSON 带进 note 与增量合成输入；快照存原值不切（放弃回滚原样恢复）
+            note = (f"因变更单#{change_id} 重开，原答复：{answer_text_of(item.answer)}"
+                    if item.answer else f"因变更单#{change_id} 重开")
             out.append((item.seq, note, None))
             snapshot.append({"seq": item.seq, "answer": item.answer, "status": item.status,
                              "note": item.note, "answeredAt": item.answered_at})
@@ -830,9 +855,12 @@ def _section_block_ids(blocks_all: list[Any], heading_ids: list[str]) -> set[str
 
 
 def _merge_rows(old_rows: list[Any], new_rows: list[Any], section_ids: set[str],
-                inv_anchors: set[str], stats: dict[str, int]) -> list[Any]:
+                inv_anchors: set[str], stats: dict[str, int],
+                view: Callable[[Any], dict[str, Any]] | None = None) -> list[Any]:
     """§6.2 行合并：区间内旧行删（anchor 落区间）；作废清单删；区间外原样；空 anchor/global 行
-    永不触碰；新行追加（同 anchor 多行整组重写——行无稳定 ID，按 anchor 定位）。"""
+    永不触碰；新行追加（同 anchor 多行整组重写——行无稳定 ID，按 anchor 定位）。v1.6：view
+    仅作用于 new 行（白名单归一，调用点按 key 传——flows 传 digest_flow_view、其余 None），kept
+    行永远原样透传（重写历史数据违背「永不触碰」承诺）。"""
     kept: list[Any] = []
     for f in old_rows:
         if not is_json_obj(f):
@@ -845,18 +873,23 @@ def _merge_rows(old_rows: list[Any], new_rows: list[Any], section_ids: set[str],
             stats["removedRows"] += 1
             continue
         kept.append(f)
-    new = [f for f in new_rows if is_json_obj(f)]
+    new = [view(f) if view is not None else f for f in new_rows if is_json_obj(f)]
     stats["newRows"] += len(new)
     return [*kept, *new]
 
 
 def _machine_clarify(req_id: str, it: dict[str, Any]) -> Any:
-    """增量新澄清行（§6.3：origin='incremental'，P 系编号由平台分配接 max+1——seq 平台权威）。"""
+    """增量新澄清行（§6.3：origin='incremental'，P 系编号由平台分配接 max+1——seq 平台权威）。
+    v1.6（B6）：options/module/layer 宽松透传（layer 归一）——缺此三字段则增量新行相对
+    全量推送永远降级（options 静默丢弃、layer 不点亮就绪度）。"""
     from platform_sdlc.models import ClarifyItem
     return ClarifyItem(id=0, req_id=req_id, seq="__PENDING__", level=jtext(it, "level", "yellow"),
                        theme=jtext(it, "theme", "") or "增量质检", question=jrequired(it, "question"),
                        ctx=jtext(it, "ctx", ""), quote=jtext(it, "quote", ""),
-                       anchor=jtext(it, "anchor", ""), status="pending", origin="incremental")
+                       anchor=jtext(it, "anchor", ""), status="pending", origin="incremental",
+                       options_json=(_json_compact(opts) if (opts := jarray(it, "options")) else ""),
+                       module=jtext(it, "module", ""),
+                       layer=normalize_layer(jtext(it, "layer", "")))
 
 
 def _json_compact(o: Any) -> str:

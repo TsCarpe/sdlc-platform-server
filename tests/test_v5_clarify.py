@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, cast, get_origin
@@ -21,11 +22,12 @@ from fastapi import FastAPI
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 
-from platform_sdlc.common import answer_text_of
+from platform_sdlc.agent.prompts import sys_prompt
+from platform_sdlc.common import answer_text_of, audit_item_view, normalize_layer
 from platform_sdlc.config import Settings
 from platform_sdlc.db import Database
 from platform_sdlc.main import create_app
-from platform_sdlc.models import ClarifyItem
+from platform_sdlc.models import ClarifyItem, ReqBlock, Requirement
 from platform_sdlc.repositories import Repos
 from platform_sdlc.schemas import wire
 
@@ -191,3 +193,258 @@ def test_routes_stay_schema_free(env: tuple[TestClient, Database, Repos]) -> Non
         origin = get_origin(rm) or rm  # list[dict[str,Any]] → list；dict[str,Any] → dict
         assert origin in (dict, list), \
             f"{name}：response_model 非透传形态——挂具名 pydantic 模型会锁键集/键序，破坏 NON_NULL 条件键视图"
+
+
+# ---------- 批 2：变更链路 + 四通道消费（DESIGN-v5 §6.4/§7-4，A4/B6/D15） ----------
+
+_OPTION_ANSWER = '{"kind":"option","optionKey":"A","optionText":"选项全文","extra":"补充说明"}'
+_AUDIT_KEYS = {"id", "level", "title", "where", "go", "group", "quote", "anchor", "layer"}
+_SKILLS_SPEC = Path.home() / "IdeaProjects" / "claude-sdlc-skills" / "sdlc-sync" / "references" / "standard-doc-spec.md"
+
+
+def _seed_blocks(repos: Repos, req_id: str) -> None:
+    """5 块基线：p1（变更 edit 目标锚，h1 章节）+ li2（h2 章节下——增量 sections=['h1'] 的区间外
+    kept 锚：section_ids 是章节级集合，锚须在受影响章节之外而非仅块未编辑）。"""
+    repos.req_block.replace_all(req_id, [
+        ReqBlock(req_id=req_id, block_id="t1", seq=1000, type="title", text="标题"),
+        ReqBlock(req_id=req_id, block_id="h1", seq=2000, type="heading", text="背景",
+                 attrs_json='{"level":2}'),
+        ReqBlock(req_id=req_id, block_id="p1", seq=3000, type="paragraph", text="一段说明"),
+        ReqBlock(req_id=req_id, block_id="h2", seq=4000, type="heading", text="其他",
+                 attrs_json='{"level":2}'),
+        ReqBlock(req_id=req_id, block_id="li2", seq=5000, type="list-item", text="子项 a"),
+    ])
+
+
+def _push_and_publish(client: TestClient, req_id: str, *, p1_answer: str = "答 P1",
+                      flows: list[dict[str, Any]] | None = None,
+                      audit_items: list[dict[str, Any]] | None = None) -> None:
+    """发布链：push（P1 锚 p1 / P2 锚 li2 带 v1.6 字段）→ 全处置 → publish。"""
+    client.post(f"/api/requirements/{req_id}/artifacts", json={
+        "digest": {"md": "", "summary": "s", "roles": [], "states": [], "features": [],
+                   "flows": flows if flows is not None else []},
+        "audit": {"md": "", "red": 0, "yellow": 0, "blue": 0,
+                  "items": audit_items if audit_items is not None else []},
+        "items": [
+            {"seq": "P1", "level": "yellow", "theme": "t", "question": "q1", "anchor": "p1"},
+            {"seq": "P2", "level": "yellow", "theme": "t", "question": "q2", "anchor": "li2",
+             "options": [{"key": "A", "text": "甲"}], "module": "教研", "layer": "5"},
+        ],
+    })
+    client.put(f"/api/requirements/{req_id}/answers/P1", json={"answer": p1_answer})
+    client.put(f"/api/requirements/{req_id}/answers/P2", json={"answer": "答 P2"})
+    client.post(f"/api/requirements/{req_id}/publish", json={"standardMd": "# 定稿"})
+
+
+def _to_changed(client: TestClient, db: Database, req_id: str) -> int:
+    """published → edit 变更单（p1 修订，h1 章节受影响）→ confirm → changed。返回变更单 id。"""
+    cid = client.post(f"/api/requirements/{req_id}/changes", json={
+        "title": "口径修订", "proposedBy": "张三", "blocks": [
+            {"id": "t1", "type": "title", "text": "标题"},
+            {"id": "h1", "type": "heading", "level": 2, "text": "背景"},
+            {"id": "p1", "type": "paragraph", "text": "一段说明（修订）"},
+            # h2/li2 原样透传（li2 在 h2 章节下 = 增量区间外，锚 li2 的行走 kept 路径）
+            {"id": "h2", "type": "heading", "level": 2, "text": "其他"},
+            {"id": "li2", "type": "list-item", "text": "子项 a"},
+        ]}).json()["id"]
+    db.execute("UPDATE artifact SET pushed_at='2026-10-13 00:00:00' WHERE req_id=? AND type='digest'",
+               (req_id,))
+    assert client.post(f"/api/requirements/{req_id}/changes/{cid}/confirm",
+                       json={"confirmedBy": "李四"}).status_code == 200
+    return int(cid)
+
+
+def _v5_bundle(cid: int, *, flows: list[dict[str, Any]] | None = None,
+               audit_items: list[dict[str, Any]] | None = None,
+               clarify_items: list[dict[str, Any]] | None = None,
+               features: list[dict[str, Any]] | None = None,
+               states: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    b: dict[str, Any] = {
+        "changeId": cid, "sections": ["h1"],
+        "digestRows": {
+            "features": features if features is not None else [],
+            "flows": flows if flows is not None else [],
+            "states": states if states is not None else [],
+            "auditItems": audit_items if audit_items is not None else [],
+            "frUpserts": [], "frRemoves": [],
+        },
+        "invalidate": {"digestAnchors": [], "auditIds": []},
+        "clarify": {"items": clarify_items if clarify_items is not None else []},
+        "summary": "增量后摘要", "riskTier": "A",
+    }
+    return b
+
+
+def _approve_bundle(client: TestClient, req_id: str, bundle: dict[str, Any]) -> dict[str, Any]:
+    r = client.put(f"/api/requirements/{req_id}/drafts/incremental_bundle",
+                   json={"contentJson": json.dumps(bundle, ensure_ascii=False)})
+    assert r.status_code == 200, r.text
+    appr = client.post(f"/api/requirements/{req_id}/drafts/incremental_bundle/approve",
+                       json={"by": "采纳人"})
+    assert appr.status_code == 200, appr.text
+    return appr.json()
+
+
+def test_reopen_note_uses_answer_text(env: tuple[TestClient, Database, Repos]) -> None:
+    """A4/D15：变更 confirm 的重开 note 拼解构文本（结构化作答不外溢 JSON 进 note/增量输入）；
+    snapshot 存原值（放弃回滚按原文恢复）。"""
+    client, db, repos = env
+    req_id = _mk_card(client)
+    _seed_blocks(repos, req_id)
+    _push_and_publish(client, req_id, p1_answer=_OPTION_ANSWER)
+    cid = _to_changed(client, db, req_id)
+    answers = {a["seq"]: a for a in client.get(f"/api/requirements/{req_id}/answers").json()}
+    # 重开 note = 解构文本；裸 JSON 不得进 note（D15：note 是增量合成输入与 PM 可见面）
+    assert answers["P1"]["status"] == "pending"
+    assert answers["P1"]["note"] == "因变更单#1 重开，原答复：选项全文（补充：补充说明）"
+    assert '{"kind"' not in answers["P1"]["note"]
+    # 快照存原值不切（§5.6 放弃回滚按原文恢复）
+    row = db.query_one("SELECT snapshot_json FROM req_change WHERE id=?", (cid,))
+    snapshot: dict[str, Any] = json.loads(str(row["snapshot_json"])) if row is not None else {}
+    assert snapshot["reopen"][0]["answer"] == _OPTION_ANSWER
+
+
+def test_incremental_merge_keeps_new_clarify_fields(env: tuple[TestClient, Database, Repos]) -> None:
+    """B6：增量新澄清行 options/module/layer 宽松透传（layer 归一）——缺此三字段则增量新行
+    相对全量推送永远降级。"""
+    client, db, repos = env
+    req_id = _mk_card(client)
+    _seed_blocks(repos, req_id)
+    _push_and_publish(client, req_id)
+    cid = _to_changed(client, db, req_id)
+    _approve_bundle(client, req_id, _v5_bundle(cid, clarify_items=[
+        {"level": "yellow", "theme": "t", "question": "增量选择题", "anchor": "p1",
+         "options": [{"key": "A", "text": "甲"}, {"key": "B", "text": "乙"}],
+         "module": "教研", "layer": 3},  # 数字 layer 主线形态
+        {"level": "yellow", "theme": "t", "question": "增量旧形态行", "anchor": "p1"},
+    ]))
+    items = {it["question"]: it for it in client.get(f"/api/requirements/{req_id}").json()["items"]}
+    new1 = items["增量选择题"]
+    assert new1["options"] == [{"key": "A", "text": "甲"}, {"key": "B", "text": "乙"}]
+    assert new1["module"] == "教研" and new1["layer"] == "3"
+    new2 = items["增量旧形态行"]
+    assert new2["options"] == [] and new2["module"] == "" and new2["layer"] == ""
+
+
+def test_incremental_merge_preserves_kept_row_fields(env: tuple[TestClient, Database, Repos]) -> None:
+    """机器行重插往返：区间外 kept 行（skill 来源）经 delete_machine + insert_many 重建，
+    v1.6 三字段与已答处置一并保留（r4 风险#7）。"""
+    client, db, repos = env
+    req_id = _mk_card(client)
+    _seed_blocks(repos, req_id)
+    _push_and_publish(client, req_id)  # P2（li2 区间外）带 options/module/layer + 已答
+    cid = _to_changed(client, db, req_id)
+    _approve_bundle(client, req_id, _v5_bundle(cid))
+    answers = {a["seq"]: a for a in client.get(f"/api/requirements/{req_id}/answers").json()}
+    assert answers["P2"]["answer"] == "答 P2" and answers["P2"]["status"] == "answered"
+    assert answers["P2"]["origin"] == "skill"
+    p2 = next(c for c in repos.clarify_item.list_by_req(req_id) if c.seq == "P2")
+    assert p2.options_json == '[{"key":"A","text":"甲"}]'
+    assert p2.module == "教研" and p2.layer == "5"
+
+
+def test_incremental_audit_whitelist_unified(env: tuple[TestClient, Database, Repos]) -> None:
+    """B6：增量合并 audit kept+new 全量过共享构造器——9 键白名单统一（私货剥除、layer 归一），
+    与 push 侧 _audit_view 同一口径。断言面取 artifact content_json（合并层权威；detail 视图
+    在其上叠加 relatedCases 等展示键，不在本用例范围）。"""
+    client, db, repos = env
+    req_id = _mk_card(client)
+    _seed_blocks(repos, req_id)
+    # 库里旧行（push 侧落库即 9 键归一）：li2 区间外 kept
+    _push_and_publish(client, req_id, audit_items=[
+        {"id": "P-OLD", "level": "yellow", "title": "旧条目", "where": "w", "go": "",
+         "group": "g", "quote": "", "anchor": "li2"}])
+    cid = _to_changed(client, db, req_id)
+    _approve_bundle(client, req_id, _v5_bundle(cid, audit_items=[
+        {"id": "A-1", "level": "yellow", "title": "新条目", "where": "w", "go": "确认",
+         "anchor": "p1", "layer": 2, "foo": "私货"}]))
+    raw = db.query_one("SELECT content_json FROM artifact WHERE req_id=? AND type='audit'", (req_id,))
+    assert raw is not None
+    items = {it["id"]: it for it in json.loads(str(raw["content_json"]))["items"]}
+    assert set(items) == {"P-OLD", "A-1"}
+    for iid, it in items.items():
+        assert set(it) == _AUDIT_KEYS, f"{iid} 键集不是 9 键白名单：{set(it) ^ _AUDIT_KEYS}"
+        assert "bar" not in it and "foo" not in it
+    assert items["P-OLD"]["layer"] == ""       # 旧行无 layer → 构造器补默认（kept 也归一）
+    assert items["A-1"]["layer"] == "2"        # new 行数字归一
+
+
+def test_incremental_flows_whitelist_and_pids(env: tuple[TestClient, Database, Repos]) -> None:
+    """D-K + 调用点 view 纪律：仅 flows 的 new 行过白名单视图（pids 数组化/私货剥除）；
+    features/states 不受影响（不传 view）；kept flows（空 anchor global 行）合并前后逐字节不变
+    （push 侧落库即归一 7 键，「永不改写」= 合并不重写历史数据）。"""
+    client, db, repos = env
+    req_id = _mk_card(client)
+    _seed_blocks(repos, req_id)
+    _push_and_publish(client, req_id, flows=[
+        {"role": "系统", "step": "巡检", "anchor": ""},  # 空 anchor global 行（push 侧归一落库）
+    ])
+    cid = _to_changed(client, db, req_id)
+
+    def _digest_flows() -> list[Any]:
+        raw = db.query_one("SELECT content_json FROM artifact WHERE req_id=? AND type='digest'",
+                           (req_id,))
+        assert raw is not None
+        return json.loads(str(raw["content_json"]))["flows"]
+
+    kept_before = _digest_flows()
+    _approve_bundle(client, req_id, _v5_bundle(
+        cid,
+        flows=[{"role": "用户", "step": "提交", "next": "审核", "anchor": "p1",
+                "pids": ["P1"], "foo": "new 私货"}],
+        features=[{"role": "用户", "m": "注册", "func": "邮箱注册", "cov": "全", "anchor": "p1"}],
+        states=[{"obj": "工单", "from": "草稿", "on": "提交", "to": "审核", "anchor": "p1"}]))
+    flows = _digest_flows()
+    assert len(flows) == 2
+    assert flows[0] == kept_before[0]  # kept 行合并前后逐字节不变（永不改写）
+    assert set(flows[0]) == {"role", "step", "next", "gap", "src", "anchor", "pids"}
+    assert flows[1] == {"role": "用户", "step": "提交", "next": "审核", "gap": False,
+                        "src": "", "anchor": "p1", "pids": ["P1"]}  # new 7 键白名单（foo 剥除）
+    assert isinstance(flows[1]["pids"], list)
+    # features/states 不传 view：正当字段全保留（不受 flows 视图误伤）
+    content = client.get(f"/api/requirements/{req_id}").json()["digest"]["content"]
+    assert content["features"][0]["m"] == "注册" and content["features"][0]["func"] == "邮箱注册"
+    assert content["features"][0]["cov"] == "全"
+    assert content["states"][0]["obj"] == "工单" and content["states"][0]["from"] == "草稿"
+
+
+def test_prompt_channels_consume_answer_text() -> None:
+    """四通道契约锁（r4 按分支断言）：standard_doc = answerText + 〔Pxx〕/〔Pxx·挂起〕；
+    incremental = answerText 指令与其数据源步骤（list_clarify_items）共同在位——指令悬空即回退。"""
+    root = Path(__file__).resolve().parents[1]
+    runner_src = (root / "runner" / "runner.mjs").read_text(encoding="utf-8")
+    # runner standard_doc 分支：answerText 消费 + 〔Pxx〕尾缀 + 挂起标注
+    std_seg = runner_src.split("task.type === 'standard_doc'")[1].split("task.type === 'case_gen'")[0]
+    assert "items[].answerText" in std_seg and "不要直接消费" in std_seg
+    assert "〔Pxx〕" in std_seg and "〔Pxx·挂起〕" in std_seg
+    # runner incremental 分支：输入侧 answerText 指令
+    inc_seg = runner_src.split("task.type === 'incremental_check'")[1].split("task.type === 'standard_doc'")[0]
+    assert "answerText" in inc_seg and "不要直接消费" in inc_seg
+    # agent prompts：standard_doc = answerText + 〔Pxx〕；incremental = answerText 指令 + 数据源步骤
+    card = Requirement(id="R", name="n")
+    repo = Path("/repo")
+    agent_std = sys_prompt("standard_doc", card, repo, [])
+    assert "answerText" in agent_std and "不要直接消费" in agent_std
+    assert "〔Pxx〕" in agent_std and "〔Pxx·挂起〕" in agent_std
+    agent_inc = sys_prompt("incremental_check", card, repo, [])
+    assert "answerText" in agent_inc and "list_clarify_items" in agent_inc  # 指令与数据源共同在位
+    # agent 数据面 docstring：list_clarify_items 声明消费 answerText
+    tools_src = (root / "src" / "platform_sdlc" / "agent" / "tools.py").read_text(encoding="utf-8")
+    assert "answerText" in tools_src.split("async def list_clarify_items")[1].split("def impl")[0]
+    # skills spec.md（可达时）：answerText 消费规则在权威合成规范中
+    if _SKILLS_SPEC.exists():
+        spec = _SKILLS_SPEC.read_text(encoding="utf-8")
+        assert "answerText" in spec and "〔Pxx〕" in spec
+
+
+def test_audit_view_layer_passthrough() -> None:
+    """D-J 单点三用之直测：audit_item_view 的 layer 归一（数字主线/越界/'0'/缺省）。"""
+    assert normalize_layer(2) == "2" and normalize_layer("7") == "7"
+    assert normalize_layer("0") == "" and normalize_layer("9") == "" and normalize_layer("x") == ""
+    assert normalize_layer("") == "" and normalize_layer(None) == ""
+    base = {"id": "P1", "level": "yellow", "title": "t", "where": "w", "go": "",
+            "group": "g", "quote": "", "anchor": "a"}
+    assert audit_item_view({**base, "layer": 3})["layer"] == "3"
+    assert audit_item_view(dict(base))["layer"] == ""           # 缺省补默认
+    assert audit_item_view({**base, "layer": "0"})["layer"] == ""
+    assert set(audit_item_view(base)) == _AUDIT_KEYS            # 9 键白名单

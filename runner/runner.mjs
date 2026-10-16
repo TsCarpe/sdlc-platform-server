@@ -126,7 +126,7 @@ SDLC_TASK_RESULT {"关键统计": "..."}
    curl -s ${PLATFORM}/api/requirements/${task.reqId}/doc.json -o intake/doc-inc.json   （编辑后全文块模型）
    curl -s ${PLATFORM}/api/requirements/${task.reqId}/changes | python3 -c "import sys,json;d=json.load(sys.stdin);print(json.dumps([c for c in d if c['status']=='confirmed'][0],ensure_ascii=False))" > raw/change.json
    curl -s ${PLATFORM}/api/requirements/${task.reqId}/changes/$(python3 -c "import json;print(json.load(open('raw/change.json'))['id'])")/impact > raw/impact.json
-   curl -s ${PLATFORM}/api/requirements/${task.reqId} > raw/card.json   （digest/audit 结构行 + 保留澄清项及已答）
+   curl -s ${PLATFORM}/api/requirements/${task.reqId} > raw/card.json   （digest/audit 结构行 + 保留澄清项及已答；已答澄清项的答复一律取 items[].answerText——answer 原文可能是结构化 JSON 串，不要直接消费）
    curl -s ${PLATFORM}/api/requirements/${task.reqId}/comments.json -o raw/comments.json
 3. 按 incremental-guide 只重梳理受影响章节：新版本 digest 行/audit 条目/FR 点，作废行清单（原文已删/口径已变），新澄清问题（机器 P 系——seq 由平台合并时分配，不携带）。
 4. 组装增量包（严格结构）：{changeId, sections:[受影响章节 heading 的 block_id——禁 seq 数值], digestRows:{features,flows,states,auditItems,frUpserts,frRemoves}, invalidate:{digestAnchors,auditIds}, clarify:{items}, summary, riskTier}
@@ -139,9 +139,9 @@ SDLC_TASK_RESULT {"关键统计": "..."}
     return `${common}
 执行标准需求文档合成（重写版）。平台已有该需求的全部澄清答复。
 
-1. 拉取平台数据：curl -s ${PLATFORM}/api/requirements/${task.reqId}（含 card/snapshot/digest/audit/items/domains/doc；澄清答复在 items[].answer）。
-   澄清项处置语义（DESIGN-v2.2 D21）：items[].status=rejected 的问题不进定稿（连同 answer 一并忽略，PM 已认定不是问题）；status=deferred 的记入遗留假设（需求.Axx）。
-2. 读取合成规范：${REPO}/skills/sdlc-sync/references/standard-doc-spec.md（结构/消化规则/质量自查清单，必须逐项遵守：❓ 清零、不发明需求、原文规则全集等价覆盖、✅/⚠️/删除线标注、保留 需求.FR-xx / 体检.Pxx / 需求.Axx / 裸 Pxx 引用记号）。
+1. 拉取平台数据：curl -s ${PLATFORM}/api/requirements/${task.reqId}（含 card/snapshot/digest/audit/items/domains/doc；澄清答复一律取 items[].answerText——它是服务端解构后的纯文本，items[].answer 原文可能是结构化 JSON 串，任何情况下不要直接消费）。
+   澄清项处置语义（DESIGN-v2.2 D21）：items[].status=rejected 的问题不进定稿（连同其答复一并忽略，PM 已认定不是问题）；status=deferred 的记入遗留假设（需求.Axx）并标注〔Pxx·挂起〕。
+2. 读取合成规范：${REPO}/skills/sdlc-sync/references/standard-doc-spec.md（结构/消化规则/质量自查清单，必须逐项遵守：❓ 清零、不发明需求、原文规则全集等价覆盖、✅/⚠️/删除线标注、保留 需求.FR-xx / 体检.Pxx / 需求.Axx / 裸 Pxx 引用记号；澄清结论固化的条款尾部带〔Pxx〕尾缀、挂起项带〔Pxx·挂起〕——与 spec §3 消化规则同源）。
 3. 以快照为底稿逐条消化体检定论与澄清答复，合成完整定稿 markdown。
 4. curl -X PUT ${PLATFORM}/api/requirements/${task.reqId}/drafts/standard -H 'Content-Type: application/json' -d '{"md": <合成文档 JSON 转义>}'（文档大时同样写临时文件 --data-binary @文件）。
 5. 输出 SDLC_TASK_RESULT 行（含章节结构摘要/消化条数/遗留假设数）。`

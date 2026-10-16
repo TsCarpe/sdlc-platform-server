@@ -40,8 +40,10 @@ def sys_prompt(task_type: str, card: Requirement, skills_repo: Path, repos_of: l
         return (f"{common}\n执行变更后局部质检（受影响章节切片增量梳理，v4 DESIGN §6）：\n"
                 f"1. read_file 读取增量规范：{repo}/skills/sdlc-intent/references/incremental-guide.md"
                 "（受影响章节重梳理、作废行清单、anchor 越界纪律）。\n"
-                "2. get_requirement_card（编辑后块模型 doc）+ get_digest_bundle（digest/audit 结构行 + 保留澄清）"
-                "+ 只读评论工具取评论；变更单冻结面（impact 的 blocks/sections/四类清单）从任务 payload 的"
+                "2. get_requirement_card（编辑后块模型 doc）+ get_digest_bundle（digest/audit 结构行）"
+                "+ 只读评论工具取评论；已答澄清项经 list_clarify_items 工具获取（其答复是重梳理的"
+                "口径输入——一律取 answerText，answer 原文可能是结构化 JSON 串，不要直接消费）；"
+                "变更单冻结面（impact 的 blocks/sections/四类清单）从任务 payload 的"
                 " note 说明经 GET /changes 与 /changes/{id}/impact 获取（run_command curl 直落 raw/）。\n"
                 "3. 只重梳理受影响章节：新版本 digest 行/audit 条目/FR 点 + 作废行清单 + 新澄清（P 系编号"
                 "由平台合并时分配，items 不携带 seq）。\n"
@@ -53,9 +55,11 @@ def sys_prompt(task_type: str, card: Requirement, skills_repo: Path, repos_of: l
                 "6. 输出 SDLC_TASK_RESULT 行（受影响章节数/新行数/作废数/新澄清数）。")
     if task_type == "standard_doc":
         return (f"{common}\n执行标准需求文档合成（重写版）。平台已有该需求的全部澄清答复：\n"
-                "1. get_requirement_card + list_clarify_items 获取卡、原文与逐问答复；get_digest_bundle 获取 digest/audit。\n"
-                "   澄清项处置语义（DESIGN-v2.2 D21）：status=rejected 的问题不进定稿（连同其 answer 一并忽略，PM 已认定不是问题）；status=deferred 的记入遗留假设（需求.Axx）。\n"
-                f"2. read_file 读取合成规范：{repo}/skills/sdlc-sync/references/standard-doc-spec.md（结构/消化规则/质量自查清单，必须逐项遵守：❓清零、不发明需求、原文规则全集等价覆盖、✅/⚠️/删除线标注、保留 需求.FR-xx / 体检.Pxx / 需求.Axx / 裸 Pxx 引用记号）。\n"
+                "1. get_requirement_card + list_clarify_items 获取卡、原文与逐问答复（答复一律取 answerText"
+                "——服务端解构后的纯文本，answer 原文可能是结构化 JSON 串，任何情况下不要直接消费）；"
+                "get_digest_bundle 获取 digest/audit。\n"
+                "   澄清项处置语义（DESIGN-v2.2 D21）：status=rejected 的问题不进定稿（连同其答复一并忽略，PM 已认定不是问题）；status=deferred 的记入遗留假设（需求.Axx）并标注〔Pxx·挂起〕。\n"
+                f"2. read_file 读取合成规范：{repo}/skills/sdlc-sync/references/standard-doc-spec.md（结构/消化规则/质量自查清单，必须逐项遵守：❓清零、不发明需求、原文规则全集等价覆盖、✅/⚠️/删除线标注、保留 需求.FR-xx / 体检.Pxx / 需求.Axx / 裸 Pxx 引用记号；澄清结论固化的条款尾部带〔Pxx〕尾缀、挂起项带〔Pxx·挂起〕——与 spec §3 消化规则同源）。\n"
                 "3. 以快照为底稿逐条消化体检定论与澄清答复，合成完整定稿 markdown。\n"
                 "4. put_draft(type=standard, md=合成文档)。\n"
                 "5. 输出 SDLC_TASK_RESULT 行（章节结构摘要/消化条数/遗留假设数）。")

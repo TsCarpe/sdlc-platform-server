@@ -219,3 +219,17 @@ def audit_item_view(i: Any) -> dict[str, Any]:
         "quote": jtext(i, "quote", ""), "anchor": jtext(i, "anchor", ""),
         "layer": normalize_layer(i.get("layer") if is_json_obj(i) else ""),
     }
+
+
+# flows 行视图键集（现行 6 键 + pids；与 payload-schema.md flows 契约/incremental-guide 字段集核对）
+DIGEST_FLOW_FIELDS: tuple[str, ...] = ("role", "step", "next", "gap", "src", "anchor", "pids")
+
+
+def digest_flow_view(f: Any) -> dict[str, Any]:
+    """flows 行视图共享构造器（push 侧 _digest_view 与增量合并 new 行两路同构）：pids 走 jstrings
+    一律数组形态（D-K——字符串形态会以非空串绕过前端 (f.pids||[]).length 降级判定）。"""
+    return {
+        "role": jtext(f, "role", ""), "step": jtext(f, "step", ""), "next": jtext(f, "next", ""),
+        "gap": jbool(f, "gap", False), "src": jtext(f, "src", ""), "anchor": jtext(f, "anchor", ""),
+        "pids": jstrings(f, "pids"),
+    }

@@ -18,6 +18,7 @@ from platform_sdlc.common import (
     IntegrityException,
     Times,
     audit_item_view,
+    digest_flow_view,
     is_json_list,
     is_json_obj,
     jarray,
@@ -528,12 +529,9 @@ class RequirementService:
         features = [{"role": jtext(f, "role", ""), "m": jtext(f, "m", ""), "func": jtext(f, "func", ""),
                      "cov": jtext(f, "cov", ""), "src": jtext(f, "src", ""), "anchor": jtext(f, _A, "")}
                     for f in jarray(digest, "features")]
-        flows = [{"role": jtext(f, "role", ""), "step": jtext(f, "step", ""), "next": jtext(f, "next", ""),
-                  "gap": jbool(f, "gap", False), "src": jtext(f, "src", ""), "anchor": jtext(f, _A, ""),
-                  # v1.6（DESIGN-v5 §6.1，D-K）：pids=关联澄清 P 系编号，一律数组形态（jstrings）——
-                  # 字符串形态会以非空串绕过前端 (f.pids||[]).length 降级判定（取字符长度伪命中）
-                  "pids": jstrings(f, "pids")}
-                 for f in jarray(digest, "flows")]
+        # v1.6（D-K）：flows 行构造切共享构造器（common.digest_flow_view）——与批 2 增量合并
+        # new 行两路同构（pids 白名单+数组化），两套字段清单会漂移
+        flows = [digest_flow_view(f) for f in jarray(digest, "flows")]
         states = [{"obj": jtext(s, "obj", ""), "from": jtext(s, "from", ""), "on": jtext(s, "on", ""),
                    "to": jtext(s, "to", ""), "gap": jbool(s, "gap", False), "src": jtext(s, "src", ""),
                    "anchor": jtext(s, _A, "")}
