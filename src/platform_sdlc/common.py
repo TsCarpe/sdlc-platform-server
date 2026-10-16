@@ -6,6 +6,7 @@ Json 助手操作「已解析的 JSON 值」（dict/list/str/int/float/bool/None
 
 from __future__ import annotations
 
+import json
 import re
 from datetime import datetime
 from typing import Any, TypeGuard, overload
@@ -163,3 +164,58 @@ def jarray(n: Any, field: str) -> list[Any]:
 
 def jstrings(n: Any, field: str) -> list[str]:
     return [_as_text(v) for v in jarray(n, field)]
+
+
+# ---------- v1.6（DESIGN-v5 §6.2/§6.3）：layer 归一 / answer 解构 / 澄清视图共享构造器 ----------
+
+def normalize_layer(v: Any) -> str:
+    """layer 归一单点（D-J，三用：push_artifacts 解析 / _machine_clarify / audit_item_view）：
+    先 str 化再判（数字 2 → "2" 是 v1.6 推送方主线形态），'1'-'7' 之外一律 ''（'0'/越界/杂质
+    归空——出参端前端对空串已有降级，入库端不点亮伪桶）。DB 存字符串、wire 出字符串。"""
+    s = str(v if v is not None else "").strip()
+    return s if s in ("1", "2", "3", "4", "5", "6", "7") else ""
+
+
+def answer_text_of(answer: str) -> str:
+    """answer → 展示文本单一解构出口（D15/D-E，前端展示/重开 note/合成输入/pull-answers 回写
+    统一消费）：四条件判别——json.loads 成功 ∧ 含 kind 键 ∧ kind ∈ {option,text} ∧ 分支负载
+    非空（option: optionText / text: text），全过才算结构化：option → optionText[＋（补充：extra）]、
+    text → text；任一不过一律原文透传（残缺结构化不当空串产出——下游会当未答漏固化，也不在
+    展示层外溢 JSON）。kind:text 当前零生产方，保留契约分支（宽进合法、未来写方预留，D-F）。"""
+    s = (answer or "").strip()
+    if not s.startswith("{"):
+        return answer
+    try:
+        obj: Any = json.loads(s)
+    except ValueError:
+        return answer
+    if not is_json_obj(obj) or "kind" not in obj:
+        return answer
+    kind = str(obj.get("kind") or "")
+    if kind == "option":
+        text = str(obj.get("optionText") or "")
+        if not text:
+            return answer
+        extra = str(obj.get("extra") or "").strip()
+        return f"{text}（补充：{extra}）" if extra else text
+    if kind == "text":
+        text = str(obj.get("text") or "")
+        return text if text else answer
+    return answer
+
+
+# audit 条目视图键集（现行 8 键 + layer；push 侧 _audit_view 与增量合并共用同一构造器——
+# 两套口径会漂移出隐式字段保留，DESIGN-v5 §6.4 B6）
+AUDIT_ITEM_FIELDS: tuple[str, ...] = (
+    "id", "level", "title", "where", "go", "group", "quote", "anchor", "layer")
+
+
+def audit_item_view(i: Any) -> dict[str, Any]:
+    """audit 条目视图共享构造器（9 键，字段集与 AUDIT_ITEM_FIELDS 同序）：layer 走 normalize_layer
+    归一（audit items 与澄清卡同一 1-7 体系 §6.2，不归一会点亮就绪度伪桶）+ 未知键剥除（白名单）。"""
+    return {
+        "id": jtext(i, "id", ""), "level": jtext(i, "level", "yellow"), "title": jtext(i, "title", ""),
+        "where": jtext(i, "where", ""), "go": jtext(i, "go", ""), "group": jtext(i, "group", ""),
+        "quote": jtext(i, "quote", ""), "anchor": jtext(i, "anchor", ""),
+        "layer": normalize_layer(i.get("layer") if is_json_obj(i) else ""),
+    }

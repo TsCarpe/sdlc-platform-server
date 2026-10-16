@@ -38,6 +38,11 @@ _COLUMNS: list[tuple[str, str, str]] = [
     ("clarify_item", "origin", "ALTER TABLE clarify_item ADD COLUMN origin TEXT DEFAULT ''"),
     # v4.8（DESIGN-v4 §4.1）：评论升级回链——被升级的评论可跳回原讨论上下文；存量行无来源评论，无回填
     ("clarify_item", "src_comment_id", "ALTER TABLE clarify_item ADD COLUMN src_comment_id INTEGER"),
+    # v1.6（DESIGN-v5 §6.1/§6.3）：选择题化作答契约——options=选项快照（JSON 数组串）、
+    # module/layer=分层归属（layer 1-7 体系，§6.2）。默认空串/空选项，存量行零回填零迁移
+    ("clarify_item", "options", "ALTER TABLE clarify_item ADD COLUMN options TEXT DEFAULT ''"),
+    ("clarify_item", "module", "ALTER TABLE clarify_item ADD COLUMN module TEXT DEFAULT ''"),
+    ("clarify_item", "layer", "ALTER TABLE clarify_item ADD COLUMN layer TEXT DEFAULT ''"),
     # v4.12（DESIGN-v4 §5.5/§7）：content_rev 单调递增不回退（仅作展示计数，变更判定查变更单不比 rev）；
     # blocks_json = draft 全量块数组留底（confirm 应用面的顺序来源——items 只存变更行不含新序）
     ("requirement", "content_rev", "ALTER TABLE requirement ADD COLUMN content_rev INTEGER NOT NULL DEFAULT 0"),

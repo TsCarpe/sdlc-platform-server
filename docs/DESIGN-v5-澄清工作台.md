@@ -162,9 +162,9 @@ v4 完成需求平台权威化后，PM 在澄清阶段的体验存在三个结�
 {"kind":"text","text":"自由文本答复"}
 ```
 
-- **判别规则（r2 B1 + r4 二审#15 第四条件）**：`json.loads` 成功 ∧ 含 `kind` 键 ∧ `kind ∈ {option,text}` ∧（kind=option 时含非空 `optionText`）才算结构化，否则**一律按纯文本原样透传**（`answerText` = 原文）——残缺结构化（有 kind 无 optionText）不会产出空串 answerText（下游当未答、条款漏固化），也不会在解构层外溢 JSON（当纯文本展示无害）；
+- **判别规则（r2 B1 + r4 二审#15 第四条件；二期终稿 D-E 收紧）**：`json.loads` 成功 ∧ 含 `kind` 键 ∧ `kind ∈ {option,text}` ∧ 分支负载非空（kind=option 含非空 `optionText` ∧ kind=text 含非空 `text`）才算结构化，否则**一律按纯文本原样透传**（`answerText` = 原文）——残缺结构化（有 kind 无负载）不会产出空串 answerText（下游当未答、条款漏固化），也不会在解构层外溢 JSON（当纯文本展示无害）；
 - **写入 wire（r2 审查 B1）**：`PUT /answers/{seq}` 的 `answer` 字段仍为字符串，内容为上述 JSON；服务端不强制校验内部结构（宽进）；
-- **`answerText`（r2 审查 B2/A4，D15）**：`answers()` 与 detail 的 items 出参统一增 `answerText`——服务端解构（option → `optionText`[+extra]；text → text；非结构化 → 原文）。**前端展示、sdlc-sync pull-answers 本地回写、变更重开 note、合成输入全部消费 `answerText`**，原始 `answer` 仅透传给需要结构的一方（前端选项回显）；
+- **`answerText`（r2 审查 B2/A4，D15）**：`answers()` 与 detail 的 items 出参统一增 `answerText`——服务端解构（option → `optionText`[＋`（补充：extra）`]，**extra 连接符定稿全角括号中文冒号形态（二期实现定稿）**；text → text；非结构化 → 原文）。**前端展示、sdlc-sync pull-answers 本地回写、变更重开 note、合成输入全部消费 `answerText`**，原始 `answer` 仅透传给需要结构的一方（前端选项回显）；
 - 选项全文快照（D5）：防重推 options 再生成后 key 漂移。
 
 ### 6.4 服务端与生成端改动清单（r2 全面修正）

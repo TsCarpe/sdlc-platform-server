@@ -36,9 +36,9 @@ class ClarifyItemRepo:
     def insert(self, c: ClarifyItem) -> None:
         self.db.execute(
             "INSERT INTO clarify_item(req_id,seq,level,theme,question,ctx,answer,answered_at,quote,anchor,"
-            "status,note,origin,src_comment_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "status,note,origin,src_comment_id,options,module,layer) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (c.req_id, c.seq, c.level, c.theme, c.question, c.ctx, c.answer, c.answered_at, c.quote,
-             c.anchor, c.status, c.note, c.origin, c.src_comment_id),
+             c.anchor, c.status, c.note, c.origin, c.src_comment_id, c.options_json, c.module, c.layer),
         )
 
     def insert_many(self, items: list[ClarifyItem]) -> None:
@@ -47,9 +47,10 @@ class ClarifyItemRepo:
             return
         self.db.executemany(
             "INSERT INTO clarify_item(req_id,seq,level,theme,question,ctx,answer,answered_at,quote,anchor,"
-            "status,note,origin,src_comment_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "status,note,origin,src_comment_id,options,module,layer) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             [(c.req_id, c.seq, c.level, c.theme, c.question, c.ctx, c.answer, c.answered_at, c.quote,
-              c.anchor, c.status, c.note, c.origin, c.src_comment_id) for c in items],
+              c.anchor, c.status, c.note, c.origin, c.src_comment_id, c.options_json, c.module, c.layer)
+             for c in items],
         )
 
     def reopen_items(self, req_id: str, rows: list[tuple[str, str, str | None]]) -> None:

@@ -10,7 +10,7 @@ import json
 from dataclasses import dataclass, field
 from typing import Any
 
-from platform_sdlc.common import is_json_list, is_json_obj
+from platform_sdlc.common import answer_text_of, is_json_list, is_json_obj
 
 Row = Any  # sqlite3.Row
 
@@ -124,6 +124,9 @@ class ClarifyItem:
     note: str = ""
     origin: str = ""  # v4.1（DESIGN-v4 §6.3）：skill|incremental|local，删除/合并规则按来源
     src_comment_id: int | None = None  # v4.8（DESIGN-v4 §4.1）：评论升级回链原 req_comment 行
+    options_json: str = ""  # v1.6（DESIGN-v5 §6.1）：选项快照 JSON 数组串（''=无选项，宽进）
+    module: str = ""  # v1.6（DESIGN-v5 §6.1）：分层归属-模块
+    layer: str = ""  # v1.6（DESIGN-v5 §6.2）：分层归属-层（'1'-'7'，归一见 common.normalize_layer）
 
     @classmethod
     def from_row(cls, row: Row) -> ClarifyItem:
@@ -143,7 +146,28 @@ class ClarifyItem:
             note=_s(row, "note"),
             origin=_s(row, "origin"),
             src_comment_id=_in(row, "src_comment_id"),
+            options_json=_s(row, "options"),
+            module=_s(row, "module"),
+            layer=_s(row, "layer"),
         )
+
+    @property
+    def options(self) -> list[Any]:
+        """选项快照（wire 出参 'options' 键）：''/非法 JSON/非数组一律 []（宽进——存量行与旧推送方
+        无此字段，读侧统一空数组形态，前端 options.length===0 即降级纯文本作答）。"""
+        if not self.options_json:
+            return []
+        try:
+            v: Any = json.loads(self.options_json)
+        except ValueError:
+            return []
+        return list(v) if is_json_list(v) else []
+
+    @property
+    def answer_text(self) -> str:
+        """解构后展示文本（D15 单一出口，wire 出参 'answerText' 键）：结构化 option/text 按
+        common.answer_text_of 解构，非结构化/残缺原文透传——展示/note/合成输入统一消费此键。"""
+        return answer_text_of(self.answer)
 
 
 # 块 JSON 顶层键中不进 attrs_json 的集合（v4 块模型契约）：id/type/text 是独立列；

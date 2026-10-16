@@ -17,6 +17,7 @@ from platform_sdlc.common import (
     ApiException,
     IntegrityException,
     Times,
+    audit_item_view,
     is_json_list,
     is_json_obj,
     jarray,
@@ -25,6 +26,7 @@ from platform_sdlc.common import (
     jrequired,
     jstrings,
     jtext,
+    normalize_layer,
 )
 from platform_sdlc.db import Database
 from platform_sdlc.models import Artifact, ClarifyItem, FrPoint, Requirement, string_list
@@ -166,6 +168,11 @@ class RequirementService:
                     status="pending",  # 重建行基线（D21）：携带/skill 自带 answer 分支另行覆写
                     origin="skill",  # v4.1（DESIGN-v4 §6.3/§10）：重推产生的机器行来源标记，
                     # 与账本回填同批——否则首次重推把存量回填冲零，「按来源合并」匹配不到任何行
+                    # v1.6（DESIGN-v5 §6.1）宽松三字段：options 非数组给 []（旧推送方无此键零扰动，
+                    # 空数组不落串）；layer 归一（数字 2 → "2" 主线形态，越界/杂质归 ''，D-J 单点）
+                    options_json=(_json(opts) if (opts := jarray(n, "options")) else ""),
+                    module=jtext(n, "module", ""),
+                    layer=normalize_layer(jtext(n, "layer", "")),
                 )
                 if seq in seqs:
                     raise ApiException(400, f"澄清清单 seq 重复：{seq}")
@@ -276,6 +283,8 @@ class RequirementService:
                 "answer": c.answer, "answeredAt": c.answered_at, "status": c.status, "note": c.note,
                 "origin": c.origin,  # v4-9：P/L 两族呈现区分（skill/incremental=机器，local=评论升级）
                 "srcCommentId": c.src_comment_id,  # v4.8 升级回链（前端「每条评论只可升级一次」预禁用依据）
+                "answerText": c.answer_text,  # v1.6（D15）：解构后展示文本——端点直出 + agent 交互
+                # assistant（直调本方法）双出口统一；结构化/纯文本/残缺一律有值（原文透传兜底）
             })
         return out
 
@@ -520,7 +529,10 @@ class RequirementService:
                      "cov": jtext(f, "cov", ""), "src": jtext(f, "src", ""), "anchor": jtext(f, _A, "")}
                     for f in jarray(digest, "features")]
         flows = [{"role": jtext(f, "role", ""), "step": jtext(f, "step", ""), "next": jtext(f, "next", ""),
-                  "gap": jbool(f, "gap", False), "src": jtext(f, "src", ""), "anchor": jtext(f, _A, "")}
+                  "gap": jbool(f, "gap", False), "src": jtext(f, "src", ""), "anchor": jtext(f, _A, ""),
+                  # v1.6（DESIGN-v5 §6.1，D-K）：pids=关联澄清 P 系编号，一律数组形态（jstrings）——
+                  # 字符串形态会以非空串绕过前端 (f.pids||[]).length 降级判定（取字符长度伪命中）
+                  "pids": jstrings(f, "pids")}
                  for f in jarray(digest, "flows")]
         states = [{"obj": jtext(s, "obj", ""), "from": jtext(s, "from", ""), "on": jtext(s, "on", ""),
                    "to": jtext(s, "to", ""), "gap": jbool(s, "gap", False), "src": jtext(s, "src", ""),
@@ -530,10 +542,9 @@ class RequirementService:
                 "features": features, "flows": flows, "states": states}
 
     def _audit_view(self, audit: dict[str, Any]) -> dict[str, Any]:
-        items = [{"id": jtext(i, "id", ""), "level": jtext(i, "level", "yellow"), "title": jtext(i, "title", ""),
-                  "where": jtext(i, "where", ""), "go": jtext(i, "go", ""), "group": jtext(i, "group", ""),
-                  "quote": jtext(i, "quote", ""), "anchor": jtext(i, _A, "")}
-                 for i in jarray(audit, "items")]
+        # v1.6（DESIGN-v5 §6.4 B6）：条目构造切共享构造器（common.audit_item_view，9 键含 layer）——
+        # 与批 2 增量合并同一口径，两套字段清单会漂移出隐式保留/私货
+        items = [audit_item_view(i) for i in jarray(audit, "items")]
         return {"red": jint(audit, "red", 0), "yellow": jint(audit, "yellow", 0),
                 "blue": jint(audit, "blue", 0), "items": items}
 
