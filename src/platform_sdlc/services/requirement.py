@@ -18,7 +18,9 @@ from platform_sdlc.common import (
     IntegrityException,
     Times,
     audit_item_view,
+    digest_feature_view,
     digest_flow_view,
+    digest_state_view,
     is_json_list,
     is_json_obj,
     jarray,
@@ -38,8 +40,6 @@ from platform_sdlc.services.iteration import NAME_MAX
 from platform_sdlc.states import req_can_transition
 
 log = logging.getLogger(__name__)
-
-_A = "anchor"
 _EMPTY_LIST: list[Any] = []
 
 
@@ -267,12 +267,22 @@ class RequirementService:
                 self.repos.requirement.set_status(req_id, "clarifying")
             self.repos.requirement.touch_synced(req_id, at)
 
-        log.info("推送质检产物 %s：%d 问 %d 点（保留答复 %d / 漂移 %d，缺媒体 %d）",
-                 req_id, len(parsed), len(frs), carried, changed, missing_media)
+            # v1.6 danglingPids（观察信号非守卫，D-L）：payload flows 引用了既不在本 payload items
+            # 也不在存量 local（L 系，重推幸存）行的 pids 计数——push 是全量替换语义（机器行整族
+            # 删除重建），其它存量机器 seq 引用重推后必悬空，故合法集只含这两类；照常透传不拒收，
+            # 持续 >0 = 生产端 pids 引用纪律失守的观测信号（应查 prompt 遵循率而非平台行为）
+            local_seqs = {x.seq for x in self.repos.clarify_item.list_by_req(req_id)
+                          if x.origin == "local"}
+            legal_seqs = seqs | local_seqs
+            dangling = sum(1 for f in jarray(digest, "flows") if is_json_obj(f)
+                           for p in jstrings(f, "pids") if p not in legal_seqs)
+
+        log.info("推送质检产物 %s：%d 问 %d 点（保留答复 %d / 漂移 %d，缺媒体 %d，悬空 pids %d）",
+                 req_id, len(parsed), len(frs), carried, changed, missing_media, dangling)
         return {
             "ok": True, "items": len(parsed), "frPoints": len(frs), "carriedAnswers": carried,
             "changedQuestions": changed, "snapshotUpdated": snapshot_updated,
-            "docUpdated": doc_updated, "missingMedia": missing_media,
+            "docUpdated": doc_updated, "missingMedia": missing_media, "danglingPids": dangling,
         }
 
     def answers(self, req_id: str) -> list[dict[str, Any]]:
@@ -526,16 +536,11 @@ class RequirementService:
         return out
 
     def _digest_view(self, digest: dict[str, Any]) -> dict[str, Any]:
-        features = [{"role": jtext(f, "role", ""), "m": jtext(f, "m", ""), "func": jtext(f, "func", ""),
-                     "cov": jtext(f, "cov", ""), "src": jtext(f, "src", ""), "anchor": jtext(f, _A, "")}
-                    for f in jarray(digest, "features")]
-        # v1.6（D-K）：flows 行构造切共享构造器（common.digest_flow_view）——与批 2 增量合并
-        # new 行两路同构（pids 白名单+数组化），两套字段清单会漂移
+        # v1.6（D-K + 三期 D-I）：三键行构造全部切共享构造器（common.digest_*_view）——与增量合并
+        # new 行两路同构（flows pids 白名单+数组化、features/states 剥未知私货键），两套字段清单会漂移
+        features = [digest_feature_view(f) for f in jarray(digest, "features")]
         flows = [digest_flow_view(f) for f in jarray(digest, "flows")]
-        states = [{"obj": jtext(s, "obj", ""), "from": jtext(s, "from", ""), "on": jtext(s, "on", ""),
-                   "to": jtext(s, "to", ""), "gap": jbool(s, "gap", False), "src": jtext(s, "src", ""),
-                   "anchor": jtext(s, _A, "")}
-                  for s in jarray(digest, "states")]
+        states = [digest_state_view(s) for s in jarray(digest, "states")]
         return {"summary": jtext(digest, "summary", ""), "roles": jstrings(digest, "roles"),
                 "features": features, "flows": flows, "states": states}
 

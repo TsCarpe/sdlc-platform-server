@@ -19,12 +19,15 @@ from platform_sdlc.common import (
     Times,
     answer_text_of,
     audit_item_view,
+    digest_feature_view,
     digest_flow_view,
+    digest_state_view,
     is_json_list,
     is_json_obj,
     jarray,
     jint_or_400,
     jrequired,
+    jstrings,
     jtext,
     normalize_layer,
 )
@@ -409,13 +412,15 @@ class ChangeService:
             dv: dict[str, Any] = dict(dv_raw) if is_json_obj(dv_raw) else {
                 "summary": "", "roles": [], "features": [], "flows": [], "states": []}
             stats = {"removedRows": 0, "newRows": 0}
+            # v1.6（D-K + 三期 D-I）：三键 new 行各过共享视图白名单归一（flows 含 pids 数组化、
+            # features/states 剥未知私货键——契约见 payload-schema incremental_bundle 节）；
+            # view 在调用点按 key 传（函数内无条件应用会串键集）；kept 行不改写（空 anchor/global 行
+            # 「增量合并永不触碰」承诺，混合口径由 rebaseline/重推自然收敛）
+            _row_views = {"features": digest_feature_view, "flows": digest_flow_view,
+                          "states": digest_state_view}
             for key in ("features", "flows", "states"):
-                # v1.6（D-K）：仅 flows 的 new 行过共享视图（digest_flow_view，pids 白名单+数组化）——
-                # view 必须在调用点按 key 传（函数内无条件应用会剥掉 features 的 m/func/cov、
-                # states 的 obj/from/on/to 等正当字段）；kept 行不改写（空 anchor/global 行
-                # 「增量合并永不触碰」承诺，混合口径由三期 rebaseline/重推自然收敛）
                 kept = _merge_rows(_arr(dv.get(key)), _arr(rows.get(key)), section_ids, inv_anchors,
-                                   stats, view=digest_flow_view if key == "flows" else None)
+                                   stats, view=_row_views[key])
                 dv[key] = kept
             if jtext(bundle, "summary", ""):
                 dv["summary"] = jtext(bundle, "summary", "")
@@ -501,6 +506,12 @@ class ChangeService:
             if tier and tier in ("A", "B", "C"):
                 self.repos.requirement.set_risk_tier(req_id, tier)
             self.repos.requirement.touch_synced(req_id, at)
+            # v1.6 danglingPids（观察信号非守卫，D-L）：仅计本次 new flows 行的悬空引用（pids ⊄
+            # 合并后存活 seq 集）——存量 kept 行的历史悬空不混入（归因「本次生产端纪律」，历史脏行
+            # 清理走重推）；照常透传落库不拒收，前端点击「未定位」提示仍是交互兜底
+            live_seqs = {x.seq for x in clarify_kept} | {x.seq for x in new_clarify}
+            stats["danglingPids"] = sum(1 for f in _arr(rows.get("flows")) if is_json_obj(f)
+                                        for p in jstrings(f, "pids") if p not in live_seqs)
         log.info("增量合并 %s（变更单 #%s，by=%s）：%s", req_id, change_id, by, stats)
         return {"ok": True, "changeId": change_id, "mergedBy": by, **stats}
 

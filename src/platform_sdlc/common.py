@@ -233,3 +233,26 @@ def digest_flow_view(f: Any) -> dict[str, Any]:
         "gap": jbool(f, "gap", False), "src": jtext(f, "src", ""), "anchor": jtext(f, "anchor", ""),
         "pids": jstrings(f, "pids"),
     }
+
+
+# features/states 行视图键集（三期 D-I：v1.6 契约 incremental_bundle 节行结构——push 侧与增量合并
+# 两侧同构，裸 dict 透传会静默收纳未知键漂移；与 payload-schema 契约字段集核对）
+DIGEST_FEATURE_FIELDS: tuple[str, ...] = ("role", "m", "func", "cov", "src", "anchor")
+DIGEST_STATE_FIELDS: tuple[str, ...] = ("obj", "from", "on", "to", "gap", "src", "anchor")
+
+
+def digest_feature_view(f: Any) -> dict[str, Any]:
+    """features 行视图共享构造器（D-I）：白名单 6 键 + 未知键剥除。"""
+    return {
+        "role": jtext(f, "role", ""), "m": jtext(f, "m", ""), "func": jtext(f, "func", ""),
+        "cov": jtext(f, "cov", ""), "src": jtext(f, "src", ""), "anchor": jtext(f, "anchor", ""),
+    }
+
+
+def digest_state_view(s: Any) -> dict[str, Any]:
+    """states 行视图共享构造器（D-I）：白名单 7 键 + 未知键剥除。"""
+    return {
+        "obj": jtext(s, "obj", ""), "from": jtext(s, "from", ""), "on": jtext(s, "on", ""),
+        "to": jtext(s, "to", ""), "gap": jbool(s, "gap", False), "src": jtext(s, "src", ""),
+        "anchor": jtext(s, "anchor", ""),
+    }

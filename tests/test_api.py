@@ -47,7 +47,7 @@ def test_requirement_flow_shapes(client: TestClient) -> None:
     })
     assert push.status_code == 200
     assert set(push.json()) == {"ok", "items", "frPoints", "carriedAnswers", "changedQuestions",
-                                "snapshotUpdated", "docUpdated", "missingMedia"}
+                                "snapshotUpdated", "docUpdated", "missingMedia", "danglingPids"}
 
     detail = client.get("/api/requirements/REQ-2026-001").json()
     assert set(detail) >= {"card", "items", "digest", "audit", "snapshot", "domains",

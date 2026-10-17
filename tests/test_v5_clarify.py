@@ -371,9 +371,10 @@ def test_incremental_audit_whitelist_unified(env: tuple[TestClient, Database, Re
 
 
 def test_incremental_flows_whitelist_and_pids(env: tuple[TestClient, Database, Repos]) -> None:
-    """D-K + 调用点 view 纪律：仅 flows 的 new 行过白名单视图（pids 数组化/私货剥除）；
-    features/states 不受影响（不传 view）；kept flows（空 anchor global 行）合并前后逐字节不变
-    （push 侧落库即归一 7 键，「永不改写」= 合并不重写历史数据）。"""
+    """D-K + D-I（三期白名单同构）：三键 new 行各过本键视图（flows pids 数组化/私货剥除）；
+    kept flows（空 anchor global 行）合并前后逐字节不变（push 侧落库即归一 7 键，
+    「永不改写」= 合并不重写历史数据）。features/states 的 new 行白名单归一见
+    test_incremental_features_states_whitelist。"""
     client, db, repos = env
     req_id = _mk_card(client)
     _seed_blocks(repos, req_id)
@@ -402,7 +403,7 @@ def test_incremental_flows_whitelist_and_pids(env: tuple[TestClient, Database, R
     assert flows[1] == {"role": "用户", "step": "提交", "next": "审核", "gap": False,
                         "src": "", "anchor": "p1", "pids": ["P1"]}  # new 7 键白名单（foo 剥除）
     assert isinstance(flows[1]["pids"], list)
-    # features/states 不传 view：正当字段全保留（不受 flows 视图误伤）
+    # features/states new 行过本键视图：正当字段全保留（D-I 后与本键视图同构）
     content = client.get(f"/api/requirements/{req_id}").json()["digest"]["content"]
     assert content["features"][0]["m"] == "注册" and content["features"][0]["func"] == "邮箱注册"
     assert content["features"][0]["cov"] == "全"
@@ -491,3 +492,69 @@ def test_skills_contract_v16_locked() -> None:
     assert "incremental_bundle 草稿契约（v1.6）" in schema_txt, "incremental_bundle 契约节缺失（B6）"
     guide_txt = guide.read_text(encoding="utf-8")
     assert "仅允许引用存量已分配 seq" in guide_txt, "incremental-guide 缺 D-L 存量引用纪律"
+
+
+# ---------- 三期批 B2：D-I 白名单同构 + D-M curl + danglingPids（DESIGN-V5 §8 三期行） ----------
+
+def test_incremental_features_states_whitelist(env: tuple[TestClient, Database, Repos]) -> None:
+    """D-I：features/states 的 new 行过本键共享视图白名单归一（私货键剥除、缺省补齐）——
+    与 flows（D-K）/audit（B6）三侧同构，裸 dict 透传会静默收纳未知键漂移；kept 行不改写。"""
+    client, db, repos = env
+    req_id = _mk_card(client)
+    _seed_blocks(repos, req_id)
+    _push_and_publish(client, req_id)
+    cid = _to_changed(client, db, req_id)
+
+    def _rows(key: str) -> list[Any]:
+        raw = db.query_one("SELECT content_json FROM artifact WHERE req_id=? AND type='digest'",
+                           (req_id,))
+        assert raw is not None
+        return json.loads(str(raw["content_json"]))[key]
+
+    assert _rows("features") == [] and _rows("states") == []  # push 空基线（无 kept 行）
+    merge = _approve_bundle(client, req_id, _v5_bundle(
+        cid,
+        features=[{"role": "用户", "m": "注册", "func": "邮箱注册", "cov": "全", "anchor": "p1",
+                   "secret": "私货"}],
+        states=[{"obj": "工单", "from": "草稿", "on": "提交", "to": "审核", "anchor": "p1",
+                 "pids": ["不应有"]}]))
+    feats, states = _rows("features"), _rows("states")
+    assert feats == [{"role": "用户", "m": "注册", "func": "邮箱注册", "cov": "全",
+                      "src": "", "anchor": "p1"}]  # 6 键白名单（secret 剥除、src 补默认）
+    assert states == [{"obj": "工单", "from": "草稿", "on": "提交", "to": "审核", "gap": False,
+                       "src": "", "anchor": "p1"}]  # 7 键白名单（states 无 pids 键——pids 剥除）
+    # merge 出参 danglingPids（观察信号）：flows 引用不存在 seq 计数、不拒收
+    assert merge.get("danglingPids") == 0 or "danglingPids" in merge
+
+
+def test_run_command_curl_allowed() -> None:
+    """D-M：_CMD_ALLOW 含 curl（agent incremental 分支「run_command curl 直落 raw/」数据源死路
+    修复）；LLM 可见面（_CMD_DOC 运行时构造）与白名单集合永远一致——断一致性而非断字面。"""
+    from platform_sdlc.agent import tools
+    assert "curl" in tools._CMD_ALLOW
+    assert "curl" in tools._CMD_DOC
+    assert "/".join(sorted(tools._CMD_ALLOW)) in tools._CMD_DOC  # 全集一致（增删命令自动跟随）
+    # 装饰链：run_command 已是 FunctionTool（裸调用 function_tool 后重绑生效）
+    assert any(getattr(t, "name", "") == "run_command" for t in tools.ALL_TOOLS)
+
+
+def test_dangling_pids_reported_not_rejected(env: tuple[TestClient, Database, Repos]) -> None:
+    """danglingPids 观测出参（P1 修订）：悬空 pids（⊄ 本 payload items seq ∪ 存量 L 系）计数正确、
+    200 不拒收、落库原样透传（宽进语义锁定——清理走重推/生成端纪律，平台不改写）。"""
+    client, db, repos = env   # noqa: F841 – db/repos 未直用，env 形制与邻测一致
+    req_id = _mk_card(client)
+    _seed_blocks(repos, req_id)
+    push = client.post(f"/api/requirements/{req_id}/artifacts", json={
+        "digest": {"md": "", "summary": "s", "roles": [], "states": [], "features": [], "flows": [
+            {"role": "用户", "step": "提交", "next": "?", "gap": True, "anchor": "p1",
+             "pids": ["P1", "P99", "L01"]},   # P1=本 payload 合法；P99=悬空；L01=存量 L 系合法
+        ]},
+        "audit": {"md": "", "red": 0, "yellow": 0, "blue": 0, "items": []},
+        "items": [{"seq": "P1", "level": "yellow", "theme": "t", "question": "q1", "anchor": "p1"}],
+    })
+    assert push.status_code == 200
+    # P99 与 L01 均悬空 = 2：「存量 local 合法类」指卡上真实存在的 L 系行——本卡未升级过评论，
+    # local_seqs 为空集，引用不存在的 L01 与 P99 同为悬空（合法集 = 本 payload seq ∪ 实存 local seq）
+    assert push.json()["danglingPids"] == 2
+    flows = client.get(f"/api/requirements/{req_id}").json()["digest"]["content"]["flows"]
+    assert flows[0]["pids"] == ["P1", "P99", "L01"]  # 原样透传未剥除

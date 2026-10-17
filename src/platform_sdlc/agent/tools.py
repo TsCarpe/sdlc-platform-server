@@ -18,8 +18,24 @@ from agents import RunContextWrapper, Tool, function_tool
 
 from platform_sdlc.agent.context import TaskRunContext
 
-# run_command 分段白名单（每段首 token 必须命中；飞书原文抓取 / 锚点解析脚本所需）
-_CMD_ALLOW = {"lark-cli", "python3", "node", "mkdir", "cat", "ls", "jq", "grep", "find"}
+# run_command 分段白名单（每段首 token 必须命中；飞书原文抓取 / 平台数据 curl 直落 raw/（增量
+# 任务变更单冻结面数据源，三期 D-M 修复死路）/ 锚点解析脚本所需）。curl 信任面记档：进程内 agent
+# 可对任意端点发 HTTP——接受依据：python3 已在白名单（本就可执行任意代码，信任下界未降）、
+# runner 通道（独立进程）本就 curl 平台且数据面文件化一致、agent 会话由平台固定任务 prompt 驱动
+_CMD_ALLOW = {"lark-cli", "python3", "node", "mkdir", "cat", "ls", "jq", "grep", "find", "curl"}
+
+# 工具描述（LLM 可见面）运行时由 _CMD_ALLOW 构造——手抄清单会随白名单演进失修（三期 D-M：
+# 原文案 9 项只列 6 项即此病灶）；经显式 __doc__ 赋值 + 裸调用 function_tool 装饰生效
+# （f-string 非 string literal、写在函数体首语句不成 docstring）
+_CMD_DOC = (
+    "在当前任务工作区目录执行命令（飞书原文抓取、平台数据 curl 直落 raw/、锚点解析脚本等）。"
+    "支持管道与重定向；按 | ; && 分段后每段首命令须在白名单：" + "/".join(sorted(_CMD_ALLOW)) +
+    "。禁止命令替换（反引号、$()）。\n\n"
+    "Args:\n"
+    "    command: 完整命令行（多段用 | 或 ; 连接，每段首命令须白名单内）\n"
+    "    timeout_seconds: 超时秒数，默认 300\n"
+    "    "
+)
 
 _MEDIA_ID = re.compile(r"^m-[0-9a-f]{12}$")
 
@@ -267,14 +283,8 @@ async def write_file(wrapper: RunContextWrapper[TaskRunContext], path: str, cont
         return _err(f"写入失败：{path}：{e}")
 
 
-@function_tool
 async def run_command(wrapper: RunContextWrapper[TaskRunContext], command: str, timeout_seconds: int = 300) -> str:
-    """在当前任务工作区目录执行命令（飞书原文抓取、锚点解析脚本等）。支持管道与重定向；按 | ; && 分段后每段首命令须在白名单：lark-cli / python3 / node / mkdir / cat / ls。禁止命令替换（反引号、$()）。
-
-    Args:
-        command: 完整命令行（多段用 | 或 ; 连接，每段首命令须白名单内）
-        timeout_seconds: 超时秒数，默认 300
-    """
+    """docstring 由 _CMD_DOC 运行时赋值（见模块顶部说明——白名单与 LLM 可见面永远一致）。"""
     def impl() -> str:
         import subprocess
 
@@ -295,7 +305,7 @@ async def run_command(wrapper: RunContextWrapper[TaskRunContext], command: str, 
                 continue
             first = s.split()[0]
             if first not in _CMD_ALLOW:
-                raise ValueError(f"段首命令不在白名单（lark-cli/python3/node/mkdir/cat/ls）：{first}")
+                raise ValueError(f"段首命令不在白名单（{'/'.join(sorted(_CMD_ALLOW))}）：{first}")
         try:
             proc = subprocess.run(["sh", "-c", cmd], cwd=c.workspace, capture_output=True,
                                   text=True, timeout=timeout_seconds if timeout_seconds > 0 else 300)
@@ -312,6 +322,12 @@ async def run_command(wrapper: RunContextWrapper[TaskRunContext], command: str, 
         return _err(str(e))
     except Exception as e:  # noqa: BLE001
         return _err(f"命令执行失败：{e}")
+
+
+# 先赋动态 docstring 再裸调用装饰（@function_tool 无括号形态等价 function_tool(func)，agents SDK
+# 同一代码路径；ALL_TOOLS 在下方引用的是重绑后的 Tool 实例）——拆开写是 docstring 动态化的最小改法
+run_command.__doc__ = _CMD_DOC
+run_command = function_tool(run_command)
 
 
 ALL_TOOLS: list[Tool] = [get_requirement_card, list_clarify_items, list_req_comments, get_digest_bundle,
