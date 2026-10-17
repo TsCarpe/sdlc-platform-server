@@ -21,7 +21,11 @@ async function call(method, path, body) {
     body: body ? JSON.stringify(body) : undefined
   })
   const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(`${method} ${path} -> ${res.status}: ${data.error || ''}`)
+  if (!res.ok) {
+    const err = new Error(`${method} ${path} -> ${res.status}: ${data.error || ''}`)
+    err.status = res.status   // v4-15 起 published 分支有独立文案，409 语义断言比文案稳
+    throw err
+  }
   return data
 }
 
@@ -62,7 +66,8 @@ const afterRepush = await call('GET', `/api/requirements/${created.id}/answers`)
 const l01 = afterRepush.find(a => a.seq === 'L01')
 check('v4-9：L01 经重推不丢（已答保留 + origin=local）', [l01.answer, l01.origin], ['演练：按口径 A', 'local'])
 check('v4-9：机器行重建 origin=skill（两族区分）', afterRepush.find(a => a.seq === req.checklist[0].id).origin, 'skill')
-check('v4-9：重推 carriedAnswers=机器行零答基线', repush.carriedAnswers, 0)
+check('v4-9：重推 carriedAnswers=平台处置携带（D17）', repush.carriedAnswers,
+  req.checklist.filter(c => c.answer).length)  // 首推落库的已答机器行按平台处置权威整行携带（011f 前「零答基线」为旧语义）
 
 // 1.1 risk_tier 后到覆盖：digest.risk_tier=A 应覆盖建卡值 B（DESIGN-v2.2 D19）
 const tier1 = await call('GET', `/api/requirements/${created.id}`)
@@ -132,14 +137,19 @@ check('coverage：未挂点用例入 dangling', cov.coverage.danglingCases, ['TC
 // 5.6 质量分（DESIGN-v2.2 D24，口径 D1=A）：夹具 6R/13Y/12B → 阻断 6>5 → ★（1星）
 check('quality：夹具 6 阻断 → 1 星', [cov.quality.stars, cov.quality.basis], [1, '阻断 6 项'])
 
-// 6. 发布后写入被锁
+// 6. 发布后写入被锁（v4-15：机器行终态锁定；published 分支独立文案「已发布卡仅评论升级的 L 系…」）
 let locked = false
 try {
   await call('PUT', `/api/requirements/${created.id}/answers/P07`, { answer: '发布后不应可改' })
 } catch (e) {
-  locked = e.message.includes('仅待澄清') /* v4-15 文案扩为「仅待澄清/变更中状态可作答」 */
+  locked = e.status === 409 && e.message.includes('已发布卡') /* status 语义为主，前缀为辅（文案可再演进） */
 }
-check('发布后答复锁定', locked, true)
+check('发布后机器行锁定（409）', locked, true)
+// v4-15 正路径：published 卡评论升级 L 系可处置（升级不出死巷）
+const lc2 = await call('POST', `/api/requirements/${created.id}/comments`, { author: 'dev', text: '发布后新增疑问' })
+await call('POST', `/api/requirements/${created.id}/comments/${lc2.id}/escalate`, {})
+const l02 = (await call('GET', `/api/requirements/${created.id}/answers`)).find(a => a.seq === 'L02')
+check('发布后 L 系升级可处置（不死巷）', [l02.origin, l02.status], ['local', 'pending'])
 
 // 7. HTTP 语义（评测 P1-5 修复验收）：仅 POST 的路径发 GET 应 405，且文案不泄露异常类名
 let err405 = ''

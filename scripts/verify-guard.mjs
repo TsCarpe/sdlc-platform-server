@@ -46,7 +46,8 @@ await call('PUT', `/api/requirements/${id}/answers/P02`, { answer: '平台作答
 payload.items[1].answer = ''
 payload.snapshot = { md: '# 快照 v2' }
 const repushed = await call('POST', `/api/requirements/${id}/artifacts`, payload)
-check('重推保留平台答复 carried=1', repushed.carriedAnswers, 1)
+check('重推保留平台处置 carried=2（D17：P02 平台答 + P01 首推已答机器行均整行携带）',
+  repushed.carriedAnswers, 2)
 check('重推刷新快照', repushed.snapshotUpdated, true)
 const d1 = await call('GET', `/api/requirements/${id}`)
 check('重推后 P02 答复仍在', d1.items.find(i => i.seq === 'P02').answer, '平台作答 B')
@@ -61,7 +62,8 @@ check('不带快照重推：旧快照保留', [d2.snapshot.md, d2.snapshot.versi
 // A2 守卫：seq 相同但问题文本已变（P 编号漂移）→ 不携带旧答复，changedQuestions 上报
 payload.items[1].question = '问题二（改写）'
 const drifted = await call('POST', `/api/requirements/${id}/artifacts`, payload)
-check('P 编号漂移：不携带旧答复（carried=0, changed=1）', [drifted.carriedAnswers, drifted.changedQuestions], [0, 1])
+check('P 编号漂移：P02 不携带（P01 仍携带，changed=1）',
+  [drifted.carriedAnswers, drifted.changedQuestions], [1, 1])
 const dDrift = await call('GET', `/api/requirements/${id}`)
 check('P 编号漂移：P02 答复清空待重答', dDrift.items.find(i => i.seq === 'P02').answer, '')
 // 注意：payload 的问题文本保持改写版不再改回——后续重推需与库内文本一致，否则再触发漂移干扰处置保留断言
@@ -83,7 +85,7 @@ check('驳回落库：status/note/answer', [rejItem.status, rejItem.note, rejIte
 check('驳回后 answered/totalQ', [dRej.answered, dRej.totalQ], [2, 2])
 // D23 核心：空答复的驳回在重推时必须保留（携带面 = answer 非空 OR status 非空）
 const repushed2 = await call('POST', `/api/requirements/${id}/artifacts`, payload)
-check('空答复驳回重推保留（carried=1）', repushed2.carriedAnswers, 1)
+check('空答复驳回重推保留（carried=2：P02 驳回 + P01 已答）', repushed2.carriedAnswers, 2)
 const dRej2 = await call('GET', `/api/requirements/${id}`)
 const rejItem2 = dRej2.items.find(i => i.seq === 'P02')
 check('重推后驳回与理由仍在', [rejItem2.status, rejItem2.note], ['rejected', '原文已明确，不构成缺口'])

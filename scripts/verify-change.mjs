@@ -55,7 +55,7 @@ dropDoc(imp.id, { blocks: [
   { id: 'ch-trc1', type: 'paragraph', parent: 'ch-tr1', text: '行内块' },
   { id: 'ch-li1', type: 'list-item', marker: '1. ', depth: 1, parent: null, text: '列表项一' },
   { id: 'ch-li2', type: 'list-item', marker: 'a. ', depth: 2, parent: 'ch-li1', text: '子项 a' }
-], media: [] })
+], media: [], guard: { algo: 'markdown-fallback' } })   // c09d260 守恒终检后夹具必带（同 verify-v4/m5）
 await call('POST', `/api/tasks/${imp.id}/done`, { result: 'change seed' })
 
 // ===== 1. 发布链（澄清带 anchor）→ published =====
@@ -259,7 +259,7 @@ for (let i = 0; i < 5; i++) {  // FIFO 顺路排空发布链 L2 自动任务（c
   if (t.type === 'source_import') { impU = t; break }
   await call('POST', `/api/tasks/${t.id}/done`, { result: '{"drained":"verify-change"}' })
 }
-dropDoc(impU.id, { blocks: [{ id: 'u-p1', type: 'paragraph', text: '基线' }], media: [] })
+dropDoc(impU.id, { blocks: [{ id: 'u-p1', type: 'paragraph', text: '基线' }], media: [], guard: { algo: 'markdown-fallback' } })
 await call('POST', `/api/tasks/${impU.id}/done`, { result: 'u seed' })
 const du = await call('POST', `/api/requirements/${reqU}/changes`, {
   title: '未发布单', proposedBy: '张三',
@@ -276,7 +276,7 @@ for (let i = 0; i < 5; i++) {
   if (t.type === 'source_import') { impG = t; break }
   await call('POST', `/api/tasks/${t.id}/done`, { result: '{"drained":"verify-change-gr3"}' })
 }
-dropDoc(impG.id, { blocks: [{ id: 'g-p1', type: 'paragraph', text: '基线' }], media: [] })
+dropDoc(impG.id, { blocks: [{ id: 'g-p1', type: 'paragraph', text: '基线' }], media: [], guard: { algo: 'markdown-fallback' } })
 await call('POST', `/api/tasks/${impG.id}/done`, { result: 'g seed' })
 await call('POST', `/api/requirements/${reqG}/artifacts`, {
   digest: { md: '', summary: 's', roles: [], flows: [], states: [], risk_tier: 'C', features: [
@@ -296,7 +296,11 @@ const gRnd = gOpen.rounds[0].id
 await call('POST', `/api/gate/rounds/${gRnd}/release`, { by: 'dev' })
 await new Promise(r => setTimeout(r, 1100))  // release 与 confirm 隔秒（严格大于口径）
 const gChange = await call('GET', `/api/requirements/${reqG}/changes`)
-check('放行后无变更单：横幅不亮', (await call('GET', `/api/requirements/${reqG}/gate`)).change.changed, false)
+// 「无变更单横幅不亮」在有用例卡上不可达（gate.py 有意保守判定：casesMaxUpdated >= 基线即亮，
+// 宁可多提醒不漏判）——与 verify-gate 第 6 节同口径，断言保守语义而非 false
+const gView0 = await call('GET', `/api/requirements/${reqG}/gate`)
+check('放行后横幅=保守判定（有用例即亮，无变更单号键）',
+      [gView0.change.changed, gView0.change.reqChangeIds ?? null], [true, null])
 const gDraft = await call('POST', `/api/requirements/${reqG}/changes`, {
   title: 'GR-3 验证单', proposedBy: '张三',
   blocks: [{ id: 'g-p1', type: 'paragraph', text: '基线（改）' }] })

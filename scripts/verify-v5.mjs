@@ -73,5 +73,20 @@ await call('PUT', `/api/requirements/${reqId}/answers/P03`, { status: 'deferred'
 const answers3 = Object.fromEntries((await call('GET', `/api/requirements/${reqId}/answers`)).map(a => [a.seq, a]))
 check('deferred：status/note 落库', [answers3.P03.status, answers3.P03.note], ['deferred', '下期确认'])
 
-console.log(failures ? `\n存在失败项 ❌（${failures}）` : '\nV5 二期黑盒主路径全部通过 ✅')
+// 5. 生产端静态断言（三期 ①②）：runner/agent prompt 携带 v1.6 产出指令与 D-M 白名单——防回退
+const { readFileSync } = await import('node:fs')
+const root = new URL('..', import.meta.url)
+const runnerSrc = readFileSync(new URL('runner/runner.mjs', root), 'utf8')
+check('runner①：六层文案已退役', runnerSrc.includes('六层'), false)
+check('runner①②：七层 + v1.6 契约引用 + 组装版本', [runnerSrc.includes('七层'), runnerSrc.includes('payload 契约 v1.6'), runnerSrc.includes('组装 v1.6 payload')], [true, true, true])
+const qc = runnerSrc.split("task.type === 'quality_check'")[1]
+check('runner①：options/module/layer/pids 产出指令', ['options', 'module', 'layer', 'pids'].every(k => qc.includes(k)), true)
+const inc = runnerSrc.split("task.type === 'incremental_check'")[1].split("task.type === 'standard_doc'")[0]
+check('runner②：新字段 + 存量 pids 引用纪律', ['options', 'layer', 'pids', '存量已分配'].every(k => inc.includes(k)), true)
+const promptsPy = readFileSync(new URL('src/platform_sdlc/agent/prompts.py', root), 'utf8')
+check('agent 速查卡：options/pids/layer 字段', ['options', 'pids', 'layer'].every(k => promptsPy.includes(k)), true)
+const toolsPy = readFileSync(new URL('src/platform_sdlc/agent/tools.py', root), 'utf8')
+check('D-M：curl 白名单在位', toolsPy.includes('"curl"'), true)
+
+console.log(failures ? `\n存在失败项 ❌（${failures}）` : '\nV5 黑盒主路径全部通过 ✅')
 process.exit(failures ? 1 : 0)

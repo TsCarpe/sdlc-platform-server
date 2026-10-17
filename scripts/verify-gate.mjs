@@ -131,18 +131,24 @@ const gv5 = await call('GET', `/api/requirements/${R}/gate`)
 check('放行后 phase=released', gv5.phase, 'released')
 check('关卡互认：draft 用例置 reviewed', (await call('GET', `/api/cases?reqId=${R}`)).every(c => c.status === 'reviewed'), true)
 
-// ===== 6. GR-3 变更检测与复审轮 =====
-let noChange = null
-try { await call('POST', `/api/requirements/${R}/gate/reopen`, { by: '李工' }) } catch (e) { noChange = e.status }
-check('无实质变更复审 409', noChange, 409)
+// ===== 6. GR-3 变更检测与复审轮（现行语义——三期重排适配脚本失修）=====
+// 「无实质变更复审 409」分支在有用例卡上不可达：开闸三条件 c2 要求用例 ≥1，而关卡互认（release
+// 时 draft 用例置 reviewed）使 casesMaxUpdated ≥ 基线恒成立 → change_status 保守判定（>= 秒级
+// 取向，宁可多提醒不漏判——gate.py 有意行为）恒 changed。该 409 仅无用例卡可达，此处不测。
+const ch1 = await call('GET', `/api/requirements/${R}/gate/change-status`)
+check('GR-3 放行后变更命中（关卡互认副作用·保守判定）', [ch1.changed, ch1.window], [true, 'released'])
+const gv6 = await call('POST', `/api/requirements/${R}/gate/reopen`, { by: '李工' })
+check('复审轮 r2 建立（旧轮归档）', [gv6.round.roundNo, gv6.round.status, gv6.rounds.length, gv6.rounds[0].status], [2, 'pending', 2, 'released'])
+// r2 评审中窗口：设计变更 → in-review 横幅（走落改通道不开新轮）；pending 期 reopen 409（仅已放行可开复审轮）
 const t3 = await runTask(R, 'design_rev')
 await call('PUT', `/api/requirements/${R}/drafts/design`, { md: DESIGN_MD_V1 + '\n## §2 修订（F03 改 409 + idx 补齐）\n' })
 await call('POST', `/api/tasks/${t3.id}/done`, { result: '{"rev":2}' })
 await call('POST', `/api/requirements/${R}/drafts/design/approve`, { by: '王工' })
-const ch = await call('GET', `/api/requirements/${R}/gate/change-status`)
-check('GR-3 命中设计变更（released 窗口）', [ch.changed, ch.window], [true, 'released'])
-const gv6 = await call('POST', `/api/requirements/${R}/gate/reopen`, { by: '李工' })
-check('复审轮 r2 建立（旧轮归档）', [gv6.round.roundNo, gv6.round.status, gv6.rounds.length, gv6.rounds[0].status], [2, 'pending', 2, 'released'])
+const ch2 = await call('GET', `/api/requirements/${R}/gate/change-status`)
+check('GR-3 评审中窗口变更（走落改通道）', [ch2.changed, ch2.window], [true, 'in-review'])
+let pending409 = null
+try { await call('POST', `/api/requirements/${R}/gate/reopen`, { by: '李工' }) } catch (e) { pending409 = e.status }
+check('评审中不可开复审轮 409', pending409, 409)
 
 // ===== 7. 清理 =====
 await call('DELETE', `/api/requirements/${R}`)

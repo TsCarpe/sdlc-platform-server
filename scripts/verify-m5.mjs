@@ -62,7 +62,8 @@ if (imp && imp.type === 'source_import' && imp.reqId === reqA) {
     blocks: [
       { id: 'm5-b1', type: 'heading', level: 1, text: 'M5 fixture' },
       { id: 'm5-b2', type: 'paragraph', text: 'M5 fixture 正文' }
-    ], media: []
+    ], media: [],
+    guard: { algo: 'markdown-fallback' }   // c09d260 守恒终检后夹具必带（自造 doc 无 textSha 可对，结构校验形态——同 verify-v4 dropDoc）
   }))
   const impDone = await call('POST', `/api/tasks/${imp.id}/done`, { result: 'fixture import' })
   if (impDone.status !== 'done') throw new Error(`夹具导入未 done：${impDone.status} ${impDone.result}`)
