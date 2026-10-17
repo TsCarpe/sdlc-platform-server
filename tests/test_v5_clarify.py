@@ -22,7 +22,7 @@ from fastapi import FastAPI
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 
-from platform_sdlc.agent.prompts import sys_prompt
+from platform_sdlc.agent.prompts import _quality_quick_ref, sys_prompt
 from platform_sdlc.common import answer_text_of, audit_item_view, normalize_layer
 from platform_sdlc.config import Settings
 from platform_sdlc.db import Database
@@ -199,7 +199,8 @@ def test_routes_stay_schema_free(env: tuple[TestClient, Database, Repos]) -> Non
 
 _OPTION_ANSWER = '{"kind":"option","optionKey":"A","optionText":"选项全文","extra":"补充说明"}'
 _AUDIT_KEYS = {"id", "level", "title", "where", "go", "group", "quote", "anchor", "layer"}
-_SKILLS_SPEC = Path.home() / "IdeaProjects" / "claude-sdlc-skills" / "sdlc-sync" / "references" / "standard-doc-spec.md"
+_SKILLS_SPEC = (Path(Settings().agent_skills_repo).expanduser()
+                / "skills" / "sdlc-sync" / "references" / "standard-doc-spec.md")
 
 
 def _seed_blocks(repos: Repos, req_id: str) -> None:
@@ -431,10 +432,13 @@ def test_prompt_channels_consume_answer_text() -> None:
     # agent 数据面 docstring：list_clarify_items 声明消费 answerText
     tools_src = (root / "src" / "platform_sdlc" / "agent" / "tools.py").read_text(encoding="utf-8")
     assert "answerText" in tools_src.split("async def list_clarify_items")[1].split("def impl")[0]
-    # skills spec.md（可达时）：answerText 消费规则在权威合成规范中
-    if _SKILLS_SPEC.exists():
-        spec = _SKILLS_SPEC.read_text(encoding="utf-8")
-        assert "answerText" in spec and "〔Pxx〕" in spec
+    # skills spec.md：answerText 消费规则在权威合成规范中（三期修坏路径：原拼法缺 skills/ 段，
+    # exists() 恒 False 恒 skip——断言从未执行；现与生产 executor 同源解析（agent_skills_repo 展开 ~），
+    # 缺失即 fail——本仓开发/运行环境固定含 skills 仓检出）
+    if not _SKILLS_SPEC.exists():
+        pytest.fail(f"skills 仓布局异常（标准文档规范不可达）：{_SKILLS_SPEC}")
+    spec = _SKILLS_SPEC.read_text(encoding="utf-8")
+    assert "answerText" in spec and "〔Pxx〕" in spec
 
 
 def test_audit_view_layer_passthrough() -> None:
@@ -448,3 +452,42 @@ def test_audit_view_layer_passthrough() -> None:
     assert audit_item_view(dict(base))["layer"] == ""           # 缺省补默认
     assert audit_item_view({**base, "layer": "0"})["layer"] == ""
     assert set(audit_item_view(base)) == _AUDIT_KEYS            # 9 键白名单
+
+
+# ---------- 三期批 B1：runner ①② + agent 速查卡生产端（DESIGN-v5 §6.4/§8，v1.6 选择题化） ----------
+
+def test_quality_prompt_carries_v16_fields() -> None:
+    """生产端 ①② 契约锁：runner quality_check/incremental 分支与 agent 速查卡携带 v1.6 字段
+    产出指令（options/module/layer/pids + 七层 + 契约版本引用）——静态断言防 prompt 回退。"""
+    root = Path(__file__).resolve().parents[1]
+    runner_src = (root / "runner" / "runner.mjs").read_text(encoding="utf-8")
+    assert "六层" not in runner_src, "runner 仍含过时「六层」文案（dimensions 已七层）"
+    qc_seg = runner_src.split("task.type === 'quality_check'")[1].split("task.type === 'incremental_check'")[0]
+    for kw in ("七层", "payload 契约 v1.6", "组装 v1.6 payload", "options", "module", "layer", "pids"):
+        assert kw in qc_seg, f"runner① quality_check 分支缺 v1.6 产出指令：{kw}"
+    inc_seg = runner_src.split("task.type === 'incremental_check'")[1].split("task.type === 'standard_doc'")[0]
+    for kw in ("options", "module", "layer", "pids", "存量已分配"):
+        assert kw in inc_seg, f"runner② incremental 分支缺 v1.6 产出指令：{kw}"
+    # agent 速查卡（对话被压缩后的权威）：payload 字段行与 pm-checklist 选项化提示同源
+    ref = _quality_quick_ref()
+    for kw in ("options", "module", "layer", "pids"):
+        assert kw in ref, f"agent 速查卡缺 v1.6 字段：{kw}"
+    assert "冲突/取舍类问题在问题格内换行列选项" in ref
+
+
+def test_skills_contract_v16_locked() -> None:
+    """跨仓锁序断言（B1 依赖批 A）：payload 契约须已升 v1.6 且 incremental-guide 带 D-L 存量引用
+    纪律——runner/agent prompt 指示 LLM 读技能仓文档（live 路径），契约先行是时序硬依赖，
+    先推 B1 则 LLM 读旧契约+新指令、产出大概率不带新字段且宽进静默收纳零信号。
+    路径与生产 executor 同源（settings.agent_skills_repo 展开 ~ 拼含 skills/ 段）；缺失即 fail。"""
+    skills_root = Path(Settings().agent_skills_repo).expanduser()
+    schema = skills_root / "skills" / "sdlc-sync" / "references" / "payload-schema.md"
+    guide = skills_root / "skills" / "sdlc-intent" / "references" / "incremental-guide.md"
+    for p in (schema, guide):
+        if not p.exists():
+            pytest.fail(f"skills 仓布局异常（{p.name} 不可达）：{p}")
+    schema_txt = schema.read_text(encoding="utf-8")
+    assert "v1.6" in schema_txt.splitlines()[0], "payload 契约未升 v1.6（批 A 未先行？）"
+    assert "incremental_bundle 草稿契约（v1.6）" in schema_txt, "incremental_bundle 契约节缺失（B6）"
+    guide_txt = guide.read_text(encoding="utf-8")
+    assert "仅允许引用存量已分配 seq" in guide_txt, "incremental-guide 缺 D-L 存量引用纪律"

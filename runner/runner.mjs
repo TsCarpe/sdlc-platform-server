@@ -97,20 +97,20 @@ SDLC_TASK_RESULT {"关键统计": "..."}
 
   if (task.type === 'quality_check') {
     return `${common}
-按以下步骤执行需求质检（sdlc-intent 完整两段 + v1.2 锚点管线；v4-5：纯分析读块模型——原文/评论从平台取）：
+按以下步骤执行需求质检（sdlc-intent 完整两段 + v1.2 锚点管线；v4-5：纯分析读块模型——原文/评论从平台取；v1.6：澄清选择题化）：
 
 1. 读取技能权威文档：
    - ${INTENT}/SKILL.md（两段式工作流）
    - ${INTENT}/references/digest-template.md（梳理 8 区块模板）
-   - ${INTENT}/references/dimensions.md 与 references/report-template.md（体检六层维度与报告模板）
-   - ${SYNC_CONTRACT}（payload 契约 v1.2）
+   - ${INTENT}/references/dimensions.md 与 references/report-template.md（体检七层维度与报告模板、pm-checklist 选项化/module/layer 产出约定）
+   - ${SYNC_CONTRACT}（payload 契约 v1.6）
 2. 输入（块表权威，curl 直落供管线消费）：
    curl -s ${PLATFORM}/api/requirements/${task.reqId}/doc.json -o intake/doc-task.json
    curl -s ${PLATFORM}/api/requirements/${task.reqId}/comments.json -o raw/comments.json
    （doc.json 404 = 原文未导入：如实终止报错，禁止以卡内 sourceText 降级替代；媒体已在平台，无上传步。）
 3. 第一段梳理：按 digest-template 产出 digest（出处尽量写到条款级，用 python3 ${INTENT}/scripts/list_clauses.py --doc intake/doc-task.json 查条款树）。
-4. 第二段体检：按 dimensions 六层逐层检查，产出 audit 与澄清清单（每个澄清问题 seq 用体检 P 编号，theme 必填）。
-5. 组装 v1.2 payload（严格按 payload-schema）：{snapshot:{md 原文全文}, domains:[全局需求域顺序], digest:{summary,roles,features,fr_points,md}, audit:{red,yellow,blue,items}, items:[澄清清单]}——不含 doc：原文块表权威已落库，透传会在采纳时被剥除（intake/doc-task.json 仍用于第 3 步条款树与第 6 步锚点解析）。
+4. 第二段体检：按 dimensions 七层逐层检查，产出 audit 与澄清清单（每个澄清问题 seq 用体检 P 编号，theme 必填；v1.6 新字段——每个澄清问题带 module（=fr_points[].module 同体系的归属功能模块）与 layer（命中层号 "1"-"7" 字符串，判层纪律见 dimensions.md 第 8 条，维度外补充类不携带 layer）；冲突类/取舍类问题尽量选项化：2-4 项 {key:A-Z 大写唯一, text:自包含选项全文, why:一句理由}、至多一项 recommended:true，纯缺失类/开放类问题不硬造选项（不带 options））。
+5. 组装 v1.6 payload（严格按 payload-schema）：{snapshot:{md 原文全文}, domains:[全局需求域顺序], digest:{summary,roles,features,fr_points,md}, audit:{red,yellow,blue,items（每条带 layer）}, items:[澄清清单（带 options/module/layer）]}——flows 断点行（gap:true）带 pids:["Pxx"]（字符串数组，仅引用本 payload items 的 P 编号）；不含 doc：原文块表权威已落库，透传会在采纳时被剥除（intake/doc-task.json 仍用于第 3 步条款树与第 6 步锚点解析）。
 6. 用 python3 ${INTENT}/scripts/resolve_anchors.py 给 payload 附加 anchor（--doc intake/doc-task.json --comments raw/comments.json）。
 7. 把最终 payload 原样写入临时 json 文件，然后（payload 较大时务必用 --data-binary @文件）：
    curl -X PUT ${PLATFORM}/api/requirements/${task.reqId}/drafts/digest_bundle -H 'Content-Type: application/json' --data-binary @<payload.json>
@@ -128,9 +128,9 @@ SDLC_TASK_RESULT {"关键统计": "..."}
    curl -s ${PLATFORM}/api/requirements/${task.reqId}/changes/$(python3 -c "import json;print(json.load(open('raw/change.json'))['id'])")/impact > raw/impact.json
    curl -s ${PLATFORM}/api/requirements/${task.reqId} > raw/card.json   （digest/audit 结构行 + 保留澄清项及已答；已答澄清项的答复一律取 items[].answerText——answer 原文可能是结构化 JSON 串，不要直接消费）
    curl -s ${PLATFORM}/api/requirements/${task.reqId}/comments.json -o raw/comments.json
-3. 按 incremental-guide 只重梳理受影响章节：新版本 digest 行/audit 条目/FR 点，作废行清单（原文已删/口径已变），新澄清问题（机器 P 系——seq 由平台合并时分配，不携带）。
-4. 组装增量包（严格结构）：{changeId, sections:[受影响章节 heading 的 block_id——禁 seq 数值], digestRows:{features,flows,states,auditItems,frUpserts,frRemoves}, invalidate:{digestAnchors,auditIds}, clarify:{items}, summary, riskTier}
-   红线：新行 anchor 必须全部 ∈ impact.blocks（越界即拒）；空 anchor 行不产不废（全局行增量永不触碰）。
+3. 按 incremental-guide 只重梳理受影响章节：新版本 digest 行/audit 条目/FR 点，作废行清单（原文已删/口径已变），新澄清问题（机器 P 系——seq 由平台合并时分配，不携带；v1.6 新字段：带 module/layer 与 options——纪律同全量质检，冲突/取舍类选项化 2-4 项、缺失/开放类不硬造）。
+4. 组装增量包（严格结构）：{changeId, sections:[受影响章节 heading 的 block_id——禁 seq 数值], digestRows:{features,flows,states,auditItems（每条带 layer）,frUpserts,frRemoves}, invalidate:{digestAnchors,auditIds}, clarify:{items（带 options/module/layer）}, summary, riskTier}
+   红线：新行 anchor 必须全部 ∈ impact.blocks（越界即拒）；空 anchor 行不产不废（全局行增量永不触碰）；flows 新行 pids 仅引用存量已分配 seq（raw/card.json items[] 可见编号）——本包新问题编号未分配，引用必悬空，禁引用。
 5. 写临时 json 后回传：curl -X PUT ${PLATFORM}/api/requirements/${task.reqId}/drafts/incremental_bundle -H 'Content-Type: application/json' --data-binary @bundle.json
 6. 输出 SDLC_TASK_RESULT 行（受影响章节数/新行数/作废数/新澄清数）。`
   }
