@@ -1,0 +1,13 @@
+{
+  "contract": "sdlc-sync-payload",
+  "version": "1.6",
+  "snapshotOf": "claude-sdlc-skills@11955e1",
+  "capturedAt": "2026-10-18",
+  "owner": "claude-sdlc-skills",
+  "sourcePaths": [
+    "skills/sdlc-sync/references/payload-schema.md",
+    "skills/sdlc-intent/references/incremental-guide.md",
+    "skills/sdlc-sync/references/standard-doc-spec.md"
+  ],
+  "note": "版本号是供人读的契约锚点，测试不断言它；结构键稳定性由 fixture 内容承担"
+}

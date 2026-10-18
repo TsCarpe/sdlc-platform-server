@@ -458,6 +458,7 @@ class Task:
     payload: str = ""
     result: str = ""
     runner: str = ""
+    attempt: int = 0  # retry 递增的 fencing 代数（P1-6）：迟到回报只有匹配当前 attempt 才可置终态
     created_by: str = ""
     created_at: str | None = None
     updated_at: str | None = None
@@ -472,6 +473,7 @@ class Task:
             payload=_s(row, "payload"),
             result=_s(row, "result"),
             runner=_s(row, "runner"),
+            attempt=_i(row, "attempt"),  # 判列补列（migrations）保证列必在；sqlite3.Row 的 in 查的是值不是键
             created_by=_s(row, "created_by"),
             created_at=_sn(row, "created_at"),
             updated_at=_sn(row, "updated_at"),
@@ -543,6 +545,10 @@ class GateRound:
     status: str
     checks_json: str = ""
     baseline_json: str = ""
+    # P1-9：评审扇出留痕（issues 头解析落库）——external/degraded、扇出数、fresh/single-session
+    review_mode: str = ""
+    fanout: int = 0
+    context_mode: str = ""
     released_at: str | None = None
     released_by: str = ""
     created_by: str = ""
@@ -557,6 +563,9 @@ class GateRound:
             status=_s(row, "status"),
             checks_json=_s(row, "checks_json"),
             baseline_json=_s(row, "baseline_json"),
+            review_mode=_s(row, "review_mode"),
+            fanout=_i(row, "fanout"),
+            context_mode=_s(row, "context_mode"),
             released_at=_sn(row, "released_at"),
             released_by=_s(row, "released_by"),
             created_by=_s(row, "created_by"),

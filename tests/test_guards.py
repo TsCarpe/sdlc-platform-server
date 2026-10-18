@@ -253,6 +253,89 @@ def test_case_readonly_and_version_guard(env: tuple[Repos, Services]) -> None:
     detail = services.cases.form_update(req_id, "WEB-001", {"title": "改", "expectedVersion": web["version"]})
     assert detail["title"] == "改" and detail["version"] == 2
 
+    # P1-7：表单用例人工确认定稿（仅单向 reviewed）；其它状态值 400
+    reviewed = services.cases.form_update(req_id, "WEB-001", {"status": "reviewed", "expectedVersion": detail["version"]})
+    assert reviewed["status"] == "reviewed" and reviewed["version"] == 3
+    with pytest.raises(ApiException) as e3:
+        services.cases.form_update(req_id, "WEB-001", {"status": "draft", "expectedVersion": reviewed["version"]})
+    assert e3.value.status == 400 and "仅支持置为 reviewed" in str(e3.value)
+
+    # sdlc-test 来源：删除 409（只读+评论，红线不因 P1-7 开口）
+    with pytest.raises(ApiException) as e4:
+        services.cases.form_delete(req_id, "TC-1")
+    assert e4.value.status == 409 and "只读" in str(e4.value)
+
+    # 表单用例删除：用例行与评论一并清理
+    services.cases.add_comment(req_id, "WEB-001", {"by": "pm", "text": "评审意见"})
+    assert services.cases.form_delete(req_id, "WEB-001") == {"ok": True, "deleted": "WEB-001"}
+    with pytest.raises(ApiException) as e5:
+        services.cases.detail(req_id, "WEB-001")
+    assert e5.value.status == 404
+    assert repos.comment.list_by_case(req_id, "WEB-001") == []
+
+
+def test_gr2_form_case_signoff_unblocks_gate(env: tuple[Repos, Services]) -> None:
+    """P1-7 回归：表单来源用例默认 draft 会永久堵死 GR-2 条件②；人工确认定稿后开闸通过。"""
+    repos, services = env
+    req_id = _published_with_design(repos, services)
+    services.designs.finalize(req_id, DraftArtifact(req_id=req_id, type="design", md="§0 design"), "tester")
+    web = services.cases.form_create(None, {
+        "reqId": req_id, "title": "表单用例", "points": ["需求.FR-01"],
+        "steps": "s", "expect": "e", "owner": "qa"})
+    assert web["status"] == "draft"
+    c2 = next(c for c in services.gate.checks(req_id) if c["key"] == "cases")
+    assert c2["ok"] is False and "1 条未定稿" in c2["detail"]
+    with pytest.raises(ApiException) as e:
+        services.gate.open(req_id, None)
+    assert e.value.status == 409 and "用例 ≥1 且全部定稿" in str(e.value)
+
+    services.cases.form_update(req_id, web["id"], {"status": "reviewed", "expectedVersion": web["version"]})
+    assert next(c for c in services.gate.checks(req_id) if c["key"] == "cases")["ok"] is True
+    out = services.gate.open(req_id, None)
+    assert out["round"]["roundNo"] == 1 and out["round"]["status"] == "pending"
+
+
+def test_gate_ingest_review_meta(env: tuple[Repos, Services]) -> None:
+    """P1-9：issues 头扇出留痕落库；B 级 degraded / 扇出不足 409 拒收且不落库；C 级 degraded 放行。"""
+    repos, services = env
+    req_id = _published_with_design(repos, services, tier="B")
+    services.designs.finalize(req_id, DraftArtifact(req_id=req_id, type="design", md="§0 design"), "tester")
+    services.cases.sync_upsert(None, _sync_body(req_id, [
+        {"id": "TC-1", "title": "t", "points": ["需求.FR-01"], "status": "reviewed"}]))
+    services.gate.open(req_id, None)
+    rid = repos.gate.list_rounds(req_id)[0].id
+    assert rid is not None
+
+    def ingest(mode: str, fanout: int, ctx: str) -> None:
+        md = ("# issues\n\n| 项 | 值 |\n|---|---|\n| 评审状态 | 待裁决 |\n| 风险分级 | B |\n"
+              f"| reviewMode | {mode} |\n| fanout | {fanout} |\n| contextMode | {ctx} |\n\n"
+              "|编号|A-01|\n")
+        d = DraftArtifact(req_id=req_id, type="gate_issues", md=md, task_id=1, updated_at=NOW)
+        d.content_json = '{"issues":[{"code":"A-01","sev":"mid","scene":"白话场景"}]}'
+        repos.draft.upsert(d, NOW)
+        services.gate.ingest(req_id, rid, None)
+
+    with pytest.raises(ApiException) as e1:
+        ingest("degraded", 0, "single-session")
+    assert e1.value.status == 409 and "须用外置 runner" in str(e1.value)
+    rnd = repos.gate.find_round(rid)
+    assert rnd is not None and rnd.review_mode == ""  # 拒收整体回滚，留痕不落库
+
+    with pytest.raises(ApiException) as e2:
+        ingest("external", 1, "fresh")
+    assert e2.value.status == 409 and "扇出不足" in str(e2.value)
+
+    ingest("external", 2, "fresh")
+    rnd = repos.gate.find_round(rid)
+    assert rnd is not None and (rnd.review_mode, rnd.fanout, rnd.context_mode) == ("external", 2, "fresh")
+
+    # C 级允许进程内降级（主会话自查）
+    repos.requirement.set_risk_tier(req_id, "C")
+    ingest("degraded", 0, "single-session")
+    rnd = repos.gate.find_round(rid)
+    assert rnd is not None and (rnd.review_mode, rnd.fanout, rnd.context_mode) == (
+        "degraded", 0, "single-session")
+
 
 def test_priority_strict_form_lenient_skill(env: tuple[Repos, Services]) -> None:
     """红线：表单通道非法 priority 400；skill 通道宽容归一 P2 并计数。"""
@@ -404,10 +487,9 @@ def test_gate_release_and_case_mutual_recognition(env: tuple[Repos, Services]) -
 
 
 def test_gate_reopen_requires_content_change(env: tuple[Repos, Services]) -> None:
-    """review #19：GR-3 复审门两分支——放行后无实质变更 reopen 409「内容变更检测未命中」；
-    有变更（设计 finalize v2）才开新轮（r2 pending）。「无变更」分支黑盒不可达须造态：
-    change_status 用例通道是 >=（秒级时间戳保守判定），release 同秒内用例更新恒判 changed，
-    删全部用例使 casesMaxUpdated='' 才能凑出静态快照（设计 v1 未动 + 用例无更新）。"""
+    """review #19 + P1-8：GR-3 复审门两分支——放行后无人改用例时 casesMaxUpdated == 基线，
+    严格 > 判 changed=False → reopen 409；用例时间戳推进（严格 > 命中）或设计 finalize v2
+    才判变更、开新轮（r2 pending）。等价条件从 >= 改 > 后「无变更」分支不再需要删用例造态。"""
     repos, services = env
     req_id = _published_with_design(repos, services)
     services.designs.finalize(req_id, DraftArtifact(req_id=req_id, type="design", md="§0 design"), "tester")
@@ -429,12 +511,23 @@ def test_gate_reopen_requires_content_change(env: tuple[Repos, Services]) -> Non
     services.gate.revision(iid, "a.py:L1", "done")
     services.gate.release(rid, {"by": "qa"})
 
-    # 造态（黑盒不可达分支的测试通道）：删全部用例——>= 保守判定下同秒更新恒 changed，清空
-    # 用例后 casesMaxUpdated='' 且设计 v1 未动 → changed=False → 409
-    services.gate.db.execute("DELETE FROM test_case WHERE req_id=?", (req_id,))
+    # P1-8 回归：放行后无人改用例 → 基线相等 → 严格 > 判无变更 → reopen 409（不再需要删用例）
+    ch0 = services.gate.change_status(req_id)
+    assert ch0["changed"] is False and ch0["reasons"] == []
     with pytest.raises(ApiException) as e:
         services.gate.reopen(req_id, None)
     assert e.value.status == 409 and "GR-3 内容变更检测未命中" in str(e.value)
+
+    # 阳性：用例时间戳推进到未来（> 基线）→ changed=True 且原因为用例更新；复位后回到 False
+    cases = repos.test_case.list_by_req(req_id)
+    assert cases and cases[0].updated_at is not None
+    case_ts = cases[0].updated_at
+    services.gate.db.execute("UPDATE test_case SET updated_at='2099-01-01 00:00:00' WHERE req_id=?",
+                             (req_id,))
+    ch1 = services.gate.change_status(req_id)
+    assert ch1["changed"] is True and any("用例在基线后有更新" in r for r in ch1["reasons"])
+    services.gate.db.execute("UPDATE test_case SET updated_at=? WHERE req_id=?", (case_ts, req_id))
+    assert services.gate.change_status(req_id)["changed"] is False
 
     # 正向半段：设计 finalize v2 → md ≠ r1 基线 → reopen 开新轮 → view 出 r2 pending
     services.designs.finalize(req_id, DraftArtifact(req_id=req_id, type="design", md="§0 design v2"),

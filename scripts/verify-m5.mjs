@@ -111,7 +111,7 @@ await expectErr('POST', `/api/tasks/${next1.id}/done`, { result: 'x' }, 409, '�
 // ===== 3. failed + retry =====
 const t3 = await call('POST', `/api/requirements/${reqA}/tasks`, { type: 'case_gen' })
 await call('POST', '/api/tasks/next?runner=verify-m5') // 领走 t3
-await call('POST', `/api/tasks/${t3.id}/failed`, { error: '注入的失败' })
+await call('POST', `/api/tasks/${t3.id}/failed`, { error: '注入的失败', reason: 'agent-exception' })  // reason 需在 retry 白名单（N-1）
 const t3view = await call('GET', `/api/tasks?req_id=${reqA}&status=failed`)
 check('回报 failed：状态 + 错误保存', t3view.filter(x => x.id === t3.id).map(x => [x.status, JSON.parse(x.result).error]), [['failed', '注入的失败']])
 const t3r = await call('POST', `/api/tasks/${t3.id}/retry`)

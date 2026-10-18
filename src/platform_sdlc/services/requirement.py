@@ -24,7 +24,6 @@ from platform_sdlc.common import (
     is_json_list,
     is_json_obj,
     jarray,
-    jbool,
     jint,
     jrequired,
     jstrings,
@@ -446,8 +445,9 @@ class RequirementService:
         # 最近推送 = 产物基于旧块集（窗口 1 直接编辑后无任何持久标记的脱节，发布守卫不拦）。仅
         # 块表权威面判（回退视图无编辑面）；无 digest 不判（无产物即无脱节可言）。changed 态为真
         # 属流程中间态（增量合并前），呈现口径由前端按状态裁剪。
-        dg_view = out.get("digest")
-        if doc_v is not None and isinstance(dg_view, dict) and dg_view.get("pushedAt") \
+        # 显式注解收窄 Any（isinstance 会把 Any 窄化成 dict[Unknown, Unknown]，严类型门不过）
+        dg_view: dict[str, Any] | None = out.get("digest")
+        if doc_v is not None and dg_view is not None and dg_view.get("pushedAt") \
                 and doc_v.get("pushedAt"):
             out["docStale"] = str(doc_v["pushedAt"]) > str(dg_view["pushedAt"])
 

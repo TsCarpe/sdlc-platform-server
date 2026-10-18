@@ -48,6 +48,6 @@ def test_token_guard(tmp_path: Path) -> None:
     with TestClient(app) as c:
         denied = c.post("/api/anything", json={})
         assert denied.status_code == 401
-        assert denied.json()["error"] == "Unauthorized"
+        assert denied.json()["error"].startswith("未授权")  # 统一 {error} 形状（AUDIT T-10）
         ok = c.post("/api/anything", json={}, headers={"X-Token": "secret"})
         assert ok.status_code != 401  # 404（无此路由）但已过令牌

@@ -51,7 +51,7 @@ try {
 
   // 1) 无 token 写面 401（含领取端点——写语义，POST 形态纳入守卫）
   let r = await call('POST', '/api/requirements', { name: 'token冒烟', sourceType: 'text', sourceText: 'x' })
-  assert(r.status === 401 && r.data.error === 'Unauthorized', '无 token 建卡 401（Spring 错误体形状）', `status=${r.status}`)
+  assert(r.status === 401 && /^未授权/.test(r.data.error || ''), '无 token 建卡 401（统一 {error} 形状，AUDIT T-10）', `status=${r.status} body=${JSON.stringify(r.data)}`)
   r = await call('POST', '/api/tasks/next?runner=verify-token')
   assert(r.status === 401, '无 token 领取任务 401', `status=${r.status}`)
 

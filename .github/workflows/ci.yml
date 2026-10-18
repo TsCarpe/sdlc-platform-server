@@ -11,17 +11,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      - run: uv sync
-      - run: uv run ruff check src tests
+      # 锁文件门（AUDIT N-2）：uv.lock 漂移不得靠 CI 现场解依赖掩盖——与提交锁必须一致
+      - run: uv sync --frozen
+      # 五道门各自独立出报告（AUDIT P1-1）：首步红曾令后续 pyright/pytest/模板/快照全部 skipped，
+      # 一道门失败掩盖其余四道信号；if: always() 保证每道门都执行/出结论，job 仍按失败汇总
+      - if: always()
+        run: uv run ruff check src tests
       # 类型门（AUDIT D8-4：存量 155 → 2026-10-13 清零，转阻塞）
-      - run: uv run pyright
-      - run: uv run pytest -q
+      - if: always()
+        run: uv run pyright
+      - if: always()
+        run: uv run pytest -q
       # 任务模板三处一致性守门（v4-3，DESIGN-v4 §6.1）：prompts.py ∪ runner.mjs promptFor ∪
       # task_rules/DEFAULT_RULES——每新增任务类型三处同步，漏一处 CI 红
-      - run: uv run python scripts/check_task_templates.py
-      - uses: actions/setup-node@v4
+      - if: always()
+        run: uv run python scripts/check_task_templates.py
+      - if: always()
+        uses: actions/setup-node@v4
         with: { node-version: 22 }
       # 契约快照守门（AUDIT D8-6）：契约面（端点/出参模型）变更必须重跑 export-openapi 并携带快照 commit——
       # 快照与代码不一致即红，防权威文档再漂移
-      - run: node scripts/export-openapi.mjs
-      - run: git diff --exit-code docs/openapi.json
+      - if: always()
+        run: node scripts/export-openapi.mjs
+      - if: always()
+        run: git diff --exit-code docs/openapi.json

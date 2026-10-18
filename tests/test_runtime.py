@@ -6,6 +6,7 @@ finish 的随发布作废语义 / expire_stale 按 runner 归属过滤（跨通�
 
 from __future__ import annotations
 
+import asyncio
 import concurrent.futures
 import json
 from pathlib import Path
@@ -139,9 +140,18 @@ def test_retry_and_cancel_guards(env: tuple[Repos, Services]) -> None:
     with pytest.raises(ApiException) as e:  # 已 failed 不可再 cancel
         services.tasks.cancel(t.id)
     assert e.value.status == 409
+    # N-1：人取消即终局——取消产生的 failed 不可 retry（reason=cancelled 不在白名单）
+    with pytest.raises(ApiException) as e:
+        services.tasks.retry(t.id)
+    assert e.value.status == 409 and "cancelled" in str(e.value)
 
-    retried = services.tasks.retry(t.id)
-    assert retried.status == "queued" and retried.runner == ""
+    # 执行失败（可重试 reason）→ retry 成功，attempt 递增开新一轮执行代数
+    t2 = services.tasks.create(req_id, {"type": "case_gen"})
+    claimed = services.tasks.claim("runner-x")
+    assert claimed is not None and claimed.id == t2.id
+    services.tasks.finish(t2.id, False, {"error": "x", "reason": "agent-exception"})
+    retried = services.tasks.retry(t2.id)
+    assert retried.status == "queued" and retried.runner == "" and retried.attempt == 1
 
 
 def test_retry_rejects_superseded_by_publish(env: tuple[Repos, Services]) -> None:
@@ -244,6 +254,35 @@ def test_agent_self_check_branches(env: tuple[Repos, Services]) -> None:
         "items": [{"seq": "P01", "level": "yellow", "theme": "t", "question": "q?"},
                   {"seq": "P02", "level": "yellow", "theme": "t", "question": "q2?"}]})})
     assert loop.self_check(task_of("quality_check")) is None
+
+
+def test_agent_loop_refuses_ab_gate(env: tuple[Repos, Services]) -> None:
+    """P1-9（A+B）：A/B 级 gate_review 在进程内直接 failed（不调模型），提示改用外置 runner。"""
+    repos, services = env
+    loop = _loop(env)
+    for tier in ("A", "B"):
+        req_id = make_req(repos, services, status="published")
+        repos.requirement.set_risk_tier(req_id, tier)
+        t = services.tasks.create_guarded(req_id, "gate_review", "", "")
+        claimed = services.tasks.claim(AgentLoop.RUNNER_NAME)
+        assert claimed is not None and claimed.id == t.id
+        asyncio.run(loop._handle(claimed))
+        out = repos.task.find(t.id)
+        assert out is not None and out.status == "failed"
+        m = json.loads(out.result)
+        assert m["reason"] == "gate-requires-external" and "外置 runner" in m["error"]
+
+
+def test_gate_prompt_marks_inprocess_degraded() -> None:
+    """P1-9：进程内 gate prompt 限定 C 级并要求 degraded/0/single-session 留痕；runner prompt 同步。"""
+    from platform_sdlc.agent.prompts import sys_prompt
+    card = Requirement(id="R", name="n", risk_tier="C")
+    txt = sys_prompt("gate_review", card, Path("/repo"), [])
+    for kw in ("只执行 C 级", "reviewMode | degraded", "fanout | 0", "contextMode | single-session"):
+        assert kw in txt
+    runner_src = (Path(__file__).resolve().parents[1] / "runner" / "runner.mjs").read_text(encoding="utf-8")
+    assert "reviewMode | external |" in runner_src
+    assert "A/B 级 degraded 或扇出不足会被平台 409 拒收" in runner_src
 
 
 def test_result_line_regex() -> None:

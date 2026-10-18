@@ -10,6 +10,7 @@ from __future__ import annotations
 import re
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -94,7 +95,7 @@ def test_window1_optimistic_lock_and_rev_bump(env: tuple[TestClient, Database, R
     req_id = _mk_card(client)
     _seed(repos, req_id)
 
-    def blocks(text: str) -> list[dict]:
+    def blocks(text: str) -> list[dict[str, Any]]:
         return [
             {"id": "e-h1", "type": "heading", "level": 2, "text": "背景"},
             {"id": "e-p1", "type": "paragraph", "text": text},
@@ -354,9 +355,10 @@ def test_detail_doc_stale_after_window1_edit(env: tuple[TestClient, Database, Re
     req_id = _mk_card(client)
     _seed(repos, req_id)
     # 推产物（digest.pushed_at 钉到过去——编辑在推送之后才构成脱节，且免同秒比较不稳定）
-    push = {"digest": {"md": "", "summary": "s", "roles": [], "features": [], "flows": [], "states": []},
-            "audit": {"md": "", "red": 0, "yellow": 0, "blue": 0, "items": []},
-            "items": [{"seq": "P1", "level": "yellow", "theme": "t", "question": "q1"}]}
+    push: dict[str, Any] = {
+        "digest": {"md": "", "summary": "s", "roles": [], "features": [], "flows": [], "states": []},
+        "audit": {"md": "", "red": 0, "yellow": 0, "blue": 0, "items": []},
+        "items": [{"seq": "P1", "level": "yellow", "theme": "t", "question": "q1"}]}
     assert client.post(f"/api/requirements/{req_id}/artifacts", json=push).status_code == 200
     db.execute("UPDATE artifact SET pushed_at='2020-01-01 00:00:00' WHERE req_id=? AND type='digest'",
                (req_id,))

@@ -296,11 +296,11 @@ const gRnd = gOpen.rounds[0].id
 await call('POST', `/api/gate/rounds/${gRnd}/release`, { by: 'dev' })
 await new Promise(r => setTimeout(r, 1100))  // release 与 confirm 隔秒（严格大于口径）
 const gChange = await call('GET', `/api/requirements/${reqG}/changes`)
-// 「无变更单横幅不亮」在有用例卡上不可达（gate.py 有意保守判定：casesMaxUpdated >= 基线即亮，
-// 宁可多提醒不漏判）——与 verify-gate 第 6 节同口径，断言保守语义而非 false
+// P1-8：用例通道改严格 >——放行后无人改用例（casesMaxUpdated == 基线）→ 横幅不亮；
+// 变更单通道也未命中 → 无 reqChangeIds 键
 const gView0 = await call('GET', `/api/requirements/${reqG}/gate`)
-check('放行后横幅=保守判定（有用例即亮，无变更单号键）',
-      [gView0.change.changed, gView0.change.reqChangeIds ?? null], [true, null])
+check('放行后横幅不亮（无用例变更/变更单）',
+      [gView0.change.changed, gView0.change.reqChangeIds ?? null], [false, null])
 const gDraft = await call('POST', `/api/requirements/${reqG}/changes`, {
   title: 'GR-3 验证单', proposedBy: '张三',
   blocks: [{ id: 'g-p1', type: 'paragraph', text: '基线（改）' }] })

@@ -45,7 +45,9 @@ _WIRE: dict[type[Any], tuple[str, ...]] = {
     TestCase: ("req_id", "id", "title", "points", "priority", "pre", "steps", "expect", "owner", "tool",
                "status", "version", "created_at", "updated_at", "verify_refs", "defect_refs", "case_no"),
     CaseComment: ("id", "req_id", "case_id", "by", "text", "created_at"),
-    Task: ("id", "req_id", "type", "status", "payload", "result", "runner", "created_by", "created_at", "updated_at"),
+    # attempt=P1-6 契约增键（retry 递增的执行代数；runner 回传 done/failed 时原样带回作 fencing）
+    Task: ("id", "req_id", "type", "status", "payload", "result", "runner", "attempt",
+           "created_by", "created_at", "updated_at"),
     DraftArtifact: ("req_id", "type", "md", "content_json", "task_id", "updated_at"),
     Iteration: ("name", "note", "created_by", "created_at"),
     GateRound: ("id", "req_id", "round_no", "status", "checks_json", "baseline_json",
@@ -78,6 +80,7 @@ class TaskOut(_CamelModel):
     payload: str
     result: str
     runner: str
+    attempt: int
     created_by: str
     created_at: str | None = None
     updated_at: str | None = None

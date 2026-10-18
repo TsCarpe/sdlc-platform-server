@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS test_case ( req_id TEXT NOT NULL, id TEXT NOT NULL, t
 CREATE INDEX IF NOT EXISTS idx_case_req ON test_case(req_id);
 CREATE TABLE IF NOT EXISTS case_comment ( id INTEGER PRIMARY KEY AUTOINCREMENT, req_id TEXT NOT NULL, case_id TEXT NOT NULL, by TEXT DEFAULT '', text TEXT NOT NULL, created_at TEXT );
 CREATE INDEX IF NOT EXISTS idx_comment_case ON case_comment(req_id, case_id);
-CREATE TABLE IF NOT EXISTS task ( id INTEGER PRIMARY KEY AUTOINCREMENT, req_id TEXT NOT NULL, type TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'queued', payload TEXT DEFAULT '', result TEXT DEFAULT '', runner TEXT DEFAULT '', created_by TEXT DEFAULT '', created_at TEXT, updated_at TEXT );
+CREATE TABLE IF NOT EXISTS task ( id INTEGER PRIMARY KEY AUTOINCREMENT, req_id TEXT NOT NULL, type TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'queued', payload TEXT DEFAULT '', result TEXT DEFAULT '', runner TEXT DEFAULT '', attempt INTEGER NOT NULL DEFAULT 0, created_by TEXT DEFAULT '', created_at TEXT, updated_at TEXT );
 CREATE INDEX IF NOT EXISTS idx_task_req ON task(req_id);
 CREATE TABLE IF NOT EXISTS draft_artifact ( req_id TEXT NOT NULL, type TEXT NOT NULL, md TEXT DEFAULT '', content_json TEXT DEFAULT '', task_id INTEGER, updated_at TEXT, PRIMARY KEY (req_id, type) );
 CREATE TABLE IF NOT EXISTS seq_case_no ( id INTEGER PRIMARY KEY CHECK (id = 1), val INTEGER NOT NULL DEFAULT 0 );
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS schema_version ( name TEXT PRIMARY KEY, applied_at TE
 -- 1:1 = 存活需求按 iter 唯一，服务层守卫 + 存量库检测干净后补 partial unique index（见 SchemaMigrator）
 CREATE TABLE IF NOT EXISTS iteration ( name TEXT PRIMARY KEY, note TEXT DEFAULT '', created_by TEXT DEFAULT '', created_at TEXT );
 -- v2.4 门禁域（DESIGN-v2.4 D35）：评审轮次权威两值（待裁决｜已放行）+ issue 裁决单元；旧轮只读归档
-CREATE TABLE IF NOT EXISTS gate_round ( id INTEGER PRIMARY KEY AUTOINCREMENT, req_id TEXT NOT NULL, round_no INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'pending', checks_json TEXT DEFAULT '', baseline_json TEXT DEFAULT '', released_at TEXT, released_by TEXT DEFAULT '', created_by TEXT DEFAULT '', opened_at TEXT, UNIQUE (req_id, round_no) );
+CREATE TABLE IF NOT EXISTS gate_round ( id INTEGER PRIMARY KEY AUTOINCREMENT, req_id TEXT NOT NULL, round_no INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'pending', checks_json TEXT DEFAULT '', baseline_json TEXT DEFAULT '', review_mode TEXT DEFAULT '', fanout INTEGER NOT NULL DEFAULT 0, context_mode TEXT DEFAULT '', released_at TEXT, released_by TEXT DEFAULT '', created_by TEXT DEFAULT '', opened_at TEXT, UNIQUE (req_id, round_no) );
 CREATE TABLE IF NOT EXISTS gate_issue ( id INTEGER PRIMARY KEY AUTOINCREMENT, round_id INTEGER NOT NULL, code TEXT NOT NULL, sev TEXT DEFAULT '', theme TEXT DEFAULT '', role TEXT DEFAULT '', scene TEXT DEFAULT '', quote TEXT DEFAULT '', loc TEXT DEFAULT '', basis TEXT DEFAULT '', div_flag INTEGER DEFAULT 0, tradeoff INTEGER DEFAULT 0, merged_unit INTEGER DEFAULT 0, filed INTEGER DEFAULT 0, verdict TEXT DEFAULT '', verdict_note TEXT DEFAULT '', verdict_by TEXT DEFAULT '', verdict_at TEXT, rev_location TEXT DEFAULT '', rev_status TEXT DEFAULT '' );
 CREATE INDEX IF NOT EXISTS idx_gate_issue_round ON gate_issue(round_id);
 -- v4.1 需求平台权威化（DESIGN-v4 §2.2）：原文块表——一行一块，锚点（块 ID）即主键；导入沿用飞书块 ID，

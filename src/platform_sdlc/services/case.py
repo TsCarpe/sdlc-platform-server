@@ -167,15 +167,36 @@ class CaseService:
         priority = self._form_priority(body["priority"], cur.priority) if body.get("priority") is not None else cur.priority
         steps = jrequired_non_blank(body, "steps") if body.get("steps") is not None else cur.steps
         expect = jrequired_non_blank(body, "expect") if body.get("expect") is not None else cur.expect
+        # P1-7：表单用例人工确认定稿——仅接受显式 status=reviewed（单向，不回退/不改其它值）
+        status = cur.status.strip()
+        if body.get("status") is not None:
+            requested = jtext(body, "status", "").strip()
+            if requested != "reviewed":
+                raise ApiException(400, "表单用例仅支持置为 reviewed（确认定稿）；不支持回退或其它状态")
+            status = "reviewed"
         with self.db.tx():
             # 检查读与 UPDATE 同事务；版本谓词不符（0 行）→ 与前置检查同文案 409
             if self.repos.test_case.update_form(
                     req_id, case_id, title,
                     _strings_json(body.get("points")) if body.get("points") is not None else cur.points,
-                    priority, jtext(body, "pre", cur.pre), steps, expect, ev, Times.now()) == 0:
+                    priority, jtext(body, "pre", cur.pre), steps, expect, status, ev, Times.now()) == 0:
                 now_v = self.repos.test_case.find(req_id, case_id)
                 raise ApiException(409, f"版本已变化（当前 v{now_v.version if now_v else -1}，提交基于 v{ev}），请刷新后重试")
         return self.detail(req_id, case_id)
+
+    def form_delete(self, req_id: str, case_id: str) -> dict[str, Any]:
+        """表单用例删除（P1-7）：仅 tool='表单'——sdlc-test 来源平台只读（评论反馈维护人），
+        与「全量替换只删 skill 来源」的归属口径一致；评论一并清理，避免孤儿行。"""
+        self._require_req(req_id)
+        t = self.repos.test_case.find(req_id, case_id)
+        if t is None:
+            raise ApiException(404, f"用例不存在：{case_id}")
+        if t.tool != "表单":
+            raise ApiException(409, f"该用例由 {t.tool} 推送维护，平台只读；如需下线请评论反馈维护人 {t.owner}")
+        with self.db.tx():
+            self.repos.test_case.delete(req_id, case_id)
+            self.repos.comment.delete_by_case(req_id, case_id)
+        return {"ok": True, "deleted": case_id}
 
     def add_comment(self, req_id: str, case_id: str, body: dict[str, Any]) -> dict[str, Any]:
         self._require_req(req_id)

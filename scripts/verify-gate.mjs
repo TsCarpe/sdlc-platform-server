@@ -88,7 +88,11 @@ const ISSUES = [
   { code: 'T-01', sev: 'mid', theme: '可测性', role: '可测性审查', scene: '定时任务没有时钟可控的验证入口。', quote: 'TC-09 无时间注入', loc: '用例 TC-09', basis: 'soft', mergedUnit: 11 },
   { code: 'D-01', sev: 'high', theme: '接口契约', role: '交叉审查者', scene: '用例期望 409 而设计写 200+业务码，联调必炸。', quote: '设计 §2 vs TC-07', loc: '§2 F03', basis: 'hard', div: true, mergedUnit: 12 }
 ]
-const ISSUES_MD = '# issues（评审状态：待裁决）\n\n|编号|S-01|\n|T-01|\n|D-01|\n'
+const ISSUES_MD = '# issues（评审状态：待裁决）\n\n| 项 | 值 |\n|---|---|\n| reviewMode | external |\n| fanout | 2 |\n| contextMode | fresh |\n\n|编号|S-01|\n|T-01|\n|D-01|\n'
+const ISSUES_MD_DEGRADED = ISSUES_MD
+  .replace('| reviewMode | external |', '| reviewMode | degraded |')
+  .replace('| fanout | 2 |', '| fanout | 0 |')
+  .replace('| contextMode | fresh |', '| contextMode | single-session |')
 await call('PUT', `/api/requirements/${R}/drafts/gate_issues`, { md: ISSUES_MD, contentJson: JSON.stringify({ issues: ISSUES }) })
 await call('POST', `/api/tasks/${t2.id}/done`, { result: '{"issues":3}' })
 let badIngest = null
@@ -97,9 +101,16 @@ try {
   await call('POST', `/api/requirements/${R}/gate/rounds/${gv1.round.id}/ingest`, { by: '李工' })
 } catch (e) { badIngest = e.status }
 check('md×json 不同源入库 400', badIngest, 400)
+// P1-9：B 级 degraded 留痕 ingest 409（A/B 必须外置全新上下文扇出）
+await call('PUT', `/api/requirements/${R}/drafts/gate_issues`, { md: ISSUES_MD_DEGRADED, contentJson: JSON.stringify({ issues: ISSUES }) })
+let degraded409 = null
+try { await call('POST', `/api/requirements/${R}/gate/rounds/${gv1.round.id}/ingest`, { by: '李工' }) } catch (e) { degraded409 = e.status }
+check('B 级 degraded 留痕 ingest 409', degraded409, 409)
 await call('PUT', `/api/requirements/${R}/drafts/gate_issues`, { md: ISSUES_MD, contentJson: JSON.stringify({ issues: ISSUES }) })   // 恢复同源草稿
 const gv2 = await call('POST', `/api/requirements/${R}/gate/rounds/${gv1.round.id}/ingest`, { by: '李工' })
 check('入库后 issues=3 且 phase=deciding', [gv2.issues.length, gv2.phase], [3, 'deciding'])
+check('评审扇出留痕落库（external/2/fresh）',
+      [gv2.round.reviewMode, gv2.round.fanout, gv2.round.contextMode], ['external', 2, 'fresh'])
 check('裁决单元聚合=3', gv2.units.length, 3)
 
 // ===== 4. 裁决三处置守卫 =====
@@ -131,12 +142,23 @@ const gv5 = await call('GET', `/api/requirements/${R}/gate`)
 check('放行后 phase=released', gv5.phase, 'released')
 check('关卡互认：draft 用例置 reviewed', (await call('GET', `/api/cases?reqId=${R}`)).every(c => c.status === 'reviewed'), true)
 
-// ===== 6. GR-3 变更检测与复审轮（现行语义——三期重排适配脚本失修）=====
-// 「无实质变更复审 409」分支在有用例卡上不可达：开闸三条件 c2 要求用例 ≥1，而关卡互认（release
-// 时 draft 用例置 reviewed）使 casesMaxUpdated ≥ 基线恒成立 → change_status 保守判定（>= 秒级
-// 取向，宁可多提醒不漏判——gate.py 有意行为）恒 changed。该 409 仅无用例卡可达，此处不测。
+// ===== 6. GR-3 变更检测与复审轮（P1-8：严格 >，放行后无人改用例不再误报）=====
 const ch1 = await call('GET', `/api/requirements/${R}/gate/change-status`)
-check('GR-3 放行后变更命中（关卡互认副作用·保守判定）', [ch1.changed, ch1.window], [true, 'released'])
+check('GR-3 放行后无变更：changed=false', [ch1.changed, ch1.window], [false, 'released'])
+let reopenNoChange = null
+try { await call('POST', `/api/requirements/${R}/gate/reopen`, { by: '李工' }) } catch (e) { reopenNoChange = e.status }
+check('无变更复审 409', reopenNoChange, 409)
+// 阳性：推一条用例变更（TC-G1 标题改）→ casesMaxUpdated 严格大于开闸基线 → changed=true
+await new Promise(r => setTimeout(r, 1100))   // 秒级时间戳边界：确保更新落在基线秒之后
+await call('POST', '/api/cases', {
+  reqId: R,
+  items: [
+    { id: 'TC-G1', title: '覆盖用例（复审变更）', points: ['需求.FR-01'], priority: 'P0', steps: 's', expect: 'e', owner: 'sdlc-test', tool: 'sdlc-test', status: 'reviewed', expectedVersion: 1 },
+    { id: 'TC-G2', title: '草稿用例', points: ['需求.FR-01'], priority: 'P1', steps: 's', expect: 'e', owner: 'sdlc-test', tool: 'sdlc-test', status: 'reviewed', expectedVersion: 2 }
+  ]
+})
+const ch1b = await call('GET', `/api/requirements/${R}/gate/change-status`)
+check('GR-3 用例变更命中', [ch1b.changed, ch1b.window], [true, 'released'])
 const gv6 = await call('POST', `/api/requirements/${R}/gate/reopen`, { by: '李工' })
 check('复审轮 r2 建立（旧轮归档）', [gv6.round.roundNo, gv6.round.status, gv6.rounds.length, gv6.rounds[0].status], [2, 'pending', 2, 'released'])
 // r2 评审中窗口：设计变更 → in-review 横幅（走落改通道不开新轮）；pending 期 reopen 409（仅已放行可开复审轮）
@@ -150,7 +172,20 @@ let pending409 = null
 try { await call('POST', `/api/requirements/${R}/gate/reopen`, { by: '李工' }) } catch (e) { pending409 = e.status }
 check('评审中不可开复审轮 409', pending409, 409)
 
-// ===== 7. 清理 =====
+// ===== 7. 表单用例人工定稿 / 删除（P1-7）=====
+const formCase = await call('POST', '/api/cases/form', {
+  reqId: R, title: '表单用例', points: ['需求.FR-01'], steps: 's', expect: 'e', owner: 'qa'
+})
+check('表单用例默认 draft', formCase.status, 'draft')
+const confirmed = await call('PATCH', `/api/cases/${R}/${formCase.id}`, { status: 'reviewed', expectedVersion: formCase.version })
+check('表单用例确认定稿', [confirmed.status, confirmed.version], ['reviewed', 2])
+let delSdlc = null
+try { await call('DELETE', `/api/cases/${R}/TC-G1`) } catch (e) { delSdlc = e.status }
+check('sdlc-test 用例删除 409（只读+评论）', delSdlc, 409)
+const delForm = await call('DELETE', `/api/cases/${R}/${formCase.id}`)
+check('表单用例删除成功', delForm.ok, true)
+
+// ===== 8. 清理 =====
 await call('DELETE', `/api/requirements/${R}`)
 try { await fetch(base + '/api/agent/resume', { method: 'POST' }) } catch {}
 

@@ -251,8 +251,9 @@ def test_routes_stay_schema_free(env: tuple[TestClient, Database, Repos]) -> Non
 
 _OPTION_ANSWER = '{"kind":"option","optionKey":"A","optionText":"选项全文","extra":"补充说明"}'
 _AUDIT_KEYS = {"id", "level", "title", "where", "go", "group", "quote", "anchor", "layer"}
-_SKILLS_SPEC = (Path(Settings().agent_skills_repo).expanduser()
-                / "skills" / "sdlc-sync" / "references" / "standard-doc-spec.md")
+# 跨仓契约 fixture（P1-2 hermetic）：仓内快照，CI 单仓 checkout 可跑；权威源与刷新方式见
+# tests/fixtures/skills-contract/README.md
+_CONTRACT_DIR = Path(__file__).resolve().parent / "fixtures" / "skills-contract"
 
 
 def _seed_blocks(repos: Repos, req_id: str) -> None:
@@ -496,12 +497,10 @@ def test_prompt_channels_consume_answer_text() -> None:
     # agent 数据面 docstring：list_clarify_items 声明消费 answerText
     tools_src = (root / "src" / "platform_sdlc" / "agent" / "tools.py").read_text(encoding="utf-8")
     assert "answerText" in tools_src.split("async def list_clarify_items")[1].split("def impl")[0]
-    # skills spec.md：answerText 消费规则在权威合成规范中（三期修坏路径：原拼法缺 skills/ 段，
-    # exists() 恒 False 恒 skip——断言从未执行；现与生产 executor 同源解析（agent_skills_repo 展开 ~），
-    # 缺失即 fail——本仓开发/运行环境固定含 skills 仓检出）
-    if not _SKILLS_SPEC.exists():
-        pytest.fail(f"skills 仓布局异常（标准文档规范不可达）：{_SKILLS_SPEC}")
-    spec = _SKILLS_SPEC.read_text(encoding="utf-8")
+    # skills spec：answerText 消费规则在权威合成规范中。读仓内契约 fixture（P1-2 hermetic）——
+    # 原实现直接读 ~/IdeaProjects/claude-sdlc-skills，CI 单仓 checkout 必 fail；live 对账另由
+    # test_skills_contract_live_aligned_when_available 承担（缺失即 skip）
+    spec = (_CONTRACT_DIR / "standard-doc-spec.md").read_text(encoding="utf-8")
     assert "answerText" in spec and "〔Pxx〕" in spec
 
 
@@ -539,22 +538,44 @@ def test_quality_prompt_carries_v16_fields() -> None:
     assert "冲突/取舍类问题在问题格内换行列选项" in ref
 
 
-def test_skills_contract_v16_locked() -> None:
-    """跨仓锁序断言（B1 依赖批 A）：payload 契约须已升 v1.6 且 incremental-guide 带 D-L 存量引用
-    纪律——runner/agent prompt 指示 LLM 读技能仓文档（live 路径），契约先行是时序硬依赖，
-    先推 B1 则 LLM 读旧契约+新指令、产出大概率不带新字段且宽进静默收纳零信号。
-    路径与生产 executor 同源（settings.agent_skills_repo 展开 ~ 拼含 skills/ 段）；缺失即 fail。"""
-    skills_root = Path(Settings().agent_skills_repo).expanduser()
-    schema = skills_root / "skills" / "sdlc-sync" / "references" / "payload-schema.md"
-    guide = skills_root / "skills" / "sdlc-intent" / "references" / "incremental-guide.md"
-    for p in (schema, guide):
-        if not p.exists():
-            pytest.fail(f"skills 仓布局异常（{p.name} 不可达）：{p}")
-    schema_txt = schema.read_text(encoding="utf-8")
-    assert "v1.6" in schema_txt.splitlines()[0], "payload 契约未升 v1.6（批 A 未先行？）"
-    assert "incremental_bundle 草稿契约（v1.6）" in schema_txt, "incremental_bundle 契约节缺失（B6）"
-    guide_txt = guide.read_text(encoding="utf-8")
+_CONTRACT_KEYS = ("options", "module", "layer", "answerText", "danglingPids",
+                  "incremental_bundle 草稿契约", "仅允许引用存量已分配 seq")
+
+
+def test_skills_contract_structural_locked() -> None:
+    """跨仓契约结构锁（P1-2 hermetic）：payload/incremental/标准文档三份规范的结构键必须齐备——
+    runner/agent prompt 指示 LLM 读技能仓文档，结构键是执行侧真实依赖。
+    不断言人类文档标题的版本字面量：版本标注属发布卫生，skills `5f3673c` 去掉 `v1.6` 标题后
+    原断言变成环境探测器（CI 单仓 checkout 必红）。仓内 fixture 是契约快照，权威源与刷新见
+    tests/fixtures/skills-contract/README.md；live 对账见下一用例（缺失即 skip）。"""
+    version = json.loads((_CONTRACT_DIR / "contract-version.json").read_text(encoding="utf-8"))
+    assert version["contract"] == "sdlc-sync-payload"
+    schema_txt = (_CONTRACT_DIR / "payload-schema.md").read_text(encoding="utf-8")
+    for key in _CONTRACT_KEYS:
+        assert key in schema_txt, f"payload 契约结构键缺失：{key}"
+    guide_txt = (_CONTRACT_DIR / "incremental-guide.md").read_text(encoding="utf-8")
     assert "仅允许引用存量已分配 seq" in guide_txt, "incremental-guide 缺 D-L 存量引用纪律"
+    spec_txt = (_CONTRACT_DIR / "standard-doc-spec.md").read_text(encoding="utf-8")
+    assert "answerText" in spec_txt and "〔Pxx〕" in spec_txt
+
+
+def test_skills_contract_live_aligned_when_available() -> None:
+    """live 契约对账（可选信号）：skills 仓检出存在时，用同一组结构键校验真实文档；
+    仓库缺失（CI 单仓 checkout）即 skip——红灯只来自 fixture 结构锁，不依赖开发机布局。"""
+    skills_root = Path(Settings().agent_skills_repo).expanduser()
+    live = {
+        "payload": skills_root / "skills" / "sdlc-sync" / "references" / "payload-schema.md",
+        "guide": skills_root / "skills" / "sdlc-intent" / "references" / "incremental-guide.md",
+        "spec": skills_root / "skills" / "sdlc-sync" / "references" / "standard-doc-spec.md",
+    }
+    if not all(p.exists() for p in live.values()):
+        pytest.skip(f"skills 仓未检出（{skills_root}），跳过 live 契约对账")
+    schema_txt = live["payload"].read_text(encoding="utf-8")
+    for key in _CONTRACT_KEYS:
+        assert key in schema_txt, f"live payload 契约结构键缺失：{key}"
+    assert "仅允许引用存量已分配 seq" in live["guide"].read_text(encoding="utf-8")
+    spec_txt = live["spec"].read_text(encoding="utf-8")
+    assert "answerText" in spec_txt and "〔Pxx〕" in spec_txt
 
 
 # ---------- 三期批 B2：D-I 白名单同构 + D-M curl + danglingPids（DESIGN-V5 §8 三期行） ----------
@@ -605,7 +626,7 @@ def test_run_command_curl_allowed() -> None:
 def test_dangling_pids_reported_not_rejected(env: tuple[TestClient, Database, Repos]) -> None:
     """danglingPids 观测出参（P1 修订）：悬空 pids（⊄ 本 payload items seq ∪ 存量 L 系）计数正确、
     200 不拒收、落库原样透传（宽进语义锁定——清理走重推/生成端纪律，平台不改写）。"""
-    client, db, repos = env   # noqa: F841 – db/repos 未直用，env 形制与邻测一致
+    client, _, repos = env   # db 未直用，env 形制与邻测一致
     req_id = _mk_card(client)
     _seed_blocks(repos, req_id)
     push = client.post(f"/api/requirements/{req_id}/artifacts", json={

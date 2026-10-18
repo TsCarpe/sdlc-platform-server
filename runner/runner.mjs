@@ -6,7 +6,9 @@
 //
 // 环境变量：
 //   SDLC_PLATFORM_URL   平台地址（默认 http://127.0.0.1:8080）
-//   SDLC_RUNNER_NAME    Runner 标识（默认 local-<host>）
+//   SDLC_RUNNER_NAME    Runner 标识（默认 local-<hostname>-runner；稳定名，不含 pid——
+//                       recover-stale 按名字归属，pid 名重启即变会让旧 running 永远无人认领。
+//                       同主机多实例必须显式设置不同名字）
 //   SDLC_RUNNER_INTERVAL 轮询间隔毫秒（默认 3000）
 //   SDLC_RUNNER_TIMEOUT_MIN 单任务超时分钟（默认 30）
 //   SDLC_SKILLS_REPO    claude-sdlc-skills 仓路径（权威技能源）
@@ -15,13 +17,13 @@
 // 用法：scripts/runner.sh  （或 node runner/runner.mjs）
 
 import { spawn } from 'node:child_process'
-import { homedir } from 'node:os'
+import { homedir, hostname } from 'node:os'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const PLATFORM = process.env.SDLC_PLATFORM_URL || 'http://127.0.0.1:8080'
-const RUNNER = process.env.SDLC_RUNNER_NAME || `local-${process.pid}`
+const RUNNER = process.env.SDLC_RUNNER_NAME || `local-${hostname()}-runner`
 const INTERVAL = Number(process.env.SDLC_RUNNER_INTERVAL || 3000)
 const TIMEOUT_MIN = Number(process.env.SDLC_RUNNER_TIMEOUT_MIN || 30)
 const REPO = process.env.SDLC_SKILLS_REPO || path.join(homedir(), 'IdeaProjects/claude-sdlc-skills')
@@ -190,7 +192,8 @@ SDLC_TASK_RESULT {"关键统计": "..."}
 
 1. 读取规范：${REPO}/skills/sdlc-gate/SKILL.md、references/issue-template.md（issues 文件结构权威）、references/cross-check-guide.md。
 2. 输入三件（CONTRACT）：digest/audit 读平台详情（GET ${PLATFORM}/api/requirements/${task.reqId} 的 digest/audit 字段）、设计终稿（GET ${PLATFORM}/api/requirements/${task.reqId}/design → finalized.md）、用例登记（curl -s "${PLATFORM}/api/cases?reqId=${task.reqId}"）。
-3. 分档扇出（读用例头部风险分级，无字段按 A）：A=4 角色（架构一致性/数据模型与SQL/测试可测性/交叉审查只产分歧）B=2（#2+#4）C=五问自查；headless 单会话按各角色检查单逐角色独立过审并标注角色。
+3. 分档扇出（读用例头部风险分级，无字段按 A）：A=4 角色（架构一致性/数据模型与SQL/测试可测性/交叉审查只产分歧）B=2（#2+#4）C=五问自查。A/B 必须用 Agent 工具开全新上下文子代理（禁止单会话逐角色串行冒充扇出）；headless 确实无 Agent 工具时按 degraded 如实标注。
+   issues 头部必须写扇出留痕三行（平台 ingest 机械校验）：A → | reviewMode | external | / | fanout | 4 | / | contextMode | fresh |；B → external/2/fresh；C → external 或 degraded / 0 / single-session。A/B 级 degraded 或扇出不足会被平台 409 拒收。
 4. 对抗式输出六字段：标题/场景（白话 2-3 句）/原文（≤2 句摘引）/位置/严重度（high|mid|low）/依据（hard|soft）；分歧 div:true；权衡 tradeoff:true 建议驳回。
 5. RECONCILE 四分类 + 同根因合并（mergedUnit 相同）。
 6. 产出 issues 文件（issue-template 结构，头部 评审状态=待裁决）。
@@ -306,7 +309,8 @@ async function handle(task) {
   const card = await api('GET', `/api/requirements/${task.reqId}`)
   const prompt = promptFor(task, card)
   if (!prompt) {
-    await api('POST', `/api/tasks/${task.id}/failed`, { error: `未知任务类型：${task.type}` })
+    await api('POST', `/api/tasks/${task.id}/failed`,
+      { error: `未知任务类型：${task.type}`, reason: 'unknown-type', runner: RUNNER, attempt: task.attempt })
     return
   }
   log(`执行 #${task.id} ${task.type} @ ${task.reqId}（超时 ${TIMEOUT_MIN}min）`)
@@ -316,13 +320,19 @@ async function handle(task) {
   if (code === 0 && chk.ok && !isError) {
     if (!summary) log(`#${task.id} 注意：输出无 SDLC_TASK_RESULT 结果行（草稿自查已过仍记 done；进程内通道此场景会续跑一轮）`)
     const result = summary || JSON.stringify(chk.draftType ? { draft: chk.draftType } : { imported: true })
-    await api('POST', `/api/tasks/${task.id}/done`, { result })
+    await api('POST', `/api/tasks/${task.id}/done`,
+      { result, runner: RUNNER, attempt: task.attempt })
     log(`#${task.id} 完成：${result.slice(0, 160)}`)
   } else {
     const reason = !chk.ok ? chk.error
       : code !== 0 ? `CLI 退出码 ${code}：${(err || out).slice(-400)}`
       : `CLI 异常结束（${subtype}）：${summary || out.slice(-400)}`
-    await api('POST', `/api/tasks/${task.id}/failed`, { error: reason }).catch(e => log('回报失败也失败：', e.message))
+    // reason 机器码与进程内通道同构（self-check 失败 = no-draft；CLI 异常 = agent-exception）——
+    // retry 白名单据此判定可重试性（N-1）；runner/attempt 供 fencing（P1-6）
+    const reasonCode = !chk.ok ? 'no-draft' : 'agent-exception'
+    await api('POST', `/api/tasks/${task.id}/failed`,
+      { error: reason, reason: reasonCode, runner: RUNNER, attempt: task.attempt })
+      .catch(e => log('回报失败也失败：', e.message))
     log(`#${task.id} 失败：${reason.slice(0, 200)}`)
   }
 }

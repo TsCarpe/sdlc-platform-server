@@ -227,7 +227,7 @@ def test_reconcile_skips_platform_comment_echo(env: tuple[TestClient, Database, 
     （external_id 空，幂等键永不匹配）不被复制成 feishu 行；普通飞书评论照常导入。
     （source_import 通道不达此场景——封存守卫先拒有平台评论的重导。）"""
     from platform_sdlc.models import ReqComment
-    client, db, repos = env
+    client, _, repos = env
     req_id = _mk_card(client)
     _seed_block(repos, req_id)
     pcm_id = repos.req_comment.insert(ReqComment(

@@ -189,7 +189,8 @@ erDiagram
         TEXT status "queued | running | done | failed"
         TEXT payload "JSON（note 等）"
         TEXT result "JSON（done 摘要 / failed 错误+reason+hint）"
-        TEXT runner "领取者：local-<pid> / openai-agents-inproc"
+        TEXT runner "领取者：local-<hostname>-runner / openai-agents-inproc（稳定名，重启不变）"
+        INTEGER attempt "retry 递增的执行代数（P1-6：迟到回报的 fencing）"
         TEXT created_by "空=人工；auto:clarify-complete | auto:published | gate:open"
         TEXT created_at
         TEXT updated_at "超时恢复的判断依据"
@@ -213,6 +214,9 @@ erDiagram
         TEXT status "pending | released（权威两值；2026-10 英文化，存量中文值经 SchemaMigrator 迁移）"
         TEXT checks_json "开闸三条件快照"
         TEXT baseline_json "GR-3 基线：设计终稿全文+用例 maxUpdated"
+        TEXT review_mode "P1-9 扇出留痕：external | degraded（issues 头 ingest 解析；A/B 级 degraded 拒收）"
+        INTEGER fanout "P1-9：实际子代理扇出数（A=4 / B=2 / C=0）"
+        TEXT context_mode "P1-9：fresh | single-session（A/B 必须 fresh）"
         TEXT released_at
         TEXT released_by
         TEXT created_by "开闸人"
@@ -297,7 +301,7 @@ erDiagram
 | `draft_artifact` | 草稿（agent/skill 回传） | 复合主键 upsert；采纳成功即删（草稿是临时态）；终态锁拒 `digest_bundle/standard` 类草稿 |
 | `seq_case_no` | 用例全局序号发号器 | 单行（id=1）账本，批量分配在事务内一次 UPDATE（循环内不查库） |
 | `iteration` | 迭代 | 名即主键；与需求 **1:1 = 存活需求按 iter 唯一**（软删自动释放迭代名）；仅空迭代可删（物理删除） |
-| `gate_round` | 评审轮 | 权威状态仅两值：pending→released；放行后轮只读；新轮=复审（GR-3），旧轮归档 |
+| `gate_round` | 评审轮 | 权威状态仅两值：pending→released；放行后轮只读；新轮=复审（GR-3），旧轮归档；review_mode/fanout/context_mode = issues 头扇出留痕（P1-9：A/B 级 degraded/扇出不足 ingest 409，C 级进程内固定 degraded/0/single-session） |
 | `gate_issue` | 评审 issue 与裁决 | `merged_unit` 裁决单元：人裁决的是单元，同单元批量同裁；`filed=1` 备案区放行校验豁免；落改闭环 = 落点已填 ∧ `rev_status=done` |
 | `req_block` | v4.1 原文块（块表权威） | 复合主键 `(req_id,block_id)`，锚点即主键（导入沿用飞书块 ID，平台编辑新发 `blk-<ulid>` 禁内容哈希）；`seq` 间隔 1000，重排=事务内整体重排属常规操作；派生字段（path/ordinal）读时推导不落库；comment 不入块表（评论单一权威在 req_comment）；`deleted` 软删留痕 |
 | `req_comment` | v4.1 评论（双 origin） | `origin` 区分 platform/feishu；`external_id`=飞书 comment-id（幂等重导唯一定位键）；`block_id` 空=卡片级非空=锚定块；`reply_to` 回复链；导入幂等=替换 feishu 行、平台行不动 |
@@ -426,7 +430,7 @@ sequenceDiagram
     participant EXE as 执行器
     participant DB as SQLite task 表
 
-    R->>API: POST /api/tasks/next?runner=local-123
+    R->>API: POST /api/tasks/next?runner=local-<host>-runner
     API->>DB: claim（条件 UPDATE）
     alt 领到（affected=1）
         API-->>R: 200 任务 JSON
@@ -637,8 +641,8 @@ flowchart TD
 |---|---|
 | 健康 | `GET /api/health` |
 | 需求 | `POST /api/requirements` · `GET /api/requirements`（iter/status 过滤）· `GET /api/requirements/{id}` · `POST …/artifacts`（质检推送）· `GET …/answers` · `PUT …/answers/{seq}`（处置）· `POST …/publish` · `POST …/status` · `DELETE …/{id}`（软删）· `GET …/doc.json`（块表权威原文导出，curl 直落供质检管线；空表回退 doc artifact）· `GET …/comments.json`（resolve_anchors --comments 兼容格式）· `PUT …/blocks`（v4-7 窗口 1 块级直接编辑：全量块数组→服务端 diff LIS→事务应用）· `POST …/blocks/diff`（diff 预览 dry-run）· `POST/GET …/comments`（v4-8 评论 CRUD，GET 带 unresolvedCount）· `POST …/comments/{cid}/resolve`（线程级解决/重开）· `DELETE …/comments/{cid}` · `POST …/comments/{cid}/escalate`（升级澄清项 L 系，src_comment_id 回链）· `GET /api/fr-points?req_id=` |
-| 任务/草稿 | `POST …/tasks` · `GET /api/tasks`（过滤）· `POST /api/tasks/next?runner=`（原子领取，写语义纳入 X-Token，空 204）· `POST /api/tasks/recover-stale?runner=`（执行器崩溃恢复，按 runner 归属过滤）· `POST /api/tasks/{id}/done\|failed\|retry\|cancel` · `PUT/GET/DELETE …/drafts[/{type}]` · `POST …/drafts/{type}/approve` |
-| 用例 | `POST /api/cases`（skill 批量）· `POST /api/cases/form` · `GET /api/cases`（iter/reqId/status/tool/q）· `GET/PATCH /api/cases/{req}/{case}` · `POST …/comments` |
+| 任务/草稿 | `POST …/tasks` · `GET /api/tasks`（过滤）· `POST /api/tasks/next?runner=`（原子领取，写语义纳入 X-Token，空 204）· `POST /api/tasks/recover-stale?runner=`（执行器崩溃恢复，按 runner 归属过滤；全通道恢复须显式 `all=true`，另由服务端周期 sweeper 兜底孤儿）· `POST /api/tasks/{id}/done\|failed\|retry\|cancel` · `PUT/GET/DELETE …/drafts[/{type}]` · `POST …/drafts/{type}/approve` |
+| 用例 | `POST /api/cases`（skill 批量）· `POST /api/cases/form` · `GET /api/cases`（iter/reqId/status/tool/q）· `GET/PATCH/DELETE /api/cases/{req}/{case}`（PATCH 对表单来源支持 `status=reviewed` 人工确认定稿；DELETE 仅表单来源，sdlc-test 409）· `POST …/comments` |
 | 设计 | `GET …/design` · `PUT …/target-repos` · `POST …/design/skip` |
 | 门禁 | `GET …/gate` · `POST …/gate/open` · `POST …/gate/rounds/{rid}/ingest` · `GET …/gate/change-status` · `POST …/gate/reopen` · `POST /api/gate/issues/{id}/verdict` · `POST /api/gate/issues/{id}/revision` · `POST /api/gate/rounds/{rid}/release` |
 | 迭代 | `GET /api/iterations` · `POST /api/iterations` · `GET /api/iterations/detail?name=` · `DELETE /api/iterations/detail?name=`（迭代名可含 `/`，走 query 参） |

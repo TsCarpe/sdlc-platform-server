@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import re
 import shlex
 from pathlib import Path
@@ -40,6 +41,19 @@ _CMD_DOC = (
 )
 
 _MEDIA_ID = re.compile(r"^m-[0-9a-f]{12}$")
+
+# P1-10（2026-10 三仓评估）：run_command 子进程用显式环境白名单——agent 上下文含外部需求原文/
+# 评论，prompt injection 可诱导命令读取环境变量；完整继承会把 SDLC_WRITE_TOKEN / 模型 API key
+# 交给 sh -c。HOME 刻意保留真实值：lark-cli 认证与 CLI 配置在用户目录，改指工作区会让飞书
+# 原文导入失效；文件系统沙箱（容器/低权用户/只读源码）属中期项，不在 env 白名单的防护面内。
+_ENV_ALLOW = ("PATH", "HOME", "LANG", "LC_ALL", "LC_CTYPE", "TZ", "TMPDIR", "TEMP", "TMP",
+              "TERM", "SHELL", "USER")
+
+
+def _child_env() -> dict[str, str]:
+    env = {k: os.environ[k] for k in _ENV_ALLOW if k in os.environ}
+    env.setdefault("PATH", "/usr/local/bin:/usr/bin:/bin")
+    return env
 
 
 def _err(msg: str) -> str:
@@ -348,7 +362,8 @@ async def run_command(wrapper: RunContextWrapper[TaskRunContext], command: str, 
                 raise ValueError(f"段首命令不在白名单（{'/'.join(sorted(_CMD_ALLOW))}）：{first}")
         try:
             proc = subprocess.run(["sh", "-c", cmd], cwd=c.workspace, capture_output=True,
-                                  text=True, timeout=timeout_seconds if timeout_seconds > 0 else 300)
+                                  text=True, timeout=timeout_seconds if timeout_seconds > 0 else 300,
+                                  env=_child_env())
         except subprocess.TimeoutExpired as e:
             raise ValueError(f"命令超时：{cmd}") from e
         out = (proc.stdout or "") + (proc.stderr or "")
@@ -365,10 +380,12 @@ async def run_command(wrapper: RunContextWrapper[TaskRunContext], command: str, 
 
 
 # 先赋动态 docstring 再裸调用装饰（@function_tool 无括号形态等价 function_tool(func)，agents SDK
-# 同一代码路径；ALL_TOOLS 在下方引用的是重绑后的 Tool 实例）——拆开写是 docstring 动态化的最小改法
+# 同一代码路径）——拆开写是 docstring 动态化的最小改法。装饰产物绑定独立名：重绑定同名会把
+# def 声明类型（函数签名）撞上 FunctionTool（严类型门 reportAssignmentType）；工具名仍由
+# 函数 __name__ 派生，LLM 可见面不变
 run_command.__doc__ = _CMD_DOC
-run_command = function_tool(run_command)
+_run_command_tool: Tool = function_tool(run_command)
 
 
 ALL_TOOLS: list[Tool] = [get_requirement_card, list_clarify_items, list_req_comments, get_digest_bundle,
-             get_design_doc, list_cases, put_draft, upload_media, read_file, write_file, run_command]
+             get_design_doc, list_cases, put_draft, upload_media, read_file, write_file, _run_command_tool]

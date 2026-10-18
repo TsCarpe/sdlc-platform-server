@@ -45,8 +45,12 @@ class TaskRepo:
         return int(n or 0)
 
     def claim(self, runner: str, at: str) -> Task | None:
-        """原子领取：SELECT 后带 status 条件 UPDATE，affected=1 即领取成功。"""
-        row = self.db.query_one("SELECT id FROM task WHERE status='queued' ORDER BY id LIMIT 1")
+        """原子领取：SELECT 后带 status 条件 UPDATE，affected=1 即领取成功。
+        N-1：软删需求的任务不领取（服务层删除已批量取消 queued，此处堵竞态/直改库的残留）。"""
+        row = self.db.query_one(
+            "SELECT id FROM task WHERE status='queued'"
+            " AND req_id IN (SELECT id FROM requirement WHERE deleted_at='')"
+            " ORDER BY id LIMIT 1")
         if row is None:
             return None
         task_id = int(row["id"])
@@ -60,20 +64,23 @@ class TaskRepo:
             return None
         return self.find(task_id)
 
-    def finish(self, task_id: int, status: str, result_json: str, at: str) -> bool:
-        """仅 running 可回报终态，防竞态覆盖。"""
-        return (
-            self.db.execute(
-                "UPDATE task SET status=?, result=?, updated_at=? WHERE id=? AND status='running'",
-                (status, result_json, at, task_id),
-            )
-            == 1
-        )
+    def finish(self, task_id: int, status: str, result_json: str, at: str,
+               attempt: int | None = None) -> bool:
+        """仅 running 可回报终态，防竞态覆盖；attempt 非空时加 fencing（P1-6：retry 前的
+        旧执行器晚到回报不得覆盖新 attempt 的终态）。"""
+        sql = "UPDATE task SET status=?, result=?, updated_at=? WHERE id=? AND status='running'"
+        args: list[object] = [status, result_json, at, task_id]
+        if attempt is not None:
+            sql += " AND attempt=?"
+            args.append(attempt)
+        return self.db.execute(sql, tuple(args)) == 1
 
     def retry(self, task_id: int, at: str) -> bool:
+        """failed → queued；attempt+1 开新一轮执行代数（迟到回报的 fencing 依据）。"""
         return (
             self.db.execute(
-                "UPDATE task SET status='queued', runner='', result='', updated_at=? WHERE id=? AND status='failed'",
+                "UPDATE task SET status='queued', runner='', result='', attempt=attempt+1,"
+                " updated_at=? WHERE id=? AND status='failed'",
                 (at, task_id),
             )
             == 1

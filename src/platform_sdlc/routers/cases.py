@@ -40,6 +40,11 @@ def router(ctx: AppContext) -> APIRouter:
         body = await read_json(request, required=True)
         return await asyncio.to_thread(svc.form_update, req_id, case_id, body)
 
+    @r.delete("/api/cases/{req_id}/{case_id}")
+    async def delete(req_id: str, case_id: str) -> dict[str, Any]:
+        """表单用例删除（P1-7）；sdlc-test 来源 409（只读+评论）。"""
+        return await asyncio.to_thread(svc.form_delete, req_id, case_id)
+
     @r.post("/api/cases/{req_id}/{case_id}/comments")
     async def comment(req_id: str, case_id: str, request: Request) -> dict[str, Any]:
         body = await read_json(request, required=True)

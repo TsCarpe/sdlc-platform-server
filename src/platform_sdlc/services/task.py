@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any
+from typing import Any, cast
 
 from platform_sdlc.common import ApiException, IntegrityException, Times, is_json_obj, jint_or_400, jrequired, jtext
 from platform_sdlc.db import Database
@@ -40,10 +40,37 @@ _TASK_TYPES = {T_QUALITY, T_STANDARD, T_CASES, T_DESIGN, T_DESIGN_REV, T_GATE, T
 # 发布后合法的任务类型（终态锁/发布收尾的统一豁免面，D36）：用例/设计/修订/门禁评审
 _POST_PUBLISH_TYPES = frozenset({T_CASES, T_DESIGN, T_DESIGN_REV, T_GATE})
 
+# 可重试 reason 白名单（N-1）：失败任务是「执行没跑成」才可重试；生命周期取消/作废
+# （req-deleted / superseded-by-publish / change-aborted / cancelled）一律终局——重试复活
+# 会向已删需求/已放弃变更写数据，违反终态锁红线的延伸语义。
+_RETRYABLE_REASONS = frozenset({
+    "import-failed", "integrity-failed", "timeout", "no-draft", "agent-exception", "blocks-empty",
+})
+
 
 def _post_publish_task(type_: str) -> bool:
     """发布后合法的任务类型（终态锁豁免面，D36）：用例/设计/修订/门禁评审都是发布后流程。"""
     return type_ in _POST_PUBLISH_TYPES
+
+
+def _reason_of(result_json: str) -> str:
+    """失败结果的机器码（_fail_map 落库形态；纯文本/旧格式无 reason 归空串）。"""
+    try:
+        v: Any = json.loads(result_json or "{}")
+    except json.JSONDecodeError:
+        return ""
+    if not isinstance(v, dict):
+        return ""
+    return str(cast("dict[str, Any]", v).get("reason") or "")
+
+
+class _ImportFailure(Exception):
+    """source_import 落库失败：抛出以回滚导入事务（块表/评论不留半途写入），
+    再由 finish 在独立事务中记 failed 终态。"""
+
+    def __init__(self, body: dict[str, Any]) -> None:
+        super().__init__(str(body.get("error") or "导入失败"))
+        self.body = body
 
 
 class TaskService:
@@ -139,7 +166,8 @@ class TaskService:
             # 返回 None = 领取方本轮无任务，下一轮询自然前进（不自旋查库）。
             self.finish(t.id, False, {
                 "error": "原文未导入，先完成 source_import", "reason": "blocks-empty",
-                "hint": "等待导入任务完成或人工重试导入后，重新创建质检任务"})
+                "hint": "等待导入任务完成或人工重试导入后，重新创建质检任务",
+                "runner": t.runner, "attempt": t.attempt})
             return None
         return t
 
@@ -157,38 +185,84 @@ class TaskService:
             raise ApiException(409, "飞书源已导入且存在平台编辑痕迹/平台评论，全量重导已封存；原文变更走变更单")
 
     def finish(self, task_id: int, ok: bool, body: dict[str, Any] | None) -> Task:
-        t = self.repos.task.find(task_id)
-        if t is None:
-            raise ApiException(404, f"任务不存在：{task_id}")
+        """任务终态回报（双通道汇合点）。
+
+        P1-6 顺序修正：终态校验（状态 / 执行器 / attempt）与 source_import 落库、终态置位收进
+        同一事务——校验不过在任何副作用之前 409；导入异常整体回滚（块表/评论保持原状）后另起
+        事务记 failed。attempt 是 retry 递增的 fencing 代数，旧执行器迟到回报不得覆盖新 attempt。
+        body 的 runner/attempt 可选（旧脚本兼容，缺省不做对应校验）；runner/agent 两通道始终携带。
+        """
         body = body or {}  # done/failed 可无 body，全 null 字段即默认值语义
-        # 通道兜底（评测 P0-2b）：外置 runner 通道撞终态锁的失败回报，统一补作废语义
-        if not ok and self.superseded_by_publish(t):
-            if not jtext(body, "error", "").strip():
-                body["error"] = "需求已发布（终态锁定），任务作废"
-            body["reason"] = "superseded-by-publish"
-            body["hint"] = "标准文档已由人工定稿；该任务不可重试"
-        # v4-3（DESIGN-v4 §3 落库机制细则）：source_import 完成回调——服务端直读输出文件落库
-        # （内容不经 LLM 上下文），落库成功才置 done；失败转 failed 可 retry。
-        # 两通道（runner POST done / 进程内 loop）在此汇合，落库只此一处。
-        if ok and t.type == T_SOURCE_IMPORT:
+        runner = jtext(body, "runner", "")
+        attempt_raw = body.get("attempt")
+        attempt: int | None = None
+        if attempt_raw is not None:
             try:
-                imported = self.blocks.import_from_output(t)
-                body = {"result": _json(imported)}
-            except IntegrityException as e:
-                # 守恒终检未过（guard 对账/媒体状态/missingMedia）：与一般导入失败分流，引导按文案修复
-                ok = False
-                body = {"error": str(e), "reason": "integrity-failed",
-                        "hint": "守恒终检未过：按错误内文案修复后 retry"}
-            except ApiException as e:
-                ok = False
-                body = {"error": str(e), "reason": "import-failed", "hint": "确认任务工作区 out/doc.json 已由 parse_doc 产出后重试"}
-            except Exception as e:  # noqa: BLE001  # 落库异常兜底转 failed
-                ok = False
-                body = {"error": f"导入落库失败：{e}", "reason": "import-failed", "hint": "可重试（retry 重新排队）"}
-        result = jtext(body, "result", "") if ok else _json(_fail_map(body))
-        if not self.repos.task.finish(task_id, "done" if ok else "failed", result, Times.now()):
-            raise ApiException(409, f"仅执行中（running）的任务可回报结果（当前：{t.status}）")
-        out = self.repos.task.find(task_id)
+                attempt = int(attempt_raw)
+            except (TypeError, ValueError) as e:
+                raise ApiException(400, f"attempt 须为整数（收到：{attempt_raw!r}）") from e
+        out: Task | None = None
+        try:
+            with self.db.tx():
+                t = self.repos.task.find(task_id)
+                if t is None:
+                    raise ApiException(404, f"任务不存在：{task_id}")
+                # 先校验、后副作用：取消/重复回报/旧 attempt 回报一律在导入之前 409
+                if t.status != "running":
+                    raise ApiException(409, f"仅执行中（running）的任务可回报结果（当前：{t.status}）")
+                if runner and t.runner and runner != t.runner:
+                    raise ApiException(409, f"执行器不匹配（任务归属：{t.runner}，回报：{runner}）")
+                if attempt is not None and attempt != t.attempt:
+                    raise ApiException(409, f"执行尝试已过期（当前 attempt={t.attempt}，回报 {attempt}）"
+                                            "——结果已被 retry 取代，丢弃")
+                # 通道兜底（评测 P0-2b）：外置 runner 通道撞终态锁的失败回报，统一补作废语义
+                if not ok and self.superseded_by_publish(t):
+                    if not jtext(body, "error", "").strip():
+                        body["error"] = "需求已发布（终态锁定），任务作废"
+                    body["reason"] = "superseded-by-publish"
+                    body["hint"] = "标准文档已由人工定稿；该任务不可重试"
+                # v4-3（DESIGN-v4 §3 落库机制细则）：source_import 完成回调——服务端直读输出文件落库
+                # （内容不经 LLM 上下文），落库成功才置 done；失败转 failed 可 retry。
+                # 两通道（runner POST done / 进程内 loop）在此汇合，落库只此一处。
+                if ok and t.type == T_SOURCE_IMPORT:
+                    r = self.repos.requirement.find(t.req_id)
+                    if r is None:
+                        # N-1：软删需求不落库（claim 已过滤，此处堵「领取后删除」竞态）
+                        raise _ImportFailure({"error": "需求不存在或已删除，导入落库拒绝",
+                                              "reason": "req-deleted", "hint": "任务随需求删除作废，不可重试"})
+                    try:
+                        self._guard_import_sealed(r)  # P1-6③：与建任务同一口径的导入前复检
+                    except ApiException as e:
+                        raise _ImportFailure({"error": str(e), "reason": "sealed",
+                                              "hint": "封存后原文变更走变更单；该任务不可重试"}) from e
+                    try:
+                        imported = self.blocks.import_from_output(t)
+                        body = {"result": _json(imported)}
+                    except IntegrityException as e:
+                        # 守恒终检未过（guard 对账/媒体状态/missingMedia）：与一般导入失败分流
+                        raise _ImportFailure({"error": str(e), "reason": "integrity-failed",
+                                              "hint": "守恒终检未过：按错误内文案修复后 retry"}) from e
+                    except ApiException as e:
+                        raise _ImportFailure({"error": str(e), "reason": "import-failed",
+                                              "hint": "确认任务工作区 out/doc.json 已由 parse_doc 产出后重试"}) from e
+                    except Exception as e:  # noqa: BLE001  # 落库异常兜底转 failed
+                        raise _ImportFailure({"error": f"导入落库失败：{e}", "reason": "import-failed",
+                                              "hint": "可重试（retry 重新排队）"}) from e
+                result = jtext(body, "result", "") if ok else _json(_fail_map(body))
+                if not self.repos.task.finish(task_id, "done" if ok else "failed", result,
+                                              Times.now(), attempt=t.attempt):
+                    raise ApiException(409, f"仅执行中（running）的任务可回报结果（当前：{t.status}）")
+                out = self.repos.task.find(task_id)
+        except _ImportFailure as f:
+            # 导入事务已随异常回滚（块表/评论原状）；独立事务记 failed 终态
+            with self.db.tx():
+                cur = self.repos.task.find(task_id)
+                if cur is None:
+                    raise ApiException(404, f"任务不存在：{task_id}") from f
+                if not self.repos.task.finish(task_id, "failed", _json(_fail_map(f.body)),
+                                              Times.now(), attempt=attempt):
+                    raise ApiException(409, f"仅执行中（running）的任务可回报结果（当前：{cur.status}）") from f
+                out = self.repos.task.find(task_id)
         assert out is not None
         log.info("任务 #%s %s：%s（runner=%s）", task_id, out.status, out.type, out.runner)
         return out
@@ -211,22 +285,33 @@ class TaskService:
         return r is not None and r.status == "published" and not _post_publish_task(t.type)
 
     def retry(self, task_id: int) -> Task:
-        t = self.repos.task.find(task_id)
-        if t is None:
-            raise ApiException(404, f"任务不存在：{task_id}")
-        if self.superseded_by_publish(t):
-            raise ApiException(409, "该任务随需求发布已作废，不可重试（用例生成不受影响）")
-        if not self.repos.task.retry(task_id, Times.now()):
-            raise ApiException(409, "仅失败（failed）的任务可重试")
-        out = self.repos.task.find(task_id)
-        assert out is not None
-        return out
+        """失败任务重排（N-1）：reason 白名单 + 需求存活复检——生命周期取消/作废一律终局，
+        软删需求的任务不得复活（否则 source_import 会向已删卡块表/评论写数据）。"""
+        with self.db.tx():
+            t = self.repos.task.find(task_id)
+            if t is None:
+                raise ApiException(404, f"任务不存在：{task_id}")
+            if self.repos.requirement.find(t.req_id) is None:
+                raise ApiException(409, "需求已删除，任务不可重试")
+            if self.superseded_by_publish(t):
+                raise ApiException(409, "该任务随需求发布已作废，不可重试（用例生成不受影响）")
+            reason = _reason_of(t.result)
+            if reason not in _RETRYABLE_REASONS:
+                raise ApiException(409, f"该任务失败原因不可重试：{reason or '未知'}"
+                                        "（生命周期取消/作废为终局，人取消即终局）")
+            if not self.repos.task.retry(task_id, Times.now()):
+                raise ApiException(409, "仅失败（failed）的任务可重试")
+            out = self.repos.task.find(task_id)
+            assert out is not None
+            return out
 
     def cancel(self, task_id: int) -> Task:
         t = self.repos.task.find(task_id)
         if t is None:
             raise ApiException(404, f"任务不存在：{task_id}")
-        if not self.repos.task.cancel_queued(task_id, '{"error":"排队中被取消"}', Times.now()):
+        if not self.repos.task.cancel_queued(
+                task_id, '{"error":"排队中被取消","reason":"cancelled","hint":"人取消即终局，不可重试"}',
+                Times.now()):
             raise ApiException(409, "仅排队中（queued）的任务可取消")
         out = self.repos.task.find(task_id)
         assert out is not None

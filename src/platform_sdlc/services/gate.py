@@ -132,10 +132,11 @@ class GateService:
     # ---------- issues 入库（机械校验） ----------
 
     def ingest(self, req_id: str, round_id: int, body: dict[str, Any] | None) -> dict[str, Any]:
-        """gate_issues 草稿确认入库：编号/严重度/场景列/引用可达（md×json 同源）机械校验，全绿才落 gate_issue。"""
+        """gate_issues 草稿确认入库：编号/严重度/场景列/引用可达（md×json 同源）机械校验，全绿才落 gate_issue。
+        P1-9：issues 头 reviewMode/fanout/contextMode 解析落库；A/B 级 degraded/扇出不足拒收。"""
         _ = body
         with self.db.tx():
-            self.require(req_id)
+            r = self.require(req_id)
             rnd = self.repos.gate.find_round(round_id)
             if rnd is None:
                 raise ApiException(404, f"评审轮不存在：{round_id}")
@@ -151,6 +152,11 @@ class GateService:
             issues_raw = _parse(d.content_json).get("issues")
             if not is_json_list(issues_raw) or not issues_raw:
                 raise ApiException(400, "issues 草稿 contentJson.issues 为空")
+
+            meta = _review_meta(d.md)
+            self._validate_review_meta(r.risk_tier, meta)
+            self.repos.gate.set_review_meta(round_id, str(meta["reviewMode"]), int(meta["fanout"]),
+                                            str(meta["contextMode"]))
 
             codes: set[str] = set()
             parsed: list[GateIssue] = []
@@ -294,8 +300,9 @@ class GateService:
         cur_cases = self._cases_max_updated(req_id)
         if cur_md != str(b.get("designMd", "")):
             reasons.append(f"设计文档内容变更（v{d.version if d else 0} ≠ 基线 v{int(b.get('designVer') or 0)}）")
-        if cur_cases >= str(b.get("casesMaxUpdated", "")) and cur_cases:
-            # >=（秒级时间戳保守取向）：基线同秒的用例更新也计「已更新」——宁可多提醒不漏判
+        if cur_cases > str(b.get("casesMaxUpdated", "")) and cur_cases:
+            # 严格 >（P1-8）：基线取开闸时点快照，放行后无人改用例时两者相等——>= 会把「无变化」
+            # 判成「已变更」，每次都误报复审。同秒内改用例仍会漏判（秒级时间戳的已知边界，记档接受）。
             reasons.append("用例在基线后有更新")
         out: dict[str, Any] = {"changed": bool(reasons), "reasons": reasons,
                                "window": "released" if latest.status == "released" else "in-review"}
@@ -310,6 +317,33 @@ class GateService:
                     f"需求内容已变更（变更单 #{','.join(str(c.id) for c in req_changes)}，"
                     f"reqRev {int(b.get('reqRev') or 0)} → 现值）")
         return out
+
+    @staticmethod
+    def _validate_review_meta(tier: str, meta: dict[str, Any]) -> None:
+        """P1-9（A+B 策略）：扇出留痕机械校验——A/B 级必须外置 runner 全新上下文扇出。
+        未标注（存量 issues 均为迁移窗口前产物）放行，由通道 prompt/模板在新建产物时强制写。"""
+        if not meta["present"]:
+            return
+        mode = str(meta["reviewMode"])
+        ctx = str(meta["contextMode"])
+        fanout = int(meta["fanout"])
+        if mode not in ("external", "degraded"):
+            raise ApiException(400, f"issues 头 reviewMode 非法：{mode or '空'}（external|degraded）")
+        if ctx not in ("fresh", "single-session"):
+            raise ApiException(400, f"issues 头 contextMode 非法：{ctx or '空'}（fresh|single-session）")
+        if fanout < 0:
+            raise ApiException(400, "issues 头 fanout 须为非负整数")
+        tier_v = tier if tier in ("A", "B", "C") else "A"  # 未分级按 A（与 skill 分档规则同口径）
+        if tier_v in ("A", "B"):
+            need = 4 if tier_v == "A" else 2
+            if mode == "degraded" or ctx != "fresh":
+                raise ApiException(409, f"{tier_v} 级评审须用外置 runner 全新上下文扇出"
+                                        f"（reviewMode=external / fanout≥{need} / contextMode=fresh）；"
+                                        "进程内单会话降级评审仅限 C 级")
+            if fanout < need:
+                raise ApiException(409, f"{tier_v} 级评审扇出不足：fanout={fanout}（须 ≥{need}）")
+        elif ctx != "single-session":
+            raise ApiException(400, "C 级评审为主会话自查：contextMode 须为 single-session")
 
     # ---------- 读面（六态推导） ----------
 
@@ -356,7 +390,9 @@ class GateService:
 
     def _round_block(self, g: GateRound) -> dict[str, Any]:
         return {"id": g.id, "roundNo": g.round_no, "status": g.status, "openedAt": g.opened_at,
-                "releasedAt": g.released_at, "releasedBy": g.released_by}
+                "releasedAt": g.released_at, "releasedBy": g.released_by,
+                # P1-9 扇出留痕（ingest 时点回写；空值 = 迁移窗口前存量产物）
+                "reviewMode": g.review_mode, "fanout": g.fanout, "contextMode": g.context_mode}
 
     def _issue_block(self, g: GateIssue) -> dict[str, Any]:
         return {"id": g.id, "code": g.code, "sev": g.sev, "theme": g.theme, "role": g.role,
@@ -378,3 +414,23 @@ class GateService:
 
 def _json(o: Any) -> str:
     return json.dumps(o, ensure_ascii=False, separators=(",", ":"))
+
+
+def _review_meta(md: str) -> dict[str, Any]:
+    """issues 头（首个 `## ` 标题前）解析 P1-9 扇出留痕三行：
+    `| reviewMode | external \\| degraded |`、`| fanout | N |`、`| contextMode | fresh \\| single-session |`。
+    三行全缺 → present=False（迁移窗口前存量产物，不校验不展示）。"""
+    header = md.split("\n## ", 1)[0]
+
+    def kv(field: str) -> str:
+        m = re.search(rf"^\|\s*{re.escape(field)}\s*\|\s*([^|]*)\|", header, re.M)
+        return m.group(1).strip() if m else ""
+
+    fanout_raw = kv("fanout")
+    try:
+        fanout = int(fanout_raw) if fanout_raw else 0
+    except ValueError:
+        fanout = -1  # 非法值留给 _validate_review_meta 报 400
+    mode, ctx = kv("reviewMode"), kv("contextMode")
+    return {"reviewMode": mode, "fanout": fanout, "contextMode": ctx,
+            "present": bool(mode or fanout_raw or ctx)}

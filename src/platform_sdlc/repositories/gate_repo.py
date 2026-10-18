@@ -12,8 +12,17 @@ class GateRepo:
 
     def insert_round(self, r: GateRound) -> int:
         return self.db.insert(
-            "INSERT INTO gate_round(req_id,round_no,status,checks_json,baseline_json,created_by,opened_at) VALUES(?,?,?,?,?,?,?)",
-            (r.req_id, r.round_no, r.status, r.checks_json, r.baseline_json, r.created_by, r.opened_at),
+            "INSERT INTO gate_round(req_id,round_no,status,checks_json,baseline_json,"
+            "review_mode,fanout,context_mode,created_by,opened_at) VALUES(?,?,?,?,?,?,?,?,?,?)",
+            (r.req_id, r.round_no, r.status, r.checks_json, r.baseline_json,
+             r.review_mode, r.fanout, r.context_mode, r.created_by, r.opened_at),
+        )
+
+    def set_review_meta(self, round_id: int, review_mode: str, fanout: int, context_mode: str) -> int:
+        """P1-9：issues 头扇出留痕回写（ingest 时点）。"""
+        return self.db.execute(
+            "UPDATE gate_round SET review_mode=?, fanout=?, context_mode=? WHERE id=?",
+            (review_mode, fanout, context_mode, round_id),
         )
 
     def find_round(self, round_id: int) -> GateRound | None:

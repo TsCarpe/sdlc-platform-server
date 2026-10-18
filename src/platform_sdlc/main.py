@@ -5,10 +5,11 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import logging
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
-from datetime import datetime
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -30,6 +31,24 @@ logging.basicConfig(level=logging.INFO)  # 单服务部署：INFO 直出 stdout/
 
 log = logging.getLogger(__name__)
 
+# 孤儿 running 周期自愈间隔（P1-5）：执行器被 kill -9 / 崩溃 / 手工 node 启动换名时，running
+# 任务无人回报终态；同需求同类型新任务会被 count_active 永久 409。服务端 sweeper 不看名字，
+# 只按 updated_at 超时兜底（另一通道未超时的执行不受影响）。
+_STALE_SWEEP_INTERVAL_SEC = 300
+
+
+async def _stale_sweeper(services: Services, timeout_min: int) -> None:
+    """周期清理超时 running（只清 updated_at 超过阈值的任务——另一通道未超时的执行不受影响）。
+    启动即扫一轮：服务重启本身常伴随执行器重启，可立即回收上一进程遗留的孤儿。"""
+    while True:
+        try:
+            n = await asyncio.to_thread(services.tasks.expire_stale, timeout_min)
+            if n:
+                log.warning("stale sweeper：%d 个超时 running 任务置 failed（孤儿回收）", n)
+        except Exception:  # noqa: BLE001  # 后台 sweeper 不因单轮异常退出
+            log.exception("stale sweeper 执行异常（下轮继续）")
+        await asyncio.sleep(_STALE_SWEEP_INTERVAL_SEC)
+
 
 def create_app(settings: Settings | None = None, cwd: Path | None = None) -> FastAPI:
     settings = settings or Settings()
@@ -48,12 +67,18 @@ def create_app(settings: Settings | None = None, cwd: Path | None = None) -> Fas
 
             ctx.agent = AgentLoop(settings, repos, services)
             ctx.agent.start()  # Phase ②：进程内任务 agent（openai-agents），外置 runner 通道不受影响
-        yield
-        if ctx.agent is not None:
-            await ctx.agent.stop()
-        from platform_sdlc.agent.assistant import close_shared_session_db
+        sweeper = asyncio.create_task(_stale_sweeper(services, settings.agent_timeout_min))
+        try:
+            yield
+        finally:
+            sweeper.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await sweeper
+            if ctx.agent is not None:
+                await ctx.agent.stop()
+            from platform_sdlc.agent.assistant import close_shared_session_db
 
-        close_shared_session_db()  # assistant.db 共享连接显式关闭（AUDIT D5-1）
+            close_shared_session_db()  # assistant.db 共享连接显式关闭（AUDIT D5-1）
 
     app = FastAPI(title="sdlc-platform", lifespan=lifespan, redirect_slashes=False)
     _install_exception_handlers(app)
@@ -108,16 +133,9 @@ def _install_middleware(app: FastAPI, settings: Settings) -> None:
         # 对应 TokenFilter：仅拦非 GET 且 /api/ 前缀；write-token 为空不启用（v1 无登录共识）
         is_write = request.method != "GET" and request.url.path.startswith("/api/")
         if is_write and settings.write_token and request.headers.get("X-Token") != settings.write_token:
-            # sendError 形状 = Spring Boot 默认错误体（message 默认不输出）
-            return JSONResponse(
-                {
-                    "timestamp": datetime.now().isoformat(timespec="milliseconds"),
-                    "status": 401,
-                    "error": "Unauthorized",
-                    "path": request.url.path,
-                },
-                status_code=401,
-            )
+            # 统一错误体 {error}（AUDIT T-10）：旧 Spring 形状（{timestamp,status,error,path}）
+            # 与全站契约不一致，前端只读 data.error 会退化成「请求失败 401」
+            return JSONResponse({"error": "未授权：写操作需要有效的 X-Token 请求头"}, status_code=401)
         return await call_next(request)
 
     @app.middleware("http")

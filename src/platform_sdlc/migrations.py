@@ -40,6 +40,14 @@ _COLUMNS: list[tuple[str, str, str]] = [
     ("clarify_item", "src_comment_id", "ALTER TABLE clarify_item ADD COLUMN src_comment_id INTEGER"),
     # v1.6（DESIGN-v5 §6.1/§6.3）：选择题化作答契约——options=选项快照（JSON 数组串）、
     # module/layer=分层归属（layer 1-7 体系，§6.2）。默认空串/空选项，存量行零回填零迁移
+    # P1-6（2026-10 三仓评估）：retry 复用同一 task id——attempt 单调递增作 fencing，迟到/重复的
+    # done/failed 只有携带当前 attempt 才能置终态（旧执行器跨 retry 晚到不得覆盖新 attempt）
+    ("task", "attempt", "ALTER TABLE task ADD COLUMN attempt INTEGER NOT NULL DEFAULT 0"),
+    # P1-9（2026-10 三仓评估）：评审扇出留痕——issues 头 reviewMode/fanout/contextMode 在 ingest
+    # 机械解析落库，UI 可见「降级评审」，A/B 级 degraded 在 ingest 被拒（A+B 策略）
+    ("gate_round", "review_mode", "ALTER TABLE gate_round ADD COLUMN review_mode TEXT DEFAULT ''"),
+    ("gate_round", "fanout", "ALTER TABLE gate_round ADD COLUMN fanout INTEGER NOT NULL DEFAULT 0"),
+    ("gate_round", "context_mode", "ALTER TABLE gate_round ADD COLUMN context_mode TEXT DEFAULT ''"),
     ("clarify_item", "options", "ALTER TABLE clarify_item ADD COLUMN options TEXT DEFAULT ''"),
     ("clarify_item", "module", "ALTER TABLE clarify_item ADD COLUMN module TEXT DEFAULT ''"),
     ("clarify_item", "layer", "ALTER TABLE clarify_item ADD COLUMN layer TEXT DEFAULT ''"),

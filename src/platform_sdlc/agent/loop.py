@@ -101,12 +101,29 @@ class AgentLoop:
 
     async def _handle(self, t: Task) -> None:
         log.info("[agent] 领取 #%s %s @ %s", t.id, t.type, t.req_id)
+        # P1-9（A+B 策略）：A/B 级评审须由外置 runner 用 Agent 工具扇出 4/2 个全新上下文子代理；
+        # 进程内通道无 spawn 能力，静默降级单会话自审违反评审关口语义——直接失败并给出出路。
+        if t.type == "gate_review":
+            r = await asyncio.to_thread(self.repos.requirement.find, t.req_id)
+            tier = (r.risk_tier if r is not None else "") or "A"  # 未分级按 A（skill 分档同口径）
+            if tier in ("A", "B"):
+                await asyncio.to_thread(
+                    self.services.tasks.finish, t.id, False,
+                    {"error": f"{tier} 级评审须用外置 runner（进程内 agent 无全新上下文扇出能力，"
+                              "平台拒绝降级单会话评审）",
+                     "reason": "gate-requires-external",
+                     "hint": "启动 scripts/runner.sh 执行该任务（A=4 / B=2 子代理）；"
+                             "或调整风险分级后重新排队",
+                     "runner": self.RUNNER_NAME, "attempt": t.attempt})
+                log.warning("[agent] #%s 拒绝执行：%s 级 gate_review 需外置 runner", t.id, tier)
+                return
         # 发布后兜底（评测 P0-2b）：claim 与发布之间需求可能已进终态，质检/合成类不再调模型，直接作废
         if await asyncio.to_thread(self.services.tasks.superseded_by_publish, t):
             await asyncio.to_thread(
                 self.services.tasks.finish, t.id, False,
                 {"error": "需求已发布（终态锁定），任务自动作废", "reason": "superseded-by-publish",
-                 "hint": "标准文档已由人工定稿；如需重新质检请新开一轮需求"})
+                 "hint": "标准文档已由人工定稿；如需重新质检请新开一轮需求",
+                 "runner": self.RUNNER_NAME, "attempt": t.attempt})
             log.info("[agent] #%s 随发布作废（终态锁），未调用模型", t.id)
             return
 
@@ -132,11 +149,13 @@ class AgentLoop:
             if error is None:
                 summary = res.summary if res is not None else None
                 result = summary if summary else json.dumps({"draft": self._draft_type_of(t.type)}, ensure_ascii=False)
-                await asyncio.to_thread(self.services.tasks.finish, t.id, True, {"result": result})
+                await asyncio.to_thread(self.services.tasks.finish, t.id, True,
+                                        {"result": result, "runner": self.RUNNER_NAME, "attempt": t.attempt})
                 log.info("[agent] #%s 完成：%s", t.id, result)
             else:
                 await asyncio.to_thread(self.services.tasks.finish, t.id, False,
-                                        {"error": error, "reason": reason, "hint": hint, "diag": diag})
+                                        {"error": error, "reason": reason, "hint": hint, "diag": diag,
+                                         "runner": self.RUNNER_NAME, "attempt": t.attempt})
                 log.warning("[agent] #%s 失败（%s）：%s", t.id, reason, error)
         except Exception as e:  # noqa: BLE001  # 回报终态失败仅记日志
             log.error("[agent] #%s 回报终态失败：%s", t.id, e)

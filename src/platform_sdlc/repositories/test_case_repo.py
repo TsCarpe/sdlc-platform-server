@@ -83,13 +83,14 @@ class TestCaseRepo:
 
     def update_form(
         self, req_id: str, case_id: str, title: str, points: str, priority: str, pre: str, steps: str, expect: str,
-        expected_version: int, at: str
+        status: str, expected_version: int, at: str
     ) -> int:
-        """表单编辑：不改 tool/owner/status；带版本谓词，不符 → 0 行由服务层转 409。"""
+        """表单编辑：不改 tool/owner；status 由服务层限定为 draft→reviewed（确认定稿）。
+        带版本谓词，不符 → 0 行由服务层转 409。"""
         return self.db.execute(
-            "UPDATE test_case SET title=?,points=?,priority=?,pre=?,steps=?,expect=?,version=version+1,updated_at=? "
-            "WHERE req_id=? AND id=? AND version=?",
-            (title, points, priority, pre, steps, expect, at, req_id, case_id, expected_version),
+            "UPDATE test_case SET title=?,points=?,priority=?,pre=?,steps=?,expect=?,status=?,"
+            "version=version+1,updated_at=? WHERE req_id=? AND id=? AND version=?",
+            (title, points, priority, pre, steps, expect, status, at, req_id, case_id, expected_version),
         )
 
     def list(self, iter_name: str | None, req_id: str | None, status: str | None, tool: str | None, q: str | None) -> list[CaseListRow]:

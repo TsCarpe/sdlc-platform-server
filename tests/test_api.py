@@ -94,7 +94,7 @@ def test_case_and_task_and_agent_shapes(client: TestClient) -> None:
     client.post(f"/api/tasks/{auto_import['id']}/failed", json={"error": "api-shape fixture 跳过导入"})
     # v4-4：quality_check 领取有块表非空守卫（本夹具跳过导入）——形状/状态机断言改用 case_gen
     task = client.post("/api/requirements/REQ-2026-001/tasks", json={"type": "case_gen"}).json()
-    assert set(task) == {"id", "reqId", "type", "status", "payload", "result", "runner",
+    assert set(task) == {"id", "reqId", "type", "status", "payload", "result", "runner", "attempt",
                          "createdBy", "createdAt", "updatedAt"}
     claimed = client.post("/api/tasks/next", params={"runner": "smoke"})
     assert claimed.status_code == 200 and claimed.json()["status"] == "running"

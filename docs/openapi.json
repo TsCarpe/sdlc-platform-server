@@ -1550,6 +1550,55 @@
       }
      }
     }
+   },
+   "delete": {
+    "summary": "Delete",
+    "description": "表单用例删除（P1-7）；sdlc-test 来源 409（只读+评论）。",
+    "operationId": "delete_api_cases__req_id___case_id__delete",
+    "parameters": [
+     {
+      "name": "req_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Req Id"
+      }
+     },
+     {
+      "name": "case_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Case Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Delete Api Cases  Req Id   Case Id  Delete"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
    }
   },
   "/api/cases/{req_id}/{case_id}/comments": {
@@ -1759,7 +1808,7 @@
   "/api/tasks/recover-stale": {
    "post": {
     "summary": "Recover Stale",
-    "description": "执行器启动恢复：超时 running 置 failed。runner 非空时只清该执行器名下任务\n（双通道各恢复自己，防跨通道互杀——AUDIT D1-3；超时阈值用服务端单一配置）。",
+    "description": "执行器启动恢复：超时 running 置 failed。默认必须带 runner（只清该执行器名下任务，\n双通道各恢复自己，防跨通道互杀——AUDIT D1-3；超时阈值用服务端单一配置）；\n全通道恢复须显式 all=true，避免裸调用误杀另一通道正在执行的任务（P1-5）。",
     "operationId": "recover_stale_api_tasks_recover_stale_post",
     "parameters": [
      {
@@ -1770,6 +1819,16 @@
        "type": "string",
        "default": "",
        "title": "Runner"
+      }
+     },
+     {
+      "name": "all",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": false,
+       "title": "All"
       }
      }
     ],
@@ -3127,6 +3186,10 @@
       "type": "string",
       "title": "Runner"
      },
+     "attempt": {
+      "type": "integer",
+      "title": "Attempt"
+     },
      "createdBy": {
       "type": "string",
       "title": "Createdby"
@@ -3163,6 +3226,7 @@
      "payload",
      "result",
      "runner",
+     "attempt",
      "createdBy"
     ],
     "title": "TaskOut"

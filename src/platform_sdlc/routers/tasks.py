@@ -10,6 +10,7 @@ from typing import Any
 
 from fastapi import APIRouter, Request, Response
 
+from platform_sdlc.common import ApiException
 from platform_sdlc.routers.http import read_json
 from platform_sdlc.runtime import AppContext
 from platform_sdlc.schemas import DraftOut, TaskOut, wire
@@ -41,9 +42,12 @@ def router(ctx: AppContext) -> APIRouter:
         return Response(content=json.dumps(wire(t), ensure_ascii=False), media_type="application/json")
 
     @r.post("/api/tasks/recover-stale")
-    async def recover_stale(runner: str = "") -> dict[str, Any]:
-        """执行器启动恢复：超时 running 置 failed。runner 非空时只清该执行器名下任务
-        （双通道各恢复自己，防跨通道互杀——AUDIT D1-3；超时阈值用服务端单一配置）。"""
+    async def recover_stale(runner: str = "", all: bool = False) -> dict[str, Any]:
+        """执行器启动恢复：超时 running 置 failed。默认必须带 runner（只清该执行器名下任务，
+        双通道各恢复自己，防跨通道互杀——AUDIT D1-3；超时阈值用服务端单一配置）；
+        全通道恢复须显式 all=true，避免裸调用误杀另一通道正在执行的任务（P1-5）。"""
+        if not runner and not all:
+            raise ApiException(400, "缺少 runner：恢复默认按执行器归属过滤；全通道恢复须显式传 all=true")
         n = await asyncio.to_thread(svc.expire_stale, ctx.settings.agent_timeout_min, runner or None)
         return {"ok": True, "expired": n}
 
