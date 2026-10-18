@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+import shlex
 from pathlib import Path
 from typing import Any
 
@@ -30,7 +31,8 @@ _CMD_ALLOW = {"lark-cli", "python3", "node", "mkdir", "cat", "ls", "jq", "grep",
 _CMD_DOC = (
     "在当前任务工作区目录执行命令（飞书原文抓取、平台数据 curl 直落 raw/、锚点解析脚本等）。"
     "支持管道与重定向；按 | ; && 分段后每段首命令须在白名单：" + "/".join(sorted(_CMD_ALLOW)) +
-    "。禁止命令替换（反引号、$()）。\n\n"
+    "。分段为引号感知（引号内的 ; | 是字面量不切段——URL/代码内分号用引号包裹即可），"
+    "未闭合引号会被拒绝。禁止命令替换（反引号、$()）。\n\n"
     "Args:\n"
     "    command: 完整命令行（多段用 | 或 ; 连接，每段首命令须白名单内）\n"
     "    timeout_seconds: 超时秒数，默认 300\n"
@@ -283,6 +285,52 @@ async def write_file(wrapper: RunContextWrapper[TaskRunContext], path: str, cont
         return _err(f"写入失败：{path}：{e}")
 
 
+# 段边界 sh 元字符（shlex punctuation_chars 字符集去掉重定向 <>——重定向是段内成员非命令边界）：
+# 全部由此类字符组成的 token（| ; && |; ;; ( ) 等 punctuation run）判为段边界操作符
+_SPLIT_OP_CHARS = ";|&()"
+
+
+def _split_segments(cmd: str) -> list[str]:
+    """run_command 分段器（review #23 引号感知）：shlex POSIX 令牌化——引号与反斜杠语义与
+    sh -c 词法一致（引号内 ; | 是字面量不切段；`\"` 是转义字面引号、其后的 `;` 仍是真分隔符
+    ——手写引号状态机在此处会误判「引号内」放后续命令逃逸白名单，评估 A1，必须走 shlex）。
+    段边界 = 全由 ;|&() 组成的操作符 token（重定向 < > 属段内），重组后返回每段剥除段首
+    重定向（> file / < in——shlex 下操作符与目标各为独立 token）的段首命令；纯重定向段
+    返回 ""（sh 语义下仅创建/打开文件无命令面，与旧版 continue 口径一致）。未闭合引号
+    shlex 抛 ValueError、空段（操作符悬空/连打/子 shell 括号）显式抛 ValueError——一律
+    fail-closed，由调用方拒绝。"""
+    lex = shlex.shlex(cmd, posix=True, punctuation_chars=True)
+    lex.whitespace_split = True  # punctuation_chars=True 已自动置位，显式记档意图
+    lex.commenters = ""  # '#' 不剥注释行——词首 # 在 sh 是注释，留作普通 token 由段首校验处置
+    tokens = list(lex)
+
+    def _op(t: str) -> bool:
+        return bool(t) and all(ch in _SPLIT_OP_CHARS for ch in t)
+
+    segs: list[list[str]] = []
+    cur: list[str] = []
+    for tok in tokens:
+        if _op(tok):
+            if not cur:
+                raise ValueError(f"命令存在空段：{cmd}")
+            segs.append(cur)
+            cur = []
+        else:
+            cur.append(tok)
+    if not cur:
+        raise ValueError(f"命令存在空段：{cmd}")
+    segs.append(cur)
+    out: list[str] = []
+    for seg in segs:
+        i = 0
+        while i < len(seg) and seg[i] in (">", "<"):  # 段首重定向：跳过操作符及其目标 token
+            i += 1
+            if i < len(seg) and not _op(seg[i]):
+                i += 1
+        out.append(seg[i] if i < len(seg) else "")
+    return out
+
+
 async def run_command(wrapper: RunContextWrapper[TaskRunContext], command: str, timeout_seconds: int = 300) -> str:
     """docstring 由 _CMD_DOC 运行时赋值（见模块顶部说明——白名单与 LLM 可见面永远一致）。"""
     def impl() -> str:
@@ -295,16 +343,8 @@ async def run_command(wrapper: RunContextWrapper[TaskRunContext], command: str, 
         for bad in ("`", "$(", "\n"):
             if bad in cmd:
                 raise ValueError("命令含禁止记号（反引号 / $() / 多行），请改写为分段白名单命令")
-        for seg in re.split(r"\||;|&&", cmd):
-            s = seg.strip()
-            if not s:
-                raise ValueError(f"命令存在空段：{cmd}")
-            while s.startswith(">") or s.startswith("<"):
-                s = re.sub(r"^[><]+\S*\s*", "", s).strip()
-            if not s:
-                continue
-            first = s.split()[0]
-            if first not in _CMD_ALLOW:
+        for first in _split_segments(cmd):  # 引号感知分段（#23）；空段/未闭合引号由分段器抛 ValueError
+            if first and first not in _CMD_ALLOW:
                 raise ValueError(f"段首命令不在白名单（{'/'.join(sorted(_CMD_ALLOW))}）：{first}")
         try:
             proc = subprocess.run(["sh", "-c", cmd], cwd=c.workspace, capture_output=True,

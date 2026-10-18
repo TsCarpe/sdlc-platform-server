@@ -30,6 +30,7 @@ from platform_sdlc.common import (
     jstrings,
     jtext,
     normalize_layer,
+    option_view,
 )
 from platform_sdlc.db import Database
 from platform_sdlc.models import ReqChange, ReqChangeItem, TestCase
@@ -897,13 +898,15 @@ def _merge_rows(old_rows: list[Any], new_rows: list[Any], section_ids: set[str],
 def _machine_clarify(req_id: str, it: dict[str, Any]) -> Any:
     """增量新澄清行（§6.3：origin='incremental'，P 系编号由平台分配接 max+1——seq 平台权威）。
     v1.6（B6）：options/module/layer 宽松透传（layer 归一）——缺此三字段则增量新行相对
-    全量推送永远降级（options 静默丢弃、layer 不点亮就绪度）。"""
+    全量推送永远降级（options 静默丢弃、layer 不点亮就绪度）；options 元素过 option_view
+    四键白名单（review #11——与 push 全量/读侧 property 三侧同构）。"""
     from platform_sdlc.models import ClarifyItem
     return ClarifyItem(id=0, req_id=req_id, seq="__PENDING__", level=jtext(it, "level", "yellow"),
                        theme=jtext(it, "theme", "") or "增量质检", question=jrequired(it, "question"),
                        ctx=jtext(it, "ctx", ""), quote=jtext(it, "quote", ""),
                        anchor=jtext(it, "anchor", ""), status="pending", origin="incremental",
-                       options_json=(_json_compact(opts) if (opts := jarray(it, "options")) else ""),
+                       options_json=(_json_compact(opts) if (opts := [v for v in map(option_view, jarray(it, "options"))
+                                                                     if v]) else ""),
                        module=jtext(it, "module", ""),
                        layer=normalize_layer(jtext(it, "layer", "")))
 

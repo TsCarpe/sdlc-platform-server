@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from platform_sdlc.agent.assistant import AssistantContext, _requirement_summary  # type: ignore[attr-defined]
+from platform_sdlc.agent.tools import _split_segments
 from platform_sdlc.db import Database
 from platform_sdlc.migrations import run_migrations
 from platform_sdlc.models import Requirement
@@ -59,3 +60,36 @@ def test_assistant_context_shape(env: tuple[Repos, Services]) -> None:
     repos, services = env
     c = AssistantContext(services=services, repos=repos)
     assert c.services is services and c.repos is repos
+
+
+# ---------- run_command 引号感知分段（review #23）：shlex POSIX 令牌流与 sh -c 词法一致 ----------
+
+def test_split_segments_quote_aware() -> None:
+    """#23 目标场景：引号内 ; | 是字面量不切段——带分号 URL 的 curl 直落 raw/ 主路径放行；
+    单行 python3 -c 整体加引号即可执行（原 regex 误切段拒执行的可用性限制解除）。"""
+    assert _split_segments('curl -s "http://x/a;b" > raw/d.json') == ["curl"]
+    assert _split_segments('node -e "console.log(1);console.log(2)"') == ["node"]
+    assert _split_segments("python3 -c 'import json; d=json.load(open(\"x\"))'") == ["python3"]
+
+
+def test_split_segments_operators_outside_quotes() -> None:
+    """#23 安全底线：引号外 ;/|/&& 仍切段——每段段首命令独立暴露给白名单校验
+    （`curl -s x; sh evil.sh` 的第二段段首 sh 不在白名单必拒）。"""
+    assert _split_segments("curl -s x; sh evil.sh") == ["curl", "sh"]
+    assert _split_segments("mkdir -p raw && curl -s y | jq .") == ["mkdir", "curl", "jq"]
+
+
+def test_split_segments_backslash_quote_bypass_locked() -> None:
+    """#23 绕过锁定（评估 A1 反面用例）：`\\"` 是 sh 转义字面引号、其后的 `;` 是真分隔符——
+    朴素手写引号状态机会误判「引号内」不切段，令后续命令逃逸白名单；shlex POSIX 词法正确
+    切成两段（段首 sh 暴露给白名单校验必拒）。fail-closed 前置：修此条前旧版按 `;` 无条件
+    切段同样拒绝，改错（状态机）才会开洞——本用例锁定改对。"""
+    assert _split_segments('curl \\"; sh evil.sh') == ["curl", "sh"]
+
+
+def test_split_segments_malformed_rejected() -> None:
+    """#23 fail-closed：未闭合引号 shlex 抛 ValueError、操作符悬空/连打/子 shell 括号成空段
+    显式抛 ValueError——一律拒绝，不猜词法补全。"""
+    for bad in ("curl 'abc", "curl -s x ;", "a ; | b", "( sh evil.sh )"):
+        with pytest.raises(ValueError):
+            _split_segments(bad)

@@ -43,7 +43,8 @@ await call('POST', `/api/requirements/${reqId}/artifacts`, {
 
 const detail0 = await call('GET', `/api/requirements/${reqId}`)
 const items0 = Object.fromEntries(detail0.items.map(i => [i.seq, i]))
-check('push 解析：P01 options 快照', items0.P01.options, [{ key: 'A', text: '选项A全文' }, { key: 'B', text: '选项B全文' }])
+check('push 解析：P01 options 快照（四键白名单归一，review #11）', items0.P01.options,
+  [{ key: 'A', text: '选项A全文', why: '', recommended: false }, { key: 'B', text: '选项B全文', why: '', recommended: false }])
 check('push 解析：P01 module/layer（数字 3 → "3"）', [items0.P01.module, items0.P01.layer], ['教研', '3'])
 check('push 解析：P02 旧形态零扰动（空串/空数组）', [items0.P02.options, items0.P02.module, items0.P02.layer], [[], '', ''])
 check('push 解析：flows[].pids 一律数组', detail0.digest.content.flows[0].pids, ['P01'])
@@ -77,16 +78,16 @@ check('deferred：status/note 落库', [answers3.P03.status, answers3.P03.note],
 const { readFileSync } = await import('node:fs')
 const root = new URL('..', import.meta.url)
 const runnerSrc = readFileSync(new URL('runner/runner.mjs', root), 'utf8')
-check('runner①：六层文案已退役', runnerSrc.includes('六层'), false)
-check('runner①②：七层 + v1.6 契约引用 + 组装版本', [runnerSrc.includes('七层'), runnerSrc.includes('payload 契约 v1.6'), runnerSrc.includes('组装 v1.6 payload')], [true, true, true])
 const qc = runnerSrc.split("task.type === 'quality_check'")[1]
-check('runner①：options/module/layer/pids 产出指令', ['options', 'module', 'layer', 'pids'].every(k => qc.includes(k)), true)
 const inc = runnerSrc.split("task.type === 'incremental_check'")[1].split("task.type === 'standard_doc'")[0]
+check('runner①：六层文案已退役（qc/inc 产出段级负向，review #20b）', [/六层/.test(qc), /六层/.test(inc)], [false, false])
+check('runner①②：七层 + v1.6 契约引用 + 组装版本', [runnerSrc.includes('七层'), runnerSrc.includes('payload 契约 v1.6'), runnerSrc.includes('组装 v1.6 payload')], [true, true, true])
+check('runner①：options/module/layer/pids 产出指令', ['options', 'module', 'layer', 'pids'].every(k => qc.includes(k)), true)
 check('runner②：新字段 + 存量 pids 引用纪律', ['options', 'layer', 'pids', '存量已分配'].every(k => inc.includes(k)), true)
 const promptsPy = readFileSync(new URL('src/platform_sdlc/agent/prompts.py', root), 'utf8')
 check('agent 速查卡：options/pids/layer 字段', ['options', 'pids', 'layer'].every(k => promptsPy.includes(k)), true)
 const toolsPy = readFileSync(new URL('src/platform_sdlc/agent/tools.py', root), 'utf8')
-check('D-M：curl 白名单在位', toolsPy.includes('"curl"'), true)
+check('D-M：curl 白名单在位（_CMD_ALLOW 集合成员资格，review #20b）', /_CMD_ALLOW\s*=\s*\{[^}]*"curl"/.test(toolsPy), true)
 
 console.log(failures ? `\n存在失败项 ❌（${failures}）` : '\nV5 黑盒主路径全部通过 ✅')
 process.exit(failures ? 1 : 0)

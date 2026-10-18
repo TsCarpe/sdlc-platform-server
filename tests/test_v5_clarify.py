@@ -61,6 +61,9 @@ _TABLE: list[tuple[str, str]] = [
     ('{"kind":"option","optionKey":"A"}', '{"kind":"option","optionKey":"A"}'),
     ('{"kind":"option","optionKey":"A","optionText":""}', '{"kind":"option","optionKey":"A","optionText":""}'),
     ('{"kind":"text","text":""}', '{"kind":"text","text":""}'),
+    # review #12：分支负载纯空白 → 取值 .strip() 后判空，同残缺透传
+    ('{"kind":"option","optionKey":"A","optionText":"   "}', '{"kind":"option","optionKey":"A","optionText":"   "}'),
+    ('{"kind":"text","text":" \\t "}', '{"kind":"text","text":" \\t "}'),
     # kind 越界 / 无 kind 键 / 非 JSON → 原文
     ('{"kind":"other","text":"x"}', '{"kind":"other","text":"x"}'),
     ('{"optionText":"x"}', '{"optionText":"x"}'),
@@ -84,6 +87,26 @@ def test_answer_text_discrimination_table(env: tuple[TestClient, Database, Repos
         assert detail_items[seq]["answerText"] == expected, f"detail 出口：{seq}"
         assert answers[seq]["answer"] == answer  # 原始 answer 透传不重写
         assert answer_text_of(answer) == expected  # common 单点直测
+
+
+def test_answer_text_none_and_blank() -> None:
+    """review #13：入口收口 answer 基准——None/纯空白 → ""（原 None 透传返 None、空白原样
+    返回），首尾空白非 JSON 文本以 strip 后值返回；空白负载结构化同残缺透传（透传 strip 后基准）。"""
+    assert answer_text_of(None) == ""  # type: ignore[arg-type]
+    assert answer_text_of("") == "" and answer_text_of("   ") == ""
+    assert answer_text_of("  纯文本答复  ") == "纯文本答复"
+    assert answer_text_of('  {"kind":"option","optionText":" "}  ') \
+        == '{"kind":"option","optionText":" "}'
+
+
+def test_normalize_layer_float_forms() -> None:
+    """review #24：白名单外浮点整值归一——2.0/"2.0" → "2"（原归空丢主线浮点形态）；转换结果
+    再过一次白名单（9.0 → "9" 不得漏越界拦截）；非整值/NaN/不可解析一律 ''。"""
+    assert normalize_layer(2.0) == "2" and normalize_layer("2.0") == "2"
+    assert normalize_layer("2.5") == ""
+    assert normalize_layer(9.0) == "" and normalize_layer("9.0") == ""
+    assert normalize_layer("nan") == "" and normalize_layer(float("nan")) == ""
+    assert normalize_layer("abc") == ""
 
 
 def test_set_answer_accepts_structured_json(env: tuple[TestClient, Database, Repos]) -> None:
@@ -132,7 +155,8 @@ def test_push_artifacts_parses_v5_optional_fields(env: tuple[TestClient, Databas
     assert r.status_code == 200
     detail = client.get(f"/api/requirements/{req_id}").json()
     by_seq = {it["seq"]: it for it in detail["items"]}
-    assert by_seq["P01"]["options"] == [{"key": "A", "text": "选项A"}, {"key": "B", "text": "选项B"}]
+    assert by_seq["P01"]["options"] == [{"key": "A", "text": "选项A", "why": "", "recommended": False},
+                                        {"key": "B", "text": "选项B", "why": "", "recommended": False}]
     assert by_seq["P01"]["module"] == "教研" and by_seq["P01"]["layer"] == "3"
     # 宽松分支：旧推送方（无 v1.6 三键）零扰动——options=[] / module=''/ layer=''
     assert by_seq["P02"]["options"] == [] and by_seq["P02"]["module"] == "" and by_seq["P02"]["layer"] == ""
@@ -145,6 +169,34 @@ def test_push_artifacts_parses_v5_optional_fields(env: tuple[TestClient, Databas
     assert audit_items["P02"]["layer"] == "" and audit_items["P03"]["layer"] == ""
 
 
+def test_push_options_element_whitelist(env: tuple[TestClient, Database, Repos]) -> None:
+    """review #11：options 元素级四键白名单（写侧 push 归一落库 → 读侧 wire 同构）——私货键
+    剥除、缺键补默认、非 obj 元素丢弃、空元素保留（宽进：空 key 前端匹配不上无副作用）；
+    text 取值 strip（存储/answerText/前端三侧同构）。"""
+    client, _, _ = env
+    req_id = _mk_card(client)
+    r = client.post(f"/api/requirements/{req_id}/artifacts", json={
+        "digest": {"md": "", "summary": "s", "roles": [], "states": [], "features": [], "flows": []},
+        "audit": {"md": "", "red": 0, "yellow": 0, "blue": 0, "items": []},
+        "items": [
+            {"seq": "P01", "level": "yellow", "theme": "t", "question": "选择题", "options": [
+                {"key": "A", "text": " 选项A ", "why": "取舍理由", "recommended": True, "evil": "私货"},
+                {"key": "B", "text": "选项B"},   # 存量两键形态：缺 why/recommended 补默认
+                "垃圾",                          # 非 json obj 元素：丢弃
+                {"key": "", "text": ""},         # 空元素：保留（宽进）
+            ]},
+        ],
+    })
+    assert r.status_code == 200
+    detail = client.get(f"/api/requirements/{req_id}").json()
+    it = next(t for t in detail["items"] if t["seq"] == "P01")
+    assert it["options"] == [
+        {"key": "A", "text": "选项A", "why": "取舍理由", "recommended": True},
+        {"key": "B", "text": "选项B", "why": "", "recommended": False},
+        {"key": "", "text": "", "why": "", "recommended": False},
+    ]
+
+
 def test_wire_carries_options_layer_answer_text() -> None:
     c = ClarifyItem(id=1, req_id="R", seq="P01", level="yellow", theme="t", question="q",
                     answer='{"kind":"option","optionKey":"A","optionText":"选项全文"}',
@@ -152,7 +204,7 @@ def test_wire_carries_options_layer_answer_text() -> None:
     out = wire(c)
     # 尾部追加四键（键序契约：既有 15 键不动，新增在尾）
     assert list(out)[-4:] == ["options", "module", "layer", "answerText"]
-    assert out["options"] == [{"key": "A", "text": "选项全文"}]
+    assert out["options"] == [{"key": "A", "text": "选项全文", "why": "", "recommended": False}]
     assert out["module"] == "教研" and out["layer"] == "3"
     assert out["answerText"] == "选项全文"
     # 宽进降级：非法 options_json（非数组）→ []；空 answer → answerText=''
@@ -321,7 +373,8 @@ def test_incremental_merge_keeps_new_clarify_fields(env: tuple[TestClient, Datab
     ]))
     items = {it["question"]: it for it in client.get(f"/api/requirements/{req_id}").json()["items"]}
     new1 = items["增量选择题"]
-    assert new1["options"] == [{"key": "A", "text": "甲"}, {"key": "B", "text": "乙"}]
+    assert new1["options"] == [{"key": "A", "text": "甲", "why": "", "recommended": False},
+                               {"key": "B", "text": "乙", "why": "", "recommended": False}]
     assert new1["module"] == "教研" and new1["layer"] == "3"
     new2 = items["增量旧形态行"]
     assert new2["options"] == [] and new2["module"] == "" and new2["layer"] == ""
@@ -340,7 +393,8 @@ def test_incremental_merge_preserves_kept_row_fields(env: tuple[TestClient, Data
     assert answers["P2"]["answer"] == "答 P2" and answers["P2"]["status"] == "answered"
     assert answers["P2"]["origin"] == "skill"
     p2 = next(c for c in repos.clarify_item.list_by_req(req_id) if c.seq == "P2")
-    assert p2.options_json == '[{"key":"A","text":"甲"}]'
+    # 落库串走 option_view 四键白名单（review #11；_json 序列化形态不作字面断言，解析比较）
+    assert json.loads(str(p2.options_json)) == [{"key": "A", "text": "甲", "why": "", "recommended": False}]
     assert p2.module == "教研" and p2.layer == "5"
 
 
@@ -532,8 +586,9 @@ def test_incremental_features_states_whitelist(env: tuple[TestClient, Database, 
                       "src": "", "anchor": "p1"}]  # 6 键白名单（secret 剥除、src 补默认）
     assert states == [{"obj": "工单", "from": "草稿", "on": "提交", "to": "审核", "gap": False,
                        "src": "", "anchor": "p1"}]  # 7 键白名单（states 无 pids 键——pids 剥除）
-    # merge 出参 danglingPids（观察信号）：flows 引用不存在 seq 计数、不拒收
-    assert merge.get("danglingPids") == 0 or "danglingPids" in merge
+    # merge 出参 danglingPids（观察信号）：flows 引用不存在 seq 计数、不拒收（review #20a 收紧：
+    # 本用例 bundle 不传 flows 恒 0 且键必在——恒真 or 断言改精确断言）
+    assert merge["danglingPids"] == 0
 
 
 def test_run_command_curl_allowed() -> None:

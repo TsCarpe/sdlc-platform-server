@@ -30,6 +30,7 @@ from platform_sdlc.common import (
     jstrings,
     jtext,
     normalize_layer,
+    option_view,
 )
 from platform_sdlc.db import Database
 from platform_sdlc.models import Artifact, ClarifyItem, FrPoint, Requirement, string_list
@@ -170,8 +171,10 @@ class RequirementService:
                     origin="skill",  # v4.1（DESIGN-v4 §6.3/§10）：重推产生的机器行来源标记，
                     # 与账本回填同批——否则首次重推把存量回填冲零，「按来源合并」匹配不到任何行
                     # v1.6（DESIGN-v5 §6.1）宽松三字段：options 非数组给 []（旧推送方无此键零扰动，
-                    # 空数组不落串）；layer 归一（数字 2 → "2" 主线形态，越界/杂质归 ''，D-J 单点）
-                    options_json=(_json(opts) if (opts := jarray(n, "options")) else ""),
+                    # 空数组不落串）；layer 归一（数字 2 → "2" 主线形态，越界/杂质归 ''，D-J 单点）。
+                    # options 元素过 option_view 四键白名单（review #11：坏元素丢弃、缺键补默认）
+                    options_json=(_json(opts) if (opts := [v for v in map(option_view, jarray(n, "options"))
+                                                          if v]) else ""),
                     module=jtext(n, "module", ""),
                     layer=normalize_layer(jtext(n, "layer", "")),
                 )

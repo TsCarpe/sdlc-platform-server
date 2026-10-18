@@ -10,7 +10,7 @@ import json
 from dataclasses import dataclass, field
 from typing import Any
 
-from platform_sdlc.common import answer_text_of, is_json_list, is_json_obj
+from platform_sdlc.common import answer_text_of, is_json_list, is_json_obj, option_view
 
 Row = Any  # sqlite3.Row
 
@@ -154,14 +154,16 @@ class ClarifyItem:
     @property
     def options(self) -> list[Any]:
         """选项快照（wire 出参 'options' 键）：''/非法 JSON/非数组一律 []（宽进——存量行与旧推送方
-        无此字段，读侧统一空数组形态，前端 options.length===0 即降级纯文本作答）。"""
+        无此字段，读侧统一空数组形态，前端 options.length===0 即降级纯文本作答）；数组元素过
+        option_view 四键白名单读侧归一（review #11：存量两键行惰性补齐 why/recommended 零迁移，
+        与 push 写侧/增量合并写侧三侧同构）。"""
         if not self.options_json:
             return []
         try:
             v: Any = json.loads(self.options_json)
         except ValueError:
             return []
-        return list(v) if is_json_list(v) else []
+        return [o for o in map(option_view, v) if o] if is_json_list(v) else []
 
     @property
     def answer_text(self) -> str:

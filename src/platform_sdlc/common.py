@@ -170,38 +170,69 @@ def jstrings(n: Any, field: str) -> list[str]:
 
 def normalize_layer(v: Any) -> str:
     """layer 归一单点（D-J，三用：push_artifacts 解析 / _machine_clarify / audit_item_view）：
-    先 str 化再判（数字 2 → "2" 是 v1.6 推送方主线形态），'1'-'7' 之外一律 ''（'0'/越界/杂质
-    归空——出参端前端对空串已有降级，入库端不点亮伪桶）。DB 存字符串、wire 出字符串。"""
+    先 str 化再判（数字 2 → "2" 是 v1.6 推送方主线形态）；白名单外尝试浮点整值归一（review #24：
+    2.0/"2.0" → "2"，转换结果必须再过一次白名单——否则 9.0 → "9" 漏越界拦截），非整值/NaN/
+    不可解析一律 ''（'0'/越界/杂质归空——出参端前端对空串已有降级，入库端不点亮伪桶）。
+    DB 存字符串、wire 出字符串。"""
+    ok = ("1", "2", "3", "4", "5", "6", "7")
     s = str(v if v is not None else "").strip()
-    return s if s in ("1", "2", "3", "4", "5", "6", "7") else ""
+    if s in ok:
+        return s
+    try:
+        f = float(s)
+        s = str(int(f)) if f.is_integer() else ""
+    except ValueError:
+        return ""
+    return s if s in ok else ""
 
 
 def answer_text_of(answer: str) -> str:
     """answer → 展示文本单一解构出口（D15/D-E，前端展示/重开 note/合成输入/pull-answers 回写
-    统一消费）：四条件判别——json.loads 成功 ∧ 含 kind 键 ∧ kind ∈ {option,text} ∧ 分支负载
-    非空（option: optionText / text: text），全过才算结构化：option → optionText[＋（补充：extra）]、
-    text → text；任一不过一律原文透传（残缺结构化不当空串产出——下游会当未答漏固化，也不在
-    展示层外溢 JSON）。kind:text 当前零生产方，保留契约分支（宽进合法、未来写方预留，D-F）。"""
-    s = (answer or "").strip()
-    if not s.startswith("{"):
+    统一消费）：入口先收口 answer 基准（None/纯空白 → ""，review #13），四条件判别——
+    json.loads 成功 ∧ 含 kind 键 ∧ kind ∈ {option,text} ∧ 分支负载非空白（option: optionText /
+    text: text，取值 .strip() 后判空——空白负载残缺透传，review #12），全过才算结构化：
+    option → optionText[＋（补充：extra）]、text → text；任一不过一律原文透传（残缺结构化
+    不当空串产出——下游会当未答漏固化，也不在展示层外溢 JSON）。kind:text 当前零生产方，
+    保留契约分支（宽进合法、未来写方预留，D-F）。"""
+    answer = (answer or "").strip()
+    if not answer.startswith("{"):
         return answer
     try:
-        obj: Any = json.loads(s)
+        obj: Any = json.loads(answer)
     except ValueError:
         return answer
     if not is_json_obj(obj) or "kind" not in obj:
         return answer
     kind = str(obj.get("kind") or "")
     if kind == "option":
-        text = str(obj.get("optionText") or "")
+        text = str(obj.get("optionText") or "").strip()
         if not text:
             return answer
         extra = str(obj.get("extra") or "").strip()
         return f"{text}（补充：{extra}）" if extra else text
     if kind == "text":
-        text = str(obj.get("text") or "")
+        text = str(obj.get("text") or "").strip()
         return text if text else answer
     return answer
+
+
+# 澄清选项行视图键集（review #11 四键白名单：写侧 push 全量 / 写侧增量合并 / 读侧 options
+# property 三侧同构——裸 dict 透传会静默收纳未知键漂移，与 AUDIT_ITEM_FIELDS 同一病症）
+OPTION_FIELDS: tuple[str, ...] = ("key", "text", "why", "recommended")
+
+
+def option_view(o: Any) -> dict[str, Any] | None:
+    """选项行视图共享构造器（四键白名单，字段集与 OPTION_FIELDS 同序）：非 json obj 返 None
+    （丢弃——与 audit_item_view 的宽进哲学差异：选项是数组元素，坏元素无键可补）；obj 一律
+    保留、jtext 补 ""/jbool 补 False（空 key 元素前端匹配不上无副作用）。text 取值 .strip()——
+    使存储/answerText（strip 后解构）/前端展示三侧同构，写侧不 strip 入库的选项文本会在
+    answerText 与前端展示间闪变（review C2）。"""
+    if not is_json_obj(o):
+        return None
+    return {
+        "key": jtext(o, "key", ""), "text": jtext(o, "text", "").strip(),
+        "why": jtext(o, "why", ""), "recommended": jbool(o, "recommended", False),
+    }
 
 
 # audit 条目视图键集（现行 8 键 + layer；push 侧 _audit_view 与增量合并共用同一构造器——

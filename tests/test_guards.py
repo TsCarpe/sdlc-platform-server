@@ -403,6 +403,46 @@ def test_gate_release_and_case_mutual_recognition(env: tuple[Repos, Services]) -
     assert repos.test_case.find(req_id, "TC-1").status == "reviewed"  # type: ignore[union-attr]
 
 
+def test_gate_reopen_requires_content_change(env: tuple[Repos, Services]) -> None:
+    """review #19：GR-3 复审门两分支——放行后无实质变更 reopen 409「内容变更检测未命中」；
+    有变更（设计 finalize v2）才开新轮（r2 pending）。「无变更」分支黑盒不可达须造态：
+    change_status 用例通道是 >=（秒级时间戳保守判定），release 同秒内用例更新恒判 changed，
+    删全部用例使 casesMaxUpdated='' 才能凑出静态快照（设计 v1 未动 + 用例无更新）。"""
+    repos, services = env
+    req_id = _published_with_design(repos, services)
+    services.designs.finalize(req_id, DraftArtifact(req_id=req_id, type="design", md="§0 design"), "tester")
+    services.cases.sync_upsert(None, _sync_body(req_id, [
+        {"id": "TC-1", "title": "t", "points": ["需求.FR-01"], "status": "reviewed"}]))
+    services.gate.open(req_id, {"by": "qa"})
+    rid = repos.gate.list_rounds(req_id)[0].id
+    assert rid is not None  # 开闸回填的轮 id（类型收窄）
+    repos.draft.upsert(DraftArtifact(
+        req_id=req_id, type="gate_issues", md="issues: A-01 场景", task_id=1, updated_at=NOW), NOW)
+    d = repos.draft.find(req_id, "gate_issues")
+    assert d is not None
+    d.content_json = '{"issues":[{"code":"A-01","sev":"mid","scene":"白话场景"}]}'
+    repos.draft.upsert(d, NOW)
+    services.gate.ingest(req_id, rid, None)
+    iid = repos.gate.list_issues(rid)[0].id
+    assert iid is not None
+    services.gate.verdict(iid, {"verdict": "revise", "revLocation": "a.py:L1"})
+    services.gate.revision(iid, "a.py:L1", "done")
+    services.gate.release(rid, {"by": "qa"})
+
+    # 造态（黑盒不可达分支的测试通道）：删全部用例——>= 保守判定下同秒更新恒 changed，清空
+    # 用例后 casesMaxUpdated='' 且设计 v1 未动 → changed=False → 409
+    services.gate.db.execute("DELETE FROM test_case WHERE req_id=?", (req_id,))
+    with pytest.raises(ApiException) as e:
+        services.gate.reopen(req_id, None)
+    assert e.value.status == 409 and "GR-3 内容变更检测未命中" in str(e.value)
+
+    # 正向半段：设计 finalize v2 → md ≠ r1 基线 → reopen 开新轮 → view 出 r2 pending
+    services.designs.finalize(req_id, DraftArtifact(req_id=req_id, type="design", md="§0 design v2"),
+                              "tester")
+    out = services.gate.reopen(req_id, {"by": "qa"})
+    assert out["round"]["roundNo"] == 2 and out["round"]["status"] == "pending"
+
+
 # ---------- 入参绑定防 500（批次2：裸 int()/len() 与同批重复 id） ----------
 
 

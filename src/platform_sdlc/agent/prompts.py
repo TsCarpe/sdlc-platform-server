@@ -144,7 +144,7 @@ def _source_import_steps(common: str, card: Requirement, repo: str, out_dir: Pat
             "   lark-cli drive +list-comments --url <URL> --solved-status all --comment-scope all --need-relation --format json > raw/comments.json\n"
             "   lark-cli docs +fetch --doc <URL> --doc-format xml --detail with-ids > raw/fetch.json\n"
             "   write_file 落盘 tools/extract.py 后 run_command 执行（run_command 按 |;&& 分段校验，"
-            "python3 -c 内分号会被切段拒绝）：\n"
+            "引号感知——引号内的分号不切段，单行 python3 -c 整体加引号即可直接执行）：\n"
             "     import json\n"
             "     d = json.load(open('raw/fetch.json'))['data']['document']\n"
             "     open('raw/content.xml', 'w').write(d['content'])\n"
