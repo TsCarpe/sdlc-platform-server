@@ -14,3 +14,5 @@ logs/
 .idea/
 .serena/
 .codegraph/
+/.playwright-mcp/
+/tasks/
