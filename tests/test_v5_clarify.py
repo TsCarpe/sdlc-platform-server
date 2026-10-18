@@ -390,18 +390,27 @@ def test_incremental_flows_whitelist_and_pids(env: tuple[TestClient, Database, R
         return json.loads(str(raw["content_json"]))["flows"]
 
     kept_before = _digest_flows()
-    _approve_bundle(client, req_id, _v5_bundle(
+    # L 系 local 行（评论升级形态）：合并不删不重插、合并后真实存活——flows 引用它不悬空
+    # （danglingPids 合法集须含 local，与 push 侧同口径——review #10 回归锁）
+    db.execute(
+        "INSERT INTO clarify_item(req_id,seq,level,theme,question,ctx,answer,answered_at,quote,"
+        "anchor,status,note,origin,src_comment_id,options,module,layer) "
+        "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (req_id, "L01", "yellow", "t", "评论升级问题", "", "", "", "", "", "pending", "",
+         "local", None, "", "", ""))
+    merge = _approve_bundle(client, req_id, _v5_bundle(
         cid,
         flows=[{"role": "用户", "step": "提交", "next": "审核", "anchor": "p1",
-                "pids": ["P1"], "foo": "new 私货"}],
+                "pids": ["L01"], "foo": "new 私货"}],
         features=[{"role": "用户", "m": "注册", "func": "邮箱注册", "cov": "全", "anchor": "p1"}],
         states=[{"obj": "工单", "from": "草稿", "on": "提交", "to": "审核", "anchor": "p1"}]))
+    assert merge["danglingPids"] == 0  # L01=存活 local 引用合法（修复前 live_seqs 漏 local 即 1）
     flows = _digest_flows()
     assert len(flows) == 2
     assert flows[0] == kept_before[0]  # kept 行合并前后逐字节不变（永不改写）
     assert set(flows[0]) == {"role", "step", "next", "gap", "src", "anchor", "pids"}
     assert flows[1] == {"role": "用户", "step": "提交", "next": "审核", "gap": False,
-                        "src": "", "anchor": "p1", "pids": ["P1"]}  # new 7 键白名单（foo 剥除）
+                        "src": "", "anchor": "p1", "pids": ["L01"]}  # new 7 键白名单（foo 剥除）
     assert isinstance(flows[1]["pids"], list)
     # features/states new 行过本键视图：正当字段全保留（D-I 后与本键视图同构）
     content = client.get(f"/api/requirements/{req_id}").json()["digest"]["content"]

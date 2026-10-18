@@ -40,6 +40,14 @@ restore() {
   fi
   if [ "$AGENT_WAS_PAUSED" = "1" ]; then
     curl -sf -X POST "$BASE/api/agent/resume" >/dev/null 2>&1 && echo "== 进程内 agent 已恢复 =="
+    # resume 后验（review #18）：上行 curl 静默失败无信号——生产 agent 停摆无人知；
+    # 恢复后 1s 拉一次 status，非运行态则显式告警退出非零（restore 在 EXIT trap 内，
+    # 此处改脚本退出码已太晚——以 stderr 告警 + FAIL 置位留给人工核对）
+    sleep 1
+    if ! curl -sf "$BASE/api/agent/status" 2>/dev/null | grep -q '"paused":false'; then
+      echo "⚠ agent 恢复后验失败：/api/agent/status 仍非运行态——请人工检查并恢复（curl -X POST $BASE/api/agent/resume）" >&2
+      FAIL=1
+    fi
   fi
 }
 trap restore EXIT

@@ -475,8 +475,12 @@ class ChangeService:
 
             clarify_kept: list[Any] = []  # 仅机器行（skill/incremental）——local 行不删不重插（原样
             # 保留：仍在库中重插会撞 UNIQUE(req_id,seq)，§6.3/§12 一期判据「L 系经合并不丢」）
+            local_seqs_live: set[str] = set()  # local 行合并后同样存活——danglingPids 合法集须含之
+            # （与 push 侧 legal_seqs = seqs ∪ local_seqs 同口径，否则同一 L 系引用两通道判定相反，
+            # 观测误报——review #10）
             for item in self.repos.clarify_item.list_by_req(req_id):
                 if item.origin not in ("skill", "incremental"):
+                    local_seqs_live.add(item.seq)
                     continue
                 if item.anchor and item.anchor in section_ids:
                     stats["removedRows"] += 1
@@ -507,9 +511,10 @@ class ChangeService:
                 self.repos.requirement.set_risk_tier(req_id, tier)
             self.repos.requirement.touch_synced(req_id, at)
             # v1.6 danglingPids（观察信号非守卫，D-L）：仅计本次 new flows 行的悬空引用（pids ⊄
-            # 合并后存活 seq 集）——存量 kept 行的历史悬空不混入（归因「本次生产端纪律」，历史脏行
+            # 合并后存活 seq 集 = 机器 kept ∪ new ∪ local——local 行不删不重插同样存活，review #10
+            # 与 push 侧同口径）——存量 kept 行的历史悬空不混入（归因「本次生产端纪律」，历史脏行
             # 清理走重推）；照常透传落库不拒收，前端点击「未定位」提示仍是交互兜底
-            live_seqs = {x.seq for x in clarify_kept} | {x.seq for x in new_clarify}
+            live_seqs = {x.seq for x in clarify_kept} | {x.seq for x in new_clarify} | local_seqs_live
             stats["danglingPids"] = sum(1 for f in _arr(rows.get("flows")) if is_json_obj(f)
                                         for p in jstrings(f, "pids") if p not in live_seqs)
         log.info("增量合并 %s（变更单 #%s，by=%s）：%s", req_id, change_id, by, stats)

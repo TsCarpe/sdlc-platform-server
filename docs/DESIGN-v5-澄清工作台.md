@@ -96,7 +96,7 @@ v4 完成需求平台权威化后，PM 在澄清阶段的体验存在三个结�
 
 ### 2.3 选择题化作答（Spec Kit 机制借鉴）
 
-- 每题 2-5 个互斥选项，AI 必须给推荐项（带 1-2 句理由）；「以上都不对」展开自由 textarea（补充说明语义）；驳回/挂起不变；
+- 每题 2-4 个互斥选项（review #15 修正——原稿「2-5」与契约/runner/agent/references 全链统一的「2-4」口径漂移，实现对齐为 2-4），AI 必须给推荐项（带 1-2 句理由）；「以上都不对」展开自由 textarea（补充说明语义）；驳回/挂起不变；
 - **保存并发口径（r2 C5 + r3 二审#6/#7 修正）**：
   - **点选即 PUT（无 debounce）**——选项是离散单值；body 显式携带 `{answer, status:'answered'}`，不依赖服务端按 answer 非空推断；
   - **新写 per-seq 串行发送链**（最后值胜）：同 seq 的 PUT 依次排队、前一个完成才发下一个、始终发送最新值——**不是**沿用 `savingSeqs`（现状语义是"在途直接丢弃"，对 textarea blur 无害，对点选即 PUT 是静默丢答）；textarea 的 blur 保存沿用现状在途丢弃，不进发送链；
@@ -206,7 +206,7 @@ v4 完成需求平台权威化后，PM 在澄清阶段的体验存在三个结�
 | **一期作答形态（r2 B1）** | 选择题 UI 上线，**answer 写 optionText 纯文本**（`【A】选项全文` 格式）——在二期结构化上线前，所有下游（合成/回写/note）消费的仍是合法纯文本，**零污染窗口** | 无 |
 | **二期（server 批次）** | migrations / push_artifacts 解析新字段 / views / set_answer / **answerText 出参** / change.py 三处（A4/B6）/ **runner ③ + standard-doc-spec 合成切 answerText 同批**（r4 修订：**SKILL.md pull-answers 与 incremental-guide 的 answerText 消费亦前移本批〔D-H〕**，堵「二期切换→三期」窗口的 D15 漏点） | 一期已验证 |
 | **三期（skills + runner ①② 批次，r3 二审#8）** | payload-schema v1.6（含 incremental_bundle 契约）/ standard-doc-spec / report-template / dimensions / **runner ①② 生产端（v1.6 字段，依赖契约）**。**二期 r4 边界记档（D-L/D-M）**：D-L——增量新行 pids 引用悬空 seq（P 系编号平台合并时才分配、合并不回填），引用完整性规则（仅允许引用存量 seq / 平台合并后回填）在本期 payload-schema v1.6 起草时定义，二期仅白名单透传（无生产方无害）；D-M——agent incremental 分支提示 curl 但 `_CMD_ALLOW` 不含 curl（既有死路），本期 agent 通道全面梳理时处理 | 与二期同节奏合入 |
-| **三期完成（2026-10-17，r3 计划经 sdlc-doubt 三轮对抗审查）** | skills cf0d6a8（契约 v1.6 四文件：options/module/layer/pids + answerText 判别 + incremental_bundle 契约节 + danglingPids 出参；report-template 选项化/module/layer 产出约定；dimensions 第 8 条层号纪律；incremental-guide 新字段 + 七层）；server a2070e2（runner ①② + agent 速查卡生产端 + 跨仓锁序断言）+ 6d7a027（**D-I** features/states 白名单三侧同构（二期 r4 留档项，本行补记档）+ **D-M** curl 白名单与文案/docstring 运行时构造 + danglingPids 观测出参）+ 322dff4（verify 失修全面适配：m2/gate/guard/change 断言对齐 D17 与 GR-3 保守判定语义、m5/change 夹具补守恒 guard、verify-v5 生产端静态断言）。**D-L 落地形态**：契约纪律（payload-schema 合法集两类 + incremental-guide 存量引用）+ push/合并出参 danglingPids 观测计数（不改写不拒收——悬空可测可观测，行为零变更）。standard-doc-spec 二期已完成（r4 前移），本期零改动。验收：pytest 149（144+5）、verify-all 325 PASS 全绿、verify-v5 11+7 | — |
+| **三期完成（2026-10-17，r3 计划经 sdlc-doubt 三轮对抗审查）** | skills cf0d6a8（契约 v1.6 四文件：options/module/layer/pids + answerText 判别 + incremental_bundle 契约节 + danglingPids 出参；report-template 选项化/module/layer 产出约定；dimensions 第 8 条层号纪律；incremental-guide 新字段 + 七层）；server a2070e2（runner ①② + agent 速查卡生产端 + 跨仓锁序断言）+ 6d7a027（**D-I** features/states 白名单三侧同构（二期 r4 留档项，本行补记档）+ **D-M** curl 白名单与文案/docstring 运行时构造 + danglingPids 观测出参）+ 322dff4（verify 失修全面适配：m2/gate/guard/change 断言对齐 D17 与 GR-3 保守判定语义、m5/change 夹具补守恒 guard、verify-v5 生产端静态断言）。**D-L 落地形态**：契约纪律（payload-schema 合法集两类 + incremental-guide 存量引用）+ push/合并出参 danglingPids 观测计数（不改写不拒收——悬空可测可观测，行为零变更）。standard-doc-spec 二期已完成（r4 前移），本期零改动。验收：pytest 149 collected（144+5；环境无 SDLC_EXISTING_DB 时实跑 148 passed + 1 skipped——review #14 复核口径）、verify-all 325 PASS 全绿（1 SKIP=verify-agent 通道需 SDLC_VERIFY_AGENT=1）、verify-v5 17 断言（11 功能 + 6 静态；原注记「11+7」为笔误——review #14 复核口径） | — |
 | 二期切换 | 前端 answer 写入从纯文本切结构化 JSON（读侧 answerText 不变） | 二期上线后 |
 | 存量刷新 | 需要新字段的卡重推一次 quality_check（依赖三期 runner ①② 上线后自然产出） | 不重推走降级 |
 
