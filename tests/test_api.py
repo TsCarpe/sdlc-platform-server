@@ -134,6 +134,22 @@ def test_iteration_and_design_and_gate_shapes(client: TestClient) -> None:
     assert client.get("/api/requirements/REQ-2026-001/gate/change-status").json()["changed"] is False
 
 
+def test_iteration_delete_guardrails(client: TestClient) -> None:
+    """DELETE /api/iterations/detail 三态：空迭代物理删；绑定存活需求 409；不存在 404。"""
+    client.post("/api/iterations", json={"name": "2026-W42"})
+    _create(client, iter="2026-W42")
+    r409 = client.delete("/api/iterations/detail", params={"name": "2026-W42"})
+    assert r409.status_code == 409
+    assert "REQ-" in r409.json()["error"]  # 提示先删/移出哪个需求
+
+    client.post("/api/iterations", json={"name": "2026-W43"})
+    assert client.delete("/api/iterations/detail", params={"name": "2026-W43"}).json() == {"ok": True}
+    names = [it["name"] for it in client.get("/api/iterations").json()]
+    assert "2026-W43" not in names and "2026-W42" in names
+
+    assert client.delete("/api/iterations/detail", params={"name": "ghost"}).status_code == 404
+
+
 def test_draft_task_id_binding_400(client: TestClient) -> None:
     """PUT /drafts 的 taskId 非整数 → 400 {error}（原 500 / 落库毒化）。"""
     _create(client)
