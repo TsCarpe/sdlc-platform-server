@@ -359,6 +359,44 @@ def test_gate_ingest_review_meta(env: tuple[Repos, Services]) -> None:
         "degraded", 0, "single-session")
 
 
+def test_gate_ingest_persists_issues_md(env: tuple[Repos, Services]) -> None:
+    """ingest 后 issues md 全文留档 artifact（type=gate_issues_r1），view 轮块带出 issuesMd。"""
+    repos, services = env
+    req_id = _published_with_design(repos, services, tier="B")
+    services.designs.finalize(req_id, DraftArtifact(req_id=req_id, type="design", md="§0 design"), "tester")
+    services.cases.sync_upsert(None, _sync_body(req_id, [
+        {"id": "TC-1", "title": "t", "points": ["需求.FR-01"], "status": "reviewed"}]))
+    services.gate.open(req_id, None)
+    rid = repos.gate.list_rounds(req_id)[0].id
+    assert rid is not None
+
+    md = ("# issues\n\n| 项 | 值 |\n|---|---|\n| reviewMode | external |\n| fanout | 2 |\n"
+          "| contextMode | fresh |\n\n|编号|A-01|\n")
+    d = DraftArtifact(req_id=req_id, type="gate_issues", md=md, task_id=1, updated_at=NOW)
+    d.content_json = '{"issues":[{"code":"A-01","sev":"mid","scene":"白话场景"}]}'
+    repos.draft.upsert(d, NOW)
+    services.gate.ingest(req_id, rid, None)
+
+    a = repos.artifact.find(req_id, "gate_issues_r1")
+    assert a is not None and a.markdown == md  # 草稿 md 全文入库（非摘要）
+    assert repos.draft.find(req_id, "gate_issues") is None  # 留档后草稿照常清除
+    out = services.gate.view(req_id)
+    assert out["rounds"][0]["issuesMd"] == md
+    assert out["round"]["issuesMd"] == md  # 最新轮块同源带出
+
+
+def test_gate_view_round_without_md_is_null(env: tuple[Repos, Services]) -> None:
+    """开轮未 ingest（无留档）时 view 该轮 issuesMd 为 null（存量已裁决轮同口径）。"""
+    repos, services = env
+    req_id = _published_with_design(repos, services, tier="B")
+    services.designs.finalize(req_id, DraftArtifact(req_id=req_id, type="design", md="§0 design"), "tester")
+    services.cases.sync_upsert(None, _sync_body(req_id, [
+        {"id": "TC-1", "title": "t", "points": ["需求.FR-01"], "status": "reviewed"}]))
+    services.gate.open(req_id, None)
+    out = services.gate.view(req_id)
+    assert out["rounds"][0]["issuesMd"] is None and out["round"]["issuesMd"] is None
+
+
 def test_priority_strict_form_lenient_skill(env: tuple[Repos, Services]) -> None:
     """红线：表单通道非法 priority 400；skill 通道宽容归一 P2 并计数。"""
     repos, services = env

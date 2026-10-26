@@ -23,6 +23,11 @@ _SEVS = {"high", "mid", "low"}
 _VERDICTS = {"revise", "reject", "query"}  # 落改/驳回/存疑（中文口径见文案与 ER 图）
 
 
+def _gate_issues_md_type(round_no: int) -> str:
+    """issues md 全文留档的 artifact 类型（每轮一份，PK=(req_id,type)）。"""
+    return f"gate_issues_r{round_no}"
+
+
 class GateService:
     def __init__(self, db: Database, repos: Repos, designs: DesignService) -> None:
         self.db = db
@@ -189,6 +194,8 @@ class GateService:
                     max_unit += 1
                     g.merged_unit = max_unit  # 未合并条目各自成单元
             self.repos.gate.insert_issues(parsed)
+            self.repos.artifact.upsert(req_id, _gate_issues_md_type(rnd.round_no), d.md,
+                                       _json({"roundId": rnd.id, "codes": sorted(codes)}), Times.now())
             self.repos.draft.delete(req_id, task_mod.D_GATE_ISSUES)
         return self.view(req_id)
 
@@ -389,10 +396,13 @@ class GateService:
         return "summary" if ts == "done" else "running"
 
     def _round_block(self, g: GateRound) -> dict[str, Any]:
+        a = self.repos.artifact.find(g.req_id, _gate_issues_md_type(g.round_no))
         return {"id": g.id, "roundNo": g.round_no, "status": g.status, "openedAt": g.opened_at,
                 "releasedAt": g.released_at, "releasedBy": g.released_by,
                 # P1-9 扇出留痕（ingest 时点回写；空值 = 迁移窗口前存量产物）
-                "reviewMode": g.review_mode, "fanout": g.fanout, "contextMode": g.context_mode}
+                "reviewMode": g.review_mode, "fanout": g.fanout, "contextMode": g.context_mode,
+                # issues md 全文留档（ingest 时点落 artifact；None = 存量已裁决轮无留档）
+                "issuesMd": a.markdown if a else None}
 
     def _issue_block(self, g: GateIssue) -> dict[str, Any]:
         return {"id": g.id, "code": g.code, "sev": g.sev, "theme": g.theme, "role": g.role,

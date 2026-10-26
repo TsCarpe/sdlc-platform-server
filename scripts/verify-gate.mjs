@@ -3,6 +3,7 @@
 //       裁决三处置必填守卫/裁决单元批量/GR-4 放行校验（未闭环 409 → 全绿放行+关卡互认）/
 //       GR-3 变更检测与复审轮 r2（旧轮只读归档）
 // 用法：node scripts/verify-gate.mjs [baseUrl]   （默认 http://127.0.0.1:8888）
+//       KEEP=1 node scripts/verify-gate.mjs      §5 结束后跳过 §6-§8 直接收尾，活卡留供 skill 冒烟（用毕手工清理）
 const base = process.argv[2] || 'http://127.0.0.1:8888'
 
 let failures = 0
@@ -109,6 +110,7 @@ check('B 级 degraded 留痕 ingest 409', degraded409, 409)
 await call('PUT', `/api/requirements/${R}/drafts/gate_issues`, { md: ISSUES_MD, contentJson: JSON.stringify({ issues: ISSUES }) })   // 恢复同源草稿
 const gv2 = await call('POST', `/api/requirements/${R}/gate/rounds/${gv1.round.id}/ingest`, { by: '李工' })
 check('入库后 issues=3 且 phase=deciding', [gv2.issues.length, gv2.phase], [3, 'deciding'])
+check('ingest 留档 issues md 全文', gv2.round.issuesMd, ISSUES_MD)
 check('评审扇出留痕落库（external/2/fresh）',
       [gv2.round.reviewMode, gv2.round.fanout, gv2.round.contextMode], ['external', 2, 'fresh'])
 check('裁决单元聚合=3', gv2.units.length, 3)
@@ -142,6 +144,16 @@ const gv5 = await call('GET', `/api/requirements/${R}/gate`)
 check('放行后 phase=released', gv5.phase, 'released')
 check('关卡互认：draft 用例置 reviewed', (await call('GET', `/api/cases?reqId=${R}`)).every(c => c.status === 'reviewed'), true)
 
+// KEEP=1：跳过 §6-§8 直接收尾——活卡冻结在 §5 末状态（B 级已发布+设计定稿+用例 reviewed+r1 已放行），
+// 供 skill 冒烟（gate view 含 issuesMd 留档）；失败计数退出路径与默认路径一致
+if (process.env.KEEP === '1') {
+  try { await fetch(base + '/api/agent/resume', { method: 'POST' }) } catch {}
+  console.log(`KEEP=1：已跳过 §6-§8，留卡 ${R}（门禁域验证卡，r1 已放行、issuesMd 已留档）供 skill 冒烟`)
+  console.log(`用毕手工清理：DELETE /api/requirements/${R}`)
+  console.log(failures === 0 ? '\n门禁域验证全部通过 ✓' : `\n${failures} 项失败 ✗`)
+  process.exit(failures === 0 ? 0 : 1)
+}
+
 // ===== 6. GR-3 变更检测与复审轮（P1-8：严格 >，放行后无人改用例不再误报）=====
 const ch1 = await call('GET', `/api/requirements/${R}/gate/change-status`)
 check('GR-3 放行后无变更：changed=false', [ch1.changed, ch1.window], [false, 'released'])
@@ -161,6 +173,7 @@ const ch1b = await call('GET', `/api/requirements/${R}/gate/change-status`)
 check('GR-3 用例变更命中', [ch1b.changed, ch1b.window], [true, 'released'])
 const gv6 = await call('POST', `/api/requirements/${R}/gate/reopen`, { by: '李工' })
 check('复审轮 r2 建立（旧轮归档）', [gv6.round.roundNo, gv6.round.status, gv6.rounds.length, gv6.rounds[0].status], [2, 'pending', 2, 'released'])
+check('r2 未 ingest 无 issues 留档', gv6.round.issuesMd, null)
 // r2 评审中窗口：设计变更 → in-review 横幅（走落改通道不开新轮）；pending 期 reopen 409（仅已放行可开复审轮）
 const t3 = await runTask(R, 'design_rev')
 await call('PUT', `/api/requirements/${R}/drafts/design`, { md: DESIGN_MD_V1 + '\n## §2 修订（F03 改 409 + idx 补齐）\n' })
