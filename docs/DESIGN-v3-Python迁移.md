@@ -72,6 +72,6 @@ server/src/platform_sdlc/
 ## 6. 数据与部署
 
 - 数据：`server/data/{platform.db, media/, assistant.db}`（自 backend/data 迁移，备份快照见 backups/）；schema.sql 原样（打包进 `src/platform_sdlc/schema.sql`）。
-- 启动：`scripts/dev.sh`（= npm build + uv sync + `uv run uvicorn platform_sdlc.main:create_app --factory --host 0.0.0.0 --port 8080`，cwd=server/）；常驻用 launchd/systemd，**WorkingDirectory 必须是 server/**（相对路径解析依赖它）。
-- 前端：vite outDir → `server/static`（gitignore）；`/api` 代理 8080 不变。
+- 启动：`scripts/dev.sh`（= npm build + uv sync + `uv run uvicorn platform_sdlc.main:create_app --factory --host 0.0.0.0 --port 8888`，cwd=server/）；常驻用 launchd/systemd，**WorkingDirectory 必须是 server/**（相对路径解析依赖它）。
+- 前端：vite outDir → `server/static`（gitignore）；`/api` 代理 8888 不变。
 - 验收：`scripts/verify-all.sh`（10 脚本）+ `node scripts/verify-agent.mjs`（需模型）+ `node scripts/verify-assistant.mjs`（需模型）+ pytest（`cd server && uv run pytest`）。

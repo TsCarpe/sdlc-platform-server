@@ -2,8 +2,8 @@
 // 覆盖：GR-2 三条件守卫/开闸建轮+排 gate_review/重复开闸 409/gate_issues 入库机械校验（md×json 同源）/
 //       裁决三处置必填守卫/裁决单元批量/GR-4 放行校验（未闭环 409 → 全绿放行+关卡互认）/
 //       GR-3 变更检测与复审轮 r2（旧轮只读归档）
-// 用法：node scripts/verify-gate.mjs [baseUrl]   （默认 http://127.0.0.1:8080）
-const base = process.argv[2] || 'http://127.0.0.1:8080'
+// 用法：node scripts/verify-gate.mjs [baseUrl]   （默认 http://127.0.0.1:8888）
+const base = process.argv[2] || 'http://127.0.0.1:8888'
 
 let failures = 0
 function check(name, actual, expected) {

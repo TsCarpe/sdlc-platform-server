@@ -15,9 +15,11 @@ from platform_sdlc.repositories import Repos
 _MEDIA_ID = re.compile(r"^m-[0-9a-f]{12}$")
 # 序号位数不设上限（next_id 过 999 后是 4 位起，{3} 定长会把新卡媒体读写全拒——verify-m4 实测踩中）
 _REQ_ID = re.compile(r"^REQ-[0-9]{4}-[0-9]{3,}$")
-# 可执行/可脚本内容拒绝入库（防存储型同源 XSS：响应端只对图片白名单内联，双防线）
-_DANGEROUS_MIME = {"text/html", "image/svg+xml", "application/xhtml+xml", "text/xml", "application/xml"}
-_DEFAULT_MAX_BYTES = 20 * 1024 * 1024
+# 可执行/可脚本内容拒绝入库（防存储型同源 XSS：响应端只对图片白名单内联）。
+# text/html 放行：飞书原文的 HTML 附件需完整导入；下载端对非图片一律 Content-Disposition=attachment
+# + nosniff（routers/media.py），不会在平台源上渲染执行。
+_DANGEROUS_MIME = {"image/svg+xml", "application/xhtml+xml", "text/xml", "application/xml"}
+_DEFAULT_MAX_BYTES = 64 * 1024 * 1024
 
 
 @dataclass

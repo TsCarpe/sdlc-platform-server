@@ -8,6 +8,6 @@ mkdir -p data logs
 echo "[1/2] 同步 Python 依赖（uv sync）..."
 uv sync --quiet
 
-echo "[2/2] 启动 http://127.0.0.1:8080（日志 → logs/server.log）..."
+echo "[2/2] 启动 http://127.0.0.1:8888（日志 → logs/server.log）..."
 # 管道 tee 代替 dev.sh 的 exec：日志既出终端又落盘；*.log 已被 .gitignore 忽略
-uv run uvicorn platform_sdlc.main:create_app --factory --host 0.0.0.0 --port 8080 2>&1 | tee -a logs/server.log
+uv run uvicorn platform_sdlc.main:create_app --factory --host 0.0.0.0 --port 8888 2>&1 | tee -a logs/server.log

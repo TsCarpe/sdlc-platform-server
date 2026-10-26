@@ -5,7 +5,7 @@
 // 只能由人在平台上「采纳/发布」触发——线上化不改守卫，只改触发方。
 //
 // 环境变量：
-//   SDLC_PLATFORM_URL   平台地址（默认 http://127.0.0.1:8080）
+//   SDLC_PLATFORM_URL   平台地址（默认 http://127.0.0.1:8888）
 //   SDLC_RUNNER_NAME    Runner 标识（默认 local-<hostname>-runner；稳定名，不含 pid——
 //                       recover-stale 按名字归属，pid 名重启即变会让旧 running 永远无人认领。
 //                       同主机多实例必须显式设置不同名字）
@@ -22,7 +22,7 @@ import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const PLATFORM = process.env.SDLC_PLATFORM_URL || 'http://127.0.0.1:8080'
+const PLATFORM = process.env.SDLC_PLATFORM_URL || 'http://127.0.0.1:8888'
 const RUNNER = process.env.SDLC_RUNNER_NAME || `local-${hostname()}-runner`
 const INTERVAL = Number(process.env.SDLC_RUNNER_INTERVAL || 3000)
 const TIMEOUT_MIN = Number(process.env.SDLC_RUNNER_TIMEOUT_MIN || 30)

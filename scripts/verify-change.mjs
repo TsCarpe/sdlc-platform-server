@@ -2,8 +2,8 @@
 // 覆盖：draft 建/存（四态 items + blk- 草稿期平台 ID）、confirm 事务（changed 表外通道 /
 // content_rev+1 / 块表应用 / 澄清重开 / impact 冻结）、守卫（未发布拒、串行 confirm、重复 confirm）。
 // 乐观锁与原子性由 pytest 覆盖（需 db 直改模拟并发漂移，黑盒不构造）。
-// 用法：node scripts/verify-change.mjs [baseUrl]   （默认 http://127.0.0.1:8080；服务从仓根启动）
-const base = process.argv[2] || 'http://127.0.0.1:8080'
+// 用法：node scripts/verify-change.mjs [baseUrl]   （默认 http://127.0.0.1:8888；服务从仓根启动）
+const base = process.argv[2] || 'http://127.0.0.1:8888'
 
 let failures = 0
 function check(name, actual, expected) {

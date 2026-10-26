@@ -1,8 +1,8 @@
 // M6（v2.1 L2 生命周期编排）：确定性事件钩子断言。
 // 覆盖：全答完自动排 standard_doc（createdBy=auto）、只自动一次（改答/取消后不复活）、
 //       守卫全继承（人工 409 与自动共用）、发布后自动排 case_gen、编排失败不连累主操作。
-// 用法：node scripts/verify-m6.mjs [baseUrl]   （默认 http://127.0.0.1:8080）
-const base = process.argv[2] || 'http://127.0.0.1:8080'
+// 用法：node scripts/verify-m6.mjs [baseUrl]   （默认 http://127.0.0.1:8888）
+const base = process.argv[2] || 'http://127.0.0.1:8888'
 
 let failures = 0
 function check(name, actual, expected) {

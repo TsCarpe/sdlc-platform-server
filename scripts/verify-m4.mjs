@@ -1,7 +1,7 @@
 // M4（v1.2 新增）：原文预处理与块级引用断言 —— doc 块结构落库回读、媒体上传/读取/304、
 // anchor 透传（fr/features/audit/items）、重推 doc 版本递增、无 doc 降级兼容。
-// 用法：node scripts/verify-m4.mjs [baseUrl]   （默认 http://127.0.0.1:8080）
-const base = process.argv[2] || 'http://127.0.0.1:8080'
+// 用法：node scripts/verify-m4.mjs [baseUrl]   （默认 http://127.0.0.1:8888）
+const base = process.argv[2] || 'http://127.0.0.1:8888'
 
 let failures = 0
 function check(name, actual, expected) {

@@ -1,6 +1,6 @@
 """应用装配（对应 Java start-app）：异常处理器族、X-Token 守卫、静态托管五行为、/api/health。
 
-启动：cd server && uv run uvicorn platform_sdlc.main:app --factory --host 0.0.0.0 --port 8080
+启动：cd server && uv run uvicorn platform_sdlc.main:app --factory --host 0.0.0.0 --port 8888
 """
 
 from __future__ import annotations

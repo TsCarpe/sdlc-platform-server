@@ -6,8 +6,8 @@
 // 评论（CRUD/线程级解决/升级 L 系带 quote·anchor·回链/幂等，v4-8）、
 // 窗口 1 闭环（编辑→重质检→产物 anchor ∈ 新块集 + L 系幸存，v4-9/10）、
 // 变更单数据面（draft CRUD 四态重算/影响面预览 CTE，v4-11）。
-// 用法：node scripts/verify-v4.mjs [baseUrl]   （默认 http://127.0.0.1:8080；服务从仓根启动）
-const base = process.argv[2] || 'http://127.0.0.1:8080'
+// 用法：node scripts/verify-v4.mjs [baseUrl]   （默认 http://127.0.0.1:8888；服务从仓根启动）
+const base = process.argv[2] || 'http://127.0.0.1:8888'
 
 let failures = 0
 function check(name, actual, expected) {

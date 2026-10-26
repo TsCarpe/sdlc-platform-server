@@ -1,8 +1,8 @@
 // M5（v2.0 全流程线上化）：平台任务队列 + AI 草稿两态 断言。
 // 覆盖：任务状态机、建任务守卫、草稿回传/回读、approve 转正（守卫继承：两轮推送 carried/changed）、
 // cases 乐观锁冲突、标准文档任务守卫、发布终态锁。
-// 用法：node scripts/verify-m5.mjs [baseUrl]   （默认 http://127.0.0.1:8080）
-const base = process.argv[2] || 'http://127.0.0.1:8080'
+// 用法：node scripts/verify-m5.mjs [baseUrl]   （默认 http://127.0.0.1:8888）
+const base = process.argv[2] || 'http://127.0.0.1:8888'
 
 let failures = 0
 function check(name, actual, expected) {

@@ -1,8 +1,8 @@
 // B4 验收：软删除（评测 P0-3）
 // 覆盖：删后列表不含/详情 404（写守卫经 find 根过滤继承）/用例列表空/用例详情 404/
 //       同年编号不复用/二次删除 404/running 任务时拒绝 409/queued 任务随删自动作废
-// 用法：node scripts/verify-delete.mjs [baseUrl]   （默认 http://127.0.0.1:8080）
-const base = process.argv[2] || 'http://127.0.0.1:8080'
+// 用法：node scripts/verify-delete.mjs [baseUrl]   （默认 http://127.0.0.1:8888）
+const base = process.argv[2] || 'http://127.0.0.1:8888'
 
 let failures = 0
 function check(name, actual, expected) {

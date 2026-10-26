@@ -5,7 +5,7 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { loadReal } from './real-data.load.mjs'
 
-const base = process.argv[2] || 'http://127.0.0.1:8080'
+const base = process.argv[2] || 'http://127.0.0.1:8888'
 const { req } = await loadReal()
 
 let failures = 0

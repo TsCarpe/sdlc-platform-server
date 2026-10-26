@@ -42,6 +42,19 @@ from platform_sdlc.states import req_can_transition
 log = logging.getLogger(__name__)
 _EMPTY_LIST: list[Any] = []
 
+# skill 推送 items[].answer 的占位文本（质检 agent 把 pm-checklist「答复」列原样带出）。
+# answer 是离线通道（sdlc-sync 回写）承载真实答复的字段；占位不是答复，归一为空，
+# 否则 push_artifacts 会把它当已答落库（REQ-2026-1165 实测：30 条全被误标 answered）。
+_ANSWER_PLACEHOLDERS = {
+    "待确认", "待填写", "待补充", "待回复", "待定", "tbd", "todo", "-", "—", "（待填写）", "(待填写)",
+}
+
+
+def _skill_answer(raw: str) -> str:
+    """skill 自带 answer 归一：占位文本视为未答（返回空串）。"""
+    v = (raw or "").strip()
+    return "" if v.lower() in _ANSWER_PLACEHOLDERS else v
+
 
 class RequirementService:
     def __init__(self, db: Database, repos: Repos, blocks: BlockService,
@@ -164,7 +177,7 @@ class RequirementService:
                 c = ClarifyItem(
                     id=0, req_id=req_id, seq=seq, level=level,
                     theme=jrequired(n, "theme"), question=jrequired(n, "question"),
-                    ctx=jtext(n, "ctx", ""), answer=jtext(n, "answer", ""),
+                    ctx=jtext(n, "ctx", ""), answer=_skill_answer(jtext(n, "answer", "")),
                     answered_at=None, quote=jtext(n, "quote", ""), anchor=jtext(n, "anchor", ""),
                     status="pending",  # 重建行基线（D21）：携带/skill 自带 answer 分支另行覆写
                     origin="skill",  # v4.1（DESIGN-v4 §6.3/§10）：重推产生的机器行来源标记，

@@ -36,7 +36,7 @@ class Services:
 
     @classmethod
     def create(cls, db: Database, repos: Repos, media_dir: Path, workspace_root: Path,
-               media_max_bytes: int = 20 * 1024 * 1024) -> Services:
+               media_max_bytes: int = 64 * 1024 * 1024) -> Services:
         media = MediaService(db, repos, media_dir, media_max_bytes)
         iterations = IterationService(db, repos)
         # v4.2/§3：workspace_root = 任务工作区统一根（source_import 完成回调按 tasks/<task_id>/out 定位，

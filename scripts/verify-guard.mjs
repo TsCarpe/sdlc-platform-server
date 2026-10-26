@@ -1,6 +1,6 @@
 // 保护逻辑回归：重推保留答复 & 版本冲突拦截 & 快照刷新语义（v1.1）
-// 用法：node scripts/verify-guard.mjs [baseUrl]（与其他 verify 脚本一致；不传默认 8080）
-const base = process.argv[2] || 'http://127.0.0.1:8080'
+// 用法：node scripts/verify-guard.mjs [baseUrl]（与其他 verify 脚本一致；不传默认 8888）
+const base = process.argv[2] || 'http://127.0.0.1:8888'
 let failures = 0
 const check = (n, a, e) => { const ok = JSON.stringify(a) === JSON.stringify(e); console.log(`${ok ? 'PASS' : 'FAIL'}  ${n}${ok ? '' : '：' + JSON.stringify(a)}`); if (!ok) failures++ }
 const call = async (m, p, b) => {

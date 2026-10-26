@@ -2,8 +2,8 @@
 // P5 验收：查询聊天助理端到端冒烟。
 // 前提：平台已启动、SDLC_AGENT_* 已配置（需模型余额）、sync-real 种子已入库（REQ-2026-001 在）。
 // 断言：SSE 流式事件结构（delta/done）+ 数据接地（回答包含真实数据线索）+ 会话记忆端点。
-// 用法：node scripts/verify-assistant.mjs [BASE=http://127.0.0.1:8080]
-const BASE = process.argv[2] || 'http://127.0.0.1:8080'
+// 用法：node scripts/verify-assistant.mjs [BASE=http://127.0.0.1:8888]
+const BASE = process.argv[2] || 'http://127.0.0.1:8888'
 const SID = 'verify-assistant-' + Date.now().toString(36)
 let failures = 0
 const check = (name, actual, expected) => {

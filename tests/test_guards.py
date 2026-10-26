@@ -74,6 +74,28 @@ def test_push_artifacts_keeps_answers(env: tuple[Repos, Services]) -> None:
     assert answers["P02"]["answer"] == "" and answers["P02"]["status"] == "pending"
 
 
+def test_push_artifacts_ignores_placeholder_answer(env: tuple[Repos, Services]) -> None:
+    """质检 agent 把 pm-checklist「答复」列占位文本带进 payload 时不得落成已答
+    （REQ-2026-1165 实测：30 条 answer='待确认' 全部被误标 answered）。"""
+    repos, services = env
+    req_id = make_req(repos, services)
+    payload: dict[str, Any] = {"digest": {"md": "# d", "fr_points": []},
+                               "audit": {"md": "# a", "red": 0, "yellow": 1, "blue": 0, "items": []},
+                               "items": [
+                                   {"seq": "P01", "level": "red", "theme": "登录", "question": "密码规则？",
+                                    "answer": "待确认"},
+                                   {"seq": "P02", "level": "yellow", "theme": "登录", "question": "验证码？",
+                                    "answer": "（待填写）"},
+                                   {"seq": "P03", "level": "yellow", "theme": "登录", "question": "锁定策略？",
+                                    "answer": "连续 5 次锁定"},
+                               ]}
+    services.requirements.push_artifacts(req_id, payload)
+    answers = {a["seq"]: a for a in services.requirements.answers(req_id)}
+    assert answers["P01"]["answer"] == "" and answers["P01"]["status"] == "pending"
+    assert answers["P02"]["answer"] == "" and answers["P02"]["status"] == "pending"
+    assert answers["P03"]["answer"] == "连续 5 次锁定" and answers["P03"]["status"] == "answered"
+
+
 def test_push_artifacts_platform_disposition_wins(env: tuple[Repos, Services]) -> None:
     """红线（DESIGN-v5 B5/D17）：平台已处置（驳回/挂起）一律以平台为准携带——skill 清单自带
     answer（pull-answers 回写后重推的常态）不得把平台处置顶回 answered。"""

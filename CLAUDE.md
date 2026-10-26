@@ -19,7 +19,7 @@ source_import 任务建卡自动排、完成回调服务端直读 `tasks/<task_i
 ## 常用命令
 
 ```bash
-scripts/dev.sh                 # uv sync + 启动 8080（前台；cwd 必须是仓根：./data 等相对路径依赖它）
+scripts/dev.sh                 # uv sync + 启动 8888（前台；cwd 必须是仓根：./data 等相对路径依赖它）
 scripts/dev-log.sh             # 同上 + 日志落盘 logs/server.log
 scripts/runner.sh              # 外置 Runner（node runner/runner.mjs 轮询领任务，spawn claude CLI）
 uv run pytest                  # 单元回归；单跑一条：uv run pytest tests/test_guards.py -k 关键词

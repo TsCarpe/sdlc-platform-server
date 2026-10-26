@@ -9,7 +9,7 @@
 ## 快速开始
 
 ```bash
-scripts/dev.sh        # uv sync + 启动 http://127.0.0.1:8080（前台，Ctrl-C 停止）
+scripts/dev.sh        # uv sync + 启动 http://127.0.0.1:8888（前台，Ctrl-C 停止）
 scripts/dev-log.sh    # 同上，日志落盘 logs/server.log（tail -f logs/server.log 跟随）
 ```
 
@@ -48,7 +48,7 @@ export SDLC_AGENT_API_KEY=<key>
 | `SDLC_AGENT_TIMEOUT_MIN` / `_MAX_ITERS` / `_POLL_INTERVAL_MS` | `30` / `160` / `3000` | agent 领任务节奏与单任务上限 |
 | `SDLC_WRITE_TOKEN` | 空 | 设置后非 GET 的 `/api` 写接口要求 `X-Token` 头 |
 | `SDLC_DB_PATH` / `SDLC_MEDIA_DIR` | `./data/…` | 数据库与媒体目录 |
-| `SDLC_PLATFORM_URL` | `http://127.0.0.1:8080` | Runner 指向的平台地址（仅 runner 侧读取） |
+| `SDLC_PLATFORM_URL` | `http://127.0.0.1:8888` | Runner 指向的平台地址（仅 runner 侧读取） |
 
 ## 前端对接
 

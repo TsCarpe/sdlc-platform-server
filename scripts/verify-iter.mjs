@@ -1,8 +1,8 @@
 // v2.4 批次1 验收：迭代域（DESIGN-v2.4 D32/D33）
 // 覆盖：建迭代/重名 409/名称校验/建卡绑定/1:1 守卫 409/iter 自动建迭代（payload 契约兼容）/
 //       空迭代 reqId=null/删绑定迭代 409/删空迭代 ok/软删需求释放迭代名/夹具清理
-// 用法：node scripts/verify-iter.mjs [baseUrl]   （默认 http://127.0.0.1:8080）
-const base = process.argv[2] || 'http://127.0.0.1:8080'
+// 用法：node scripts/verify-iter.mjs [baseUrl]   （默认 http://127.0.0.1:8888）
+const base = process.argv[2] || 'http://127.0.0.1:8888'
 
 let failures = 0
 function check(name, actual, expected) {

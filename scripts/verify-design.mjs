@@ -1,8 +1,8 @@
 // v2.4 批次2 验收：设计 lane（DESIGN-v2.4 D34/D36）
 // 覆盖：发布前 design_gen 409/未配仓 400/配仓后建任务/design 草稿回传/定稿 approve（version+留痕）/
 //       修订 re-finalize version+1/C 级：design_gen 409 → 轻量跳过声明 → 互斥守卫/软删 404
-// 用法：node scripts/verify-design.mjs [baseUrl]   （默认 http://127.0.0.1:8080）
-const base = process.argv[2] || 'http://127.0.0.1:8080'
+// 用法：node scripts/verify-design.mjs [baseUrl]   （默认 http://127.0.0.1:8888）
+const base = process.argv[2] || 'http://127.0.0.1:8888'
 
 let failures = 0
 function check(name, actual, expected) {

@@ -675,7 +675,7 @@ flowchart TD
 
 | 变量 | 作用 | 缺省 |
 |---|---|---|
-| `SDLC_PLATFORM_URL` | Runner 指向的平台地址 | `http://127.0.0.1:8080` |
+| `SDLC_PLATFORM_URL` | Runner 指向的平台地址 | `http://127.0.0.1:8888` |
 | `SDLC_RUNNER_NAME` / `SDLC_RUNNER_INTERVAL` / `SDLC_RUNNER_TIMEOUT_MIN` | Runner 名 / 轮询间隔 / 超时 | `local-<pid>` / 3000ms / 30min |
 | `SDLC_SKILLS_REPO` / `SDLC_CLAUDE_CLI` / `SDLC_WORKSPACE` | 技能源 / claude CLI 路径 / 工作区根（v4.3 三级优先：env > 平台 meta 下发 workspaceRoot > 仓根——与服务端落库回调同源 ResolvedPaths.workspace_root） | `~/IdeaProjects/claude-sdlc-skills` / `~/.local/bin/claude` / 仓根 |
 | `SDLC_AGENT_ENABLED` | 进程内 AgentLoop 开关（lifespan 启动） | — |

@@ -2,7 +2,7 @@
 // push 解析新字段（options/module/layer/pids/audit layer）→ PUT 结构化 option JSON →
 // answers/detail 双出口 answerText 解构（含 D-E 残缺透传 + extra 连接符）。
 // 用法：node scripts/verify-v5.mjs [baseUrl]（需平台已运行；自建卡自足，不依赖真实数据）
-const base = process.argv[2] || 'http://127.0.0.1:8080'
+const base = process.argv[2] || 'http://127.0.0.1:8888'
 
 let failures = 0
 function check(name, actual, expected) {

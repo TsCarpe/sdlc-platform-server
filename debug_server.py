@@ -10,4 +10,4 @@ import uvicorn
 
 if __name__ == "__main__":
     Path("data").mkdir(exist_ok=True)
-    uvicorn.run("platform_sdlc.main:create_app", factory=True, host="0.0.0.0", port=8080)
+    uvicorn.run("platform_sdlc.main:create_app", factory=True, host="0.0.0.0", port=8888)

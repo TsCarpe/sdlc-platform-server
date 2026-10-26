@@ -5,8 +5,8 @@
 //   ① source_import 自动排 → agent 执行（write_file 源 md + parse_doc --md → out/doc.json）→ done 落库；
 //   ② quality_check → agent 纯分析（get_requirement_card 的 doc + list_req_comments）→ digest_bundle 草稿，
 //      抽查 items[].anchor ∈ doc.json 块 ID 集（输入源切换的黑盒判据）。
-// 用法：node scripts/verify-agent.mjs [BASE=http://127.0.0.1:8080]
-const BASE = process.argv[2] || 'http://127.0.0.1:8080';
+// 用法：node scripts/verify-agent.mjs [BASE=http://127.0.0.1:8888]
+const BASE = process.argv[2] || 'http://127.0.0.1:8888';
 const assert = (cond, label, extra = '') => {
   console.log(`${cond ? 'PASS' : 'FAIL'}  ${label}${extra ? ': ' + extra : ''}`);
   if (!cond) process.exitCode = 1;

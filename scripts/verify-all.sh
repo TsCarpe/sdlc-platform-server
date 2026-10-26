@@ -1,6 +1,6 @@
 #!/bin/bash
 # v3 全量回归：全部验证脚本（v1.0 守卫 → v1.1 追溯 → v1.2 原文块 → v2.0 任务/草稿 → v2.4 迭代/设计/门禁 → 令牌/agent）
-# 用法：scripts/verify-all.sh [BASE]   （需平台已运行，默认 http://127.0.0.1:8080）
+# 用法：scripts/verify-all.sh [BASE]   （需平台已运行，默认 http://127.0.0.1:8888）
 set -e
 cd "$(dirname "$0")/.."
 
@@ -10,7 +10,7 @@ if [ -d "$HOME/.nvm/versions/node" ]; then
   [ -n "$NODE_BIN" ] && export PATH="$NODE_BIN:$PATH"
 fi
 
-BASE="${1:-http://127.0.0.1:8080}"
+BASE="${1:-http://127.0.0.1:8888}"
 echo "== 平台健康检查 =="
 curl -sf "$BASE/api/health"
 echo

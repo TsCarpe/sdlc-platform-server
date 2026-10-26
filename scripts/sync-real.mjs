@@ -1,11 +1,11 @@
 // M1/M3 验收 + M4 eval 双用：把种子数据（真实需求「区域教学技能比赛」的平台化表示）
 // 通过平台 REST API 推送，并自动校验回读结果。v1.1：含快照/需求域/溯源字段/双向索引断言。
-// 用法：node scripts/sync-real.mjs [baseUrl]   （默认 http://127.0.0.1:8080）
+// 用法：node scripts/sync-real.mjs [baseUrl]   （默认 http://127.0.0.1:8888）
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { loadReal } from './real-data.load.mjs'
 
-const base = process.argv[2] || 'http://127.0.0.1:8080'
+const base = process.argv[2] || 'http://127.0.0.1:8888'
 const { req, cases, v11 } = await loadReal()
 
 let failures = 0

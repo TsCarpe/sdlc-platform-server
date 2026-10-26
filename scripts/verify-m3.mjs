@@ -1,7 +1,7 @@
 // M3（v1.1 新增）：用例域追溯数据断言 —— R1 用例↔需求点双向、R2 用例↔体检问题、
 // R4 缺陷编号引用、旧形 payload 降级兼容。
-// 用法：node scripts/verify-m3.mjs [baseUrl]   （默认 http://127.0.0.1:8080）
-const base = process.argv[2] || 'http://127.0.0.1:8080'
+// 用法：node scripts/verify-m3.mjs [baseUrl]   （默认 http://127.0.0.1:8888）
+const base = process.argv[2] || 'http://127.0.0.1:8888'
 
 let failures = 0
 function check(name, actual, expected) {
