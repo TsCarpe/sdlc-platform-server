@@ -78,7 +78,7 @@ def build_spawn_reviewer(model: str, role_prompts: dict[str, str]) -> Tool:
         except Exception as e:  # noqa: BLE001  # 子 run 异常回灌主会话，可重试该角色
             return _err(f"子代理执行失败（{role}）：{type(e).__name__}: {e}——请重试该角色一次")
         text = str(run.final_output or "")
-        calls = await asyncio.to_thread(bump_fanout_count, ctx.workspace)
+        calls = await asyncio.to_thread(bump_fanout_count, ctx.workspace, ctx.task_id)
         lim = 24000
         report = text if len(text) <= lim else text[:lim] + f"...[截断，共 {len(text)} 字符]"
         return json.dumps({"ok": True, "role": role, "fanoutCalls": calls, "report": report},

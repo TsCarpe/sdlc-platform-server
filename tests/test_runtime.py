@@ -322,27 +322,31 @@ def test_gate_fanout_trace_check(tmp_path: Path) -> None:
 
     # A 级：留痕 4 / 实际 0 → 拒，文案指向补扇出而非改写留痕
     with pytest.raises(ValueError, match="补足至 4"):
-        _check_gate_fanout(tmp_path, "A", md_with(4))
+        _check_gate_fanout(tmp_path, 7, "A", md_with(4))
     # 补 3 次仍留痕 4 → 拒（计数与留痕不符）
     for _ in range(3):
-        bump_fanout_count(tmp_path)
+        bump_fanout_count(tmp_path, 7)
     with pytest.raises(ValueError, match="实际成功=3"):
-        _check_gate_fanout(tmp_path, "A", md_with(4))
+        _check_gate_fanout(tmp_path, 7, "A", md_with(4))
     # 第 4 次 → 计数与留痕一致且达下限 → 放行
-    bump_fanout_count(tmp_path)
-    _check_gate_fanout(tmp_path, "A", md_with(4))
+    bump_fanout_count(tmp_path, 7)
+    _check_gate_fanout(tmp_path, 7, "A", md_with(4))
+
+    # 任务隔离（同名工作区异 task_id 不继承计数）
+    with pytest.raises(ValueError, match="实际成功=0"):
+        _check_gate_fanout(tmp_path, 8, "A", md_with(4))
 
     # B 级（干净工作区）：下限 2
     ws_b = tmp_path / "b"
     ws_b.mkdir()
     with pytest.raises(ValueError, match="补足至 2"):
-        _check_gate_fanout(ws_b, "B", md_with(2))
+        _check_gate_fanout(ws_b, 9, "B", md_with(2))
 
     # C 级 external：无下限，计数 0 + 留痕 0 → 放行；degraded 不核对
     ws_c = tmp_path / "c"
     ws_c.mkdir()
-    _check_gate_fanout(ws_c, "C", md_with(0))
-    _check_gate_fanout(ws_c, "C", md_with(0, mode="degraded", ctxm="single-session"))
+    _check_gate_fanout(ws_c, 10, "C", md_with(0))
+    _check_gate_fanout(ws_c, 10, "C", md_with(0, mode="degraded", ctxm="single-session"))
 
 
 def test_result_line_regex() -> None:

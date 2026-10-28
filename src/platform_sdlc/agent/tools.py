@@ -213,28 +213,32 @@ async def list_cases(wrapper: RunContextWrapper[TaskRunContext]) -> str:
 # ---------- 写入面（仅草稿与媒体——正式产物的唯一人道在平台「采纳/发布」） ----------
 
 
-_GATE_FANOUT_FILE = "gate-fanout.json"
+def _fanout_file(workspace: Path, task_id: int) -> Path:
+    """扇出计数文件按任务隔离：工作区 sdlc/<safe_name>/ 跨同名需求共享（resume_hint 的既有
+    语义），计数若挂工作区级会在同名卡二跑时继承旧值被核对误拒——task_id 维度隔离后
+    同任务跨 attempt/retry 仍累计（防续跑轮计数归零），异任务互不沾染。"""
+    return workspace / f"gate-fanout-{task_id}.json"
 
 
-def _fanout_count(workspace: Path) -> int:
-    """读工作区扇出计数（spawn_reviewer 实际成功次数；文件缺失/损坏 = 0）。"""
+def _fanout_count(workspace: Path, task_id: int) -> int:
+    """读任务扇出计数（spawn_reviewer 实际成功次数；文件缺失/损坏 = 0）。"""
     try:
-        return int(json.loads((workspace / _GATE_FANOUT_FILE).read_text(encoding="utf-8")).get("calls", 0))
+        return int(json.loads(_fanout_file(workspace, task_id).read_text(encoding="utf-8")).get("calls", 0))
     except Exception:
         return 0
 
 
-def bump_fanout_count(workspace: Path) -> int:
+def bump_fanout_count(workspace: Path, task_id: int) -> int:
     """扇出计数 +1 并持久化。落盘而非 ctx 内存：ctx 是 per-attempt 构造，attempt-2 续跑轮
-    内存计数归零会被 put_draft 留痕核对误拒；同任务工作区跨 attempt/retry 保留，计数累计。"""
-    n = _fanout_count(workspace) + 1
-    (workspace / _GATE_FANOUT_FILE).write_text(json.dumps({"calls": n}), encoding="utf-8")
+    内存计数归零会被 put_draft 留痕核对误拒；同任务（同 task_id）跨 attempt/retry 累计。"""
+    n = _fanout_count(workspace, task_id) + 1
+    _fanout_file(workspace, task_id).write_text(json.dumps({"calls": n}), encoding="utf-8")
     return n
 
 
-def _check_gate_fanout(workspace: Path, tier: str, md: str) -> None:
+def _check_gate_fanout(workspace: Path, task_id: int, tier: str, md: str) -> None:
     """put_draft(gate_issues) 扇出留痕核对（P1-9 进程内承载，agent 工具路径专属——人工经
-    平台 PUT 不经 TaskRunContext，天然不受影响）：留痕 fanout 必须 == 工作区实际 spawn_reviewer
+    平台 PUT 不经 TaskRunContext，天然不受影响）：留痕 fanout 必须 == 本任务实际 spawn_reviewer
     计数；A/B 级另须 ≥4/2。不足时指引补扇出而非按低值改写留痕——低值会过本关但 ingest 必
     409 扇出不足，评审轮卡死。留痕解析复用 services.gate.review_meta，禁第二套解析器漂移。"""
     from platform_sdlc.services.gate import review_meta
@@ -242,7 +246,7 @@ def _check_gate_fanout(workspace: Path, tier: str, md: str) -> None:
     meta = review_meta(md)
     if not meta["present"] or str(meta["reviewMode"]) != "external":
         return  # degraded/未标注（C 级面）：ingest 权威校验，本处不重复
-    calls = _fanout_count(workspace)
+    calls = _fanout_count(workspace, task_id)
     declared = int(meta["fanout"])
     need = 4 if tier == "A" else (2 if tier == "B" else 0)
     if declared == calls and calls >= need:
@@ -275,7 +279,7 @@ async def put_draft(wrapper: RunContextWrapper[TaskRunContext], type: str, md: s
         if not md_val and mdPath.strip():
             md_val = _read_text(_resolve_in_workspace(c, mdPath.strip()))
         if type == "gate_issues":
-            _check_gate_fanout(c.workspace, c.tier, md_val)
+            _check_gate_fanout(c.workspace, c.task_id, c.tier, md_val)
         c.services.tasks.put_draft(c.req_id, type, {"md": md_val, "contentJson": json_val, "taskId": c.task_id})
         return json.dumps({"ok": True, "type": type}, ensure_ascii=False)
 
