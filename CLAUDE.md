@@ -5,7 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 项目定位
 
 SDLC 产物协作平台后端（Python/FastAPI，v3.0 起自 Java 迁移）。单服务单库（SQLite 单连接单写者），
-任务队列 + 双执行通道（外置 runner.mjs spawn claude CLI / 进程内 openai-agents），产物走「草稿 → 人工采纳/发布」两态。
+任务队列 + 进程内单执行通道（openai-agents；外置 runner 已于 2026-10-28 下线，A/B 级评审扇出由
+进程内 spawn_reviewer 工具承载），产物走「草稿 → 人工采纳/发布」两态。
 前端在姊妹仓 `sdlc-platform-web`（构建产物拷入 `static/` 同源托管）。权威文档：人读契约 = `docs/ER图与业务流程.md` §13、
 机器契约 = `docs/openapi.json`（CI 快照门）；`docs/DESIGN-v4-需求平台权威化.md`（v4 设计）与 `docs/EXEC-PLAN-v4.md`（实施计划）。
 环境变量（SDLC_AGENT_* / SDLC_WRITE_TOKEN 等）见 README。
@@ -13,7 +14,7 @@ SDLC 产物协作平台后端（Python/FastAPI，v3.0 起自 Java 迁移）。�
 v4 起需求原文以块表为权威（`req_block` 一行一块锚点即主键，`req_comment` 双 origin 评论）：
 source_import 任务建卡自动排、完成回调服务端直读 `tasks/<task_id>/out/doc.json` 落库（不经 LLM 上下文）；
 质检纯分析读块模型（`GET …/doc.json` / `comments.json` curl 直落）；分源封存守卫管住全量重导。
-新增任务类型必须三处同步（prompts.py ∪ runner.mjs promptFor ∪ task_rules/DEFAULT_RULES），
+新增任务类型必须两处同步（prompts.py 分支 ∪ task_rules 键集），
 `scripts/check_task_templates.py` 为 CI 第五道门。
 
 ## 常用命令
@@ -21,10 +22,9 @@ source_import 任务建卡自动排、完成回调服务端直读 `tasks/<task_i
 ```bash
 scripts/dev.sh                 # uv sync + 启动 8888（前台；cwd 必须是仓根：./data 等相对路径依赖它）
 scripts/dev-log.sh             # 同上 + 日志落盘 logs/server.log
-scripts/runner.sh              # 外置 Runner（node runner/runner.mjs 轮询领任务，spawn claude CLI）
 uv run pytest                  # 单元回归；单跑一条：uv run pytest tests/test_guards.py -k 关键词
 uv run pyright && uv run ruff check src tests   # 类型 strict + lint
-scripts/verify-all.sh          # 黑盒全量回归（需服务已启动；自动暂停 Runner 与进程内 agent 防抢任务，结束自动恢复）
+scripts/verify-all.sh          # 黑盒全量回归（需服务已启动；自动暂停进程内 agent 防抢任务，结束自动恢复）
 node scripts/verify-agent.mjs  # agent 执行侧端到端冒烟（需模型余额）
 scripts/backup.sh              # SQLite 快照
 ```
@@ -36,9 +36,10 @@ IDE 断点：直接 Debug `debug_server.py`（单进程无 reload，等价 dev.s
 - 装配链：`main.create_app()` → `run_migrations` → `Repos.create` / `Services.create` → `AppContext`
   （`runtime.py`，路由层唯一共享对象）→ `register_routers` → `_mount_static`（SPA 同源托管，index no-cache；
   `static/` 不存在即纯 API 模式）。lifespan 在 `SDLC_AGENT_ENABLED` 时启动 `AgentLoop`。
-- 任务双通道互斥：外置 runner 与进程内 `AgentLoop` 抢同一队列——runner 走 `POST /api/tasks/next`、进程内直调服务层，同归 `task_repo.claim()`
-  （条件 UPDATE，affected=1 才算领到）；`finish()` 仅 running 可回报终态。回归用 `/api/agent/pause` + 停 runner
-  防竞态（verify-all.sh 已内置）。
+- 任务执行单通道（外置 runner 已下线）：进程内 `AgentLoop` 直调服务层领任务，同归 `task_repo.claim()`
+  （条件 UPDATE，affected=1 才算领到——`POST /api/tasks/next` 保留为外部脚本的原子领取面，verify-*.mjs 走它）；
+  `finish()` 仅 running 可回报终态。回归用 `/api/agent/pause` 防竞态（verify-all.sh 已内置）。
+  A/B 级 gate_review 扇出由进程内 spawn_reviewer 工具承载（gate-fanout.json 计数 + put_draft 留痕核对）。
 - 路由层惯例：async 路由里的同步服务调用一律 `asyncio.to_thread(...)`——SQLite/文件 IO 不得冻结事件循环
   （进程内 agent 轮询、助理 SSE 流与请求共享同一循环）。
 - L2 自动编排：`orchestration.py` 的 `on_answered` / `on_published` 挂在作答/发布路由成功之后（编排失败不连累

@@ -1,6 +1,6 @@
 # SDLC 产物协作平台 —— ER 图与业务流程（技术侧）
 
-> 依据：`src/platform_sdlc/` 当前代码（main / routers / services / repositories / agent）+ `schema.sql` + `runner/runner.mjs`。
+> 依据：`src/platform_sdlc/` 当前代码（main / routers / services / repositories / agent）+ `schema.sql`。
 > **契约权威（2026-10 起生效）**：人读契约 = 本文 §13 端点速览表；机器可读契约 = `docs/openapi.json`
 > （`scripts/export-openapi.mjs` 导出，契约面变更须随批次重跑并 commit）。`docs/DEV-PLAN.md` 已归档为
 > v1 历史文档（停留 Java v1 时代，勿据其开发——AUDIT D1-1）。
@@ -10,7 +10,7 @@
 
 ## 0. 一句话模型
 
-单服务（FastAPI）+ 单库（SQLite 单连接单写者）+ 任务队列双执行通道（外置 Runner spawn `claude` CLI / 进程内 openai-agents）。
+单服务（FastAPI）+ 单库（SQLite 单连接单写者）+ 任务队列单执行通道（进程内 openai-agents；外置 Runner 已于 2026-10-28 下线，`POST /api/tasks/next` 保留为外部回归脚本的原子领取面）。
 产物一律走 **草稿（draft）→ 人工采纳/发布（approve/publish）** 两态，agent 对正式产物**没有写通道**。
 域模型：**需求卡（requirement）是唯一聚合根**，其余实体全部挂在 `req_id` 下；无外键约束，关系靠服务层守卫保证。
 
@@ -39,7 +39,7 @@ lifespan：SDLC_AGENT_ENABLED=true 时启动 AgentLoop（进程内执行通道�
 flowchart LR
     subgraph 入口
         WEB[前端 SPA<br/>static/ 同源托管]
-        RUNNER[外置 Runner<br/>runner/runner.mjs]
+        EXT[外部脚本 / verify 回归<br/>tasks/next 原子领取面]
         SKILL[skill / CLI 工具]
     end
     subgraph 应用["main.py（装配 + 中间件 + 异常处理器）"]
@@ -57,7 +57,7 @@ flowchart LR
         ASSIST[(assistant.db<br/>助理会话独立 SQLite)]
     end
     WEB --> RT
-    RUNNER --> RT
+    EXT --> RT
     SKILL --> RT
     RT --> SVC
     RT --> ORCH
@@ -189,7 +189,7 @@ erDiagram
         TEXT status "queued | running | done | failed"
         TEXT payload "JSON（note 等）"
         TEXT result "JSON（done 摘要 / failed 错误+reason+hint）"
-        TEXT runner "领取者：local-<hostname>-runner / openai-agents-inproc（稳定名，重启不变）"
+        TEXT runner "领取者：openai-agents-inproc（进程内，稳定名）/ 回归脚本名（verify 经 tasks/next 领取）"
         INTEGER attempt "retry 递增的执行代数（P1-6：迟到回报的 fencing）"
         TEXT created_by "空=人工；auto:clarify-complete | auto:published | gate:open"
         TEXT created_at
@@ -333,7 +333,7 @@ stateDiagram-v2
 flowchart TD
     A[PM 建卡<br/>POST /api/requirements] --> B[submitted → reviewing → clarifying<br/>人审两跳]
     B --> C[质检任务 quality_check<br/>人工建 或 推送通道]
-    C --> D[Agent/Runner 执行<br/>读需求卡/澄清项/技能仓<br/>put_draft 回传 digest_bundle 草稿]
+    C --> D[Agent 执行<br/>读需求卡/澄清项/技能仓<br/>put_draft 回传 digest_bundle 草稿]
     D --> E[人审：草稿采纳 approve<br/>digest_bundle → push_artifacts]
     E --> F[澄清清单 + digest/audit/snapshot 落库<br/>FR 点注册]
     F --> G{PM 逐条处置澄清<br/>PUT /answers/seq}
@@ -418,53 +418,40 @@ SELECT id FROM task WHERE status='queued' ORDER BY id LIMIT 1;
 UPDATE task SET status='running', runner=?, updated_at=? WHERE id=? AND status='queued';
 ```
 
-两个通道（外置 Runner 轮询 / 进程内 AgentLoop）抢同一队列，互斥完全由这条条件 UPDATE 保证——单连接 + RLock 下无竞态窗口。`finish` 同理：`WHERE id=? AND status='running'`，仅 running 可回报终态（0 行 → 409），防竞态覆盖。
+领取互斥完全由这条条件 UPDATE 保证——进程内 AgentLoop 直调服务层、外部脚本（verify 回归）走 `tasks/next` HTTP 面都汇合到同一 SQL（单连接 + RLock 下无竞态窗口）。`finish` 同理：`WHERE id=? AND status='running'`，仅 running 可回报终态（0 行 → 409），防竞态覆盖。
 
 ### 6.4 双通道时序
 
 ```mermaid
 sequenceDiagram
-    participant R as 外置 Runner（runner.mjs，轮询 3s）
     participant A as 进程内 AgentLoop（SDLC_AGENT_ENABLED 时）
-    participant API as FastAPI /api/tasks/next
+    participant API as FastAPI /api/tasks/next（外部脚本领取面）
     participant EXE as 执行器
     participant DB as SQLite task 表
 
-    R->>API: POST /api/tasks/next?runner=local-<host>-runner
-    API->>DB: claim（条件 UPDATE）
-    alt 领到（affected=1）
-        API-->>R: 200 任务 JSON
-        R->>EXE: spawn claude CLI（技能仓 prompt 模板 + 平台上下文）
-        EXE->>API: HTTP 只读拉取需求卡等（或直接用 prompt 上下文）
-        EXE->>API: PUT /drafts/{type}（agent 工具 put_draft / HTTP）
-        R->>R: selfCheck（草稿已回传且结构合法）
-        R->>API: POST /tasks/{id}/done | /failed
-    else 队列空
-        API-->>R: 204 无 body
-    end
-    A->>API: claim(runner="openai-agents-inproc")
-    API->>DB: 同一条 claim SQL
+    A->>DB: claim(runner="openai-agents-inproc")（直调服务层，同一条 claim SQL）
     alt 领到
-        A->>EXE: AgentExecutor.execute（openai-agents，ALL_TOOLS）
-        EXE->>API: 服务层直调（同进程，put_draft 等）
+        A->>EXE: AgentExecutor.execute（openai-agents，进程内工具面）
+        EXE->>EXE: 服务层直调（同进程，put_draft 等；A/B 级 gate_review 经 spawn_reviewer 扇出子代理）
         A->>A: self_check（草稿机械校验）
-        A->>API: finish(done/failed)
+        A->>DB: finish(done/failed)
     else 空
         A->>A: sleep(poll_interval_ms)
     end
+    Note over API,DB: verify-*.mjs 回归脚本走 POST /api/tasks/next?runner=<名> 领测试任务（同一条件 UPDATE 原子领取）
 ```
 
-两通道执行器对照：
+执行通道属性（runner 2026-10-28 下线后单通道）：
 
-| | 外置 Runner（`runner/runner.mjs`） | 进程内 AgentLoop（`agent/loop.py`） |
-|---|---|---|
-| 领取者名 | `local-<pid>`（env 可配） | `openai-agents-inproc` |
-| 执行体 | spawn `claude` CLI（`~/.local/bin/claude`），prompt 来自技能仓模板 | openai-agents `Agent`（OpenAI 兼容端点，chat_completions） |
-| 工具面 | CLI 通过 HTTP API 自助（读 + put_draft） | `ALL_TOOLS` 直调服务层（同进程） |
-| 结果识别 | CLI stdout JSON 的 summary/isError | 最终输出中的 `SDLC_TASK_RESULT {…}` 结果行（缺失触发 attempt=2 续跑，不重做已完成步骤） |
-| 机械自查 | selfCheck：草稿已回传 + 按类型的结构/长度下限 | self_check：同口径逐条移植（standard ≥200 字；design ≥200 字且含 §0–§8 标头；gate_issues 需 md+contentJson.issues；digest_bundle 需 digest/audit/items） |
-| 超时 | TIMEOUT_MIN（默认 30min）SIGKILL + 启动 recoverStale | deadline + asyncio.wait_for + 启动 expire_stale |
-| 回归开关 | verify-all.sh 自动暂停（停进程） | `/api/agent/pause` / `/api/agent/resume`（幂等，未启用时返回 stub） |
+| | 进程内 AgentLoop（`agent/loop.py`） |
+|---|---|
+| 领取者名 | `openai-agents-inproc`（稳定名） |
+| 执行体 | openai-agents `Agent`（OpenAI 兼容端点，chat_completions） |
+| 工具面 | `build_tools(feishu)` 直调服务层（同进程；gate_review A/B 级另装配 spawn_reviewer 扇出工具） |
+| 结果识别 | 最终输出中的 `SDLC_TASK_RESULT {…}` 结果行（缺失触发 attempt=2 续跑，不重做已完成步骤） |
+| 机械自查 | self_check：草稿已回传 + 按类型的结构/长度下限（standard ≥200 字；design ≥200 字且含 §0–§8 标头；gate_issues 需 md+contentJson.issues；digest_bundle 需 digest/audit/items） |
+| 超时 | deadline + asyncio.wait_for + 启动 expire_stale（gate_review 用 SDLC_GATE_TIMEOUT_MIN 专项墙钟） |
+| 回归开关 | `/api/agent/pause` / `/api/agent/resume`（幂等，未启用时返回 stub） |
 
 ### 6.5 L2 自动编排（`orchestration.py`，确定性事件钩子）
 
@@ -615,7 +602,7 @@ flowchart TD
 - 工具面 `ASSISTANT_TOOLS`（7 个，**跨需求只读**）：search_requirements / get_requirement_summary / list_clarify_items / list_cases / get_gate_status / get_design_status / list_iterations。
 - 会话记忆存独立 SQLite `data/assistant.db`（不进 platform.db，单写者模型不变）；会话列表/清除端点齐备。
 - 提示词纪律：只答工具能支撑的内容、查不到如实说、引用带编号与状态、数据矛盾指出原始值。
-- X-Token：属 POST /api/ 写面，启用 write-token 的部署需带（与 Runner 同口径）。
+- X-Token：属 POST /api/ 写面，启用 write-token 的部署需带（与执行器回报同口径）。
 
 ---
 
@@ -631,7 +618,7 @@ flowchart TD
 | **媒体存储** | 内容寻址：media_id = `m-` + sha256[:12]（显式须同格式）；文件 `data/media/{reqId}/{mediaId}`；同 id 幂等；读取 ETag=sha256 → 304 + immutable 缓存 |
 | **静态托管** | `static/` 存在才挂载：/assets hash 文件名长缓存；index no-cache（防旧 HTML 引已删 assets 白屏）；无扩展名路径 SPA 回退；favicon.ico 转 svg |
 | **迁移** | 幂等两段：schema.sql `IF NOT EXISTS` 建表 + `migrations.py` 判列补列；结构以运行库为权威 |
-| **回归开关** | `/api/agent/pause\|resume\|status`（进程内通道）；verify-all.sh 黑盒回归自动暂停 agent + 提示停 Runner，防回归任务被抢 |
+| **回归开关** | `/api/agent/pause\|resume\|status`（进程内通道）；verify-all.sh 黑盒回归自动暂停 agent，防回归任务被抢 |
 
 ---
 
@@ -665,7 +652,7 @@ flowchart TD
 9. 迭代与需求 1:1（存活行口径）；仅空迭代可删。
 10. 软删除行与子表保留，编号永不复用。
 11. **导入一次性封存（v4 §2.4）**：全量替换式重导在有平台数据后封存——text 源块表非空即封存（重跑 ID 全换族锚定下游全漂移）；feishu 源有平台编辑痕迹或平台评论即封存；失败重试块表空合法；对账式重导（变更单，三期）永远合法。
-12. **模板三处一致性（v4 §6.1）**：任务类型在 prompts.py 分支 ∪ runner.mjs promptFor ∪ task_rules/DEFAULT_RULES 三处同步，`scripts/check_task_templates.py` CI 守门，漏一处红。
+12. **模板两处一致性（v4 §6.1；runner 下线后收敛两处）**：任务类型在 prompts.py 分支 ∪ task_rules 键集两处同步，`scripts/check_task_templates.py` CI 守门，漏一处红。
 13. **窗口 1 编辑守卫（v4 §1 表/§5.3）**：块级直接编辑拒 published（终态锁）；保存时存在 queued/running 质检任务 → 409（防产物 anchor 基于编辑混合态）；块表空无基线拒；软删块复活拒（基线过期，复活是三期放弃变更语义）；diff 只在服务端一份（LIS 判 move），insert 服务端发 blk-<ulid>。
 14. **评论升级幂等（v4 §4.1）**：每条评论只可升级一次（重复 409）；已解决评论仍可升级；升级不改评论 resolved 态；L 系行仅人工删、计入发布守卫澄清全处置。
 
@@ -675,10 +662,8 @@ flowchart TD
 
 | 变量 | 作用 | 缺省 |
 |---|---|---|
-| `SDLC_PLATFORM_URL` | Runner 指向的平台地址 | `http://127.0.0.1:8888` |
-| `SDLC_RUNNER_NAME` / `SDLC_RUNNER_INTERVAL` / `SDLC_RUNNER_TIMEOUT_MIN` | Runner 名 / 轮询间隔 / 超时 | `local-<pid>` / 3000ms / 30min |
-| `SDLC_SKILLS_REPO` / `SDLC_CLAUDE_CLI` / `SDLC_WORKSPACE` | 技能源 / claude CLI 路径 / 工作区根（v4.3 三级优先：env > 平台 meta 下发 workspaceRoot > 仓根——与服务端落库回调同源 ResolvedPaths.workspace_root） | `~/IdeaProjects/claude-sdlc-skills` / `~/.local/bin/claude` / 仓根 |
 | `SDLC_AGENT_ENABLED` | 进程内 AgentLoop 开关（lifespan 启动） | — |
 | `SDLC_AGENT_BASE_URL` / `SDLC_AGENT_API_KEY` / `SDLC_AGENT_MODEL` | OpenAI 兼容端点接线（三者齐备才可用） | — |
 | `SDLC_AGENT_SKILLS_REPO` / `SDLC_AGENT_WORKSPACE_ROOT` / `SDLC_AGENT_POLL_INTERVAL_MS` / `SDLC_AGENT_TIMEOUT_MIN` / `SDLC_AGENT_MAX_ITERS` | 进程内通道工作区与节奏 | — |
+| `SDLC_GATE_TIMEOUT_MIN` | A/B 级 gate_review 扇出专项墙钟（主会话+4 子 run+汇合共享 deadline） | 60min |
 | `SDLC_WRITE_TOKEN` | X-Token 写保护（空=不启用） | — |

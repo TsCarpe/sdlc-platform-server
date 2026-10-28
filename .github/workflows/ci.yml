@@ -22,8 +22,8 @@ jobs:
         run: uv run pyright
       - if: always()
         run: uv run pytest -q
-      # 任务模板三处一致性守门（v4-3，DESIGN-v4 §6.1）：prompts.py ∪ runner.mjs promptFor ∪
-      # task_rules/DEFAULT_RULES——每新增任务类型三处同步，漏一处 CI 红
+      # 任务模板两处一致性守门（v4-3，DESIGN-v4 §6.1；runner 下线后收敛两处）：
+      # prompts.py 分支 ∪ task_rules 键集——每新增任务类型两处同步，漏一处 CI 红
       - if: always()
         run: uv run python scripts/check_task_templates.py
       - if: always()
