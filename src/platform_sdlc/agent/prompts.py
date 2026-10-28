@@ -127,7 +127,7 @@ def sys_prompt(task_type: str, card: Requirement, skills_repo: Path, repos_of: l
                 "4. 对抗式输出六字段：标题/场景（白话 2-3 句，禁代号）/原文（≤2 句摘引，禁只给行号）/位置/严重度（high|mid|low）/依据（hard=原文直接支撑｜soft=推导）；分歧条目 div:true；权衡条目 tradeoff:true 并建议驳回。\n"
                 "5. RECONCILE 四分类（契约误读/噪音剔除，不进清单；有效可行动/有效权衡进清单）+ 同根因合并（同根因条目 mergedUnit 相同，人裁决的是裁决单元不是发现数）。\n"
                 "6. 产出 issues 文件（issue-template 结构：头部 评审状态=待裁决/风险分级/设计文档/用例文件/CONTRACT 基准/业务背景/编号体系 + 速览 + 分歧清单 + 角色三表 + 备案区 + 裁决记录汇总留空）。\n"
-                '7. put_draft(type=gate_issues, md=issues 文件全文, contentJson={"issues":[{code:"D-01|A-xx|S-xx|T-xx",sev:"high|mid|low",theme,role,scene,quote,loc,basis:"hard|soft",div,tradeoff,filed,mergedUnit}]})。\n'
+                '7. put_draft(type=gate_issues, md=issues 文件全文, contentJson={"issues":[{code:"D-01|A-xx|S-xx|T-xx",sev:"high|mid|low",theme,role,scene,quote,loc,basis:"hard|soft",div:true|false,tradeoff:true|false,filed:true|false,mergedUnit:整数（0=平台自动分配独立单元，同根因条目填同一正整数）}]})。\n'
                 "8. 输出 SDLC_TASK_RESULT 行（发现数/裁决单元数/分歧数/备案数）。")
     raise ValueError(f"未知任务类型：{task_type}")
 
