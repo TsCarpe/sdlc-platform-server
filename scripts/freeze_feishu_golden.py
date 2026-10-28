@@ -7,7 +7,9 @@
   comments.json   评论原始 HTTP 响应（need_relation=true；extra.content_anchor_id 与
                   relation.content_deleted 只在原始响应存活，SDK FileComment 模型会丢弃）
   content.xml     lark-cli docs +fetch --doc-format xml --detail with-ids 的产物
-                  （黄金基线 = lark-cli 链路；新序列化器与它逐块比对，验收 #2）
+                  （黄金基线 = lark-cli 链路；新链路产出与它比对，验收 #2）
+  docsai.xml      docs_ai v1 fetch 服务端渲染的原始 XML（新链路实际数据源，DESIGN §13：
+                  与 lark-cli 版仅差 comment-refs 属性——那是客户端从评论锚点本地注入的）
   refmap.json     同上 reference_map.comments（key 匹配 c\\d+，value.data 是 <comment> XML 串）
   doc.json        parse_doc.py(content.xml + refmap.json) 离线产物（无 --download，媒体 pending）
   meta.json       document_id / revision_id / 块类型分布 / 工具基线 / 冻结时间
@@ -33,7 +35,7 @@ import subprocess
 import sys
 import urllib.parse
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, NoReturn, cast
 
@@ -99,6 +101,17 @@ class Feishu:
             body = json.loads(r.read())
         if body.get("code") != 0:
             die(f"API 失败 {path}：code={body.get('code')} msg={body.get('msg')}")
+        return body["data"]
+
+    def post(self, path: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        req = urllib.request.Request(
+            FEISHU + path, data=json.dumps(payload or {}).encode(),
+            headers={"Authorization": "Bearer " + self.token,
+                     "Content-Type": "application/json"}, method="POST")
+        with urllib.request.urlopen(req, timeout=120) as r:
+            body = json.loads(r.read())
+        if body.get("code") != 0:
+            die(f"API 失败 POST {path}：code={body.get('code')} msg={body.get('msg')}")
         return body["data"]
 
 
@@ -238,6 +251,21 @@ def main() -> int:
     refmap = cast("dict[str, Any]", cm_raw) if isinstance(cm_raw, dict) else {}
     print(f"lark-cli 基线：content.xml={len(content_xml)} 字符，refmap={len(refmap)} 条评论，revision 对齐 ✅")
 
+    # docs_ai 双基线（DESIGN §13）：服务端渲染 XML 是新链路数据源；与 lark-cli 版的差异
+    # 必须仅为 comment-refs（客户端注入面）——超出即 docs_ai 行为漂移，冻结时即暴露
+    docsai_doc = f.post(f"/open-apis/docs_ai/v1/documents/{doc_id}/fetch")
+    docsai_doc_node = cast("dict[str, Any]", docsai_doc.get("document") or {})
+    docsai_xml = str(docsai_doc_node.get("content") or "")
+    if int(docsai_doc_node.get("revision_id") or -1) != revision:
+        die(f"docs_ai revision 不一致：{docsai_doc_node.get('revision_id')} vs {revision}——冻结窗口内文档被编辑，稍后重跑")
+    stripped = re.sub(r' comment-refs="[^"]*"', "", content_xml)
+    if docsai_xml != stripped:
+        i = next((i for i in range(min(len(docsai_xml), len(stripped)))
+                  if docsai_xml[i] != stripped[i]), min(len(docsai_xml), len(stripped)))
+        die(f"docs_ai 与 lark-cli 差异超出 comment-refs 面 @{i}："
+            f"docsai={docsai_xml[max(0, i - 60):i + 60]!r} larkcli={stripped[max(0, i - 60):i + 60]!r}")
+    print(f"docs_ai 基线：{len(docsai_xml)} 字符（剥 comment-refs 后与 lark-cli 一致 ✅）")
+
     out_dir = Path(args.out_root) / args.name
     if out_dir.exists():
         shutil.rmtree(out_dir)  # 样本目录可整体重建；失败半成品同样不留
@@ -250,6 +278,7 @@ def main() -> int:
             json.dumps({"file_token": doc_id, "items": comments}, ensure_ascii=False, indent=1),
             encoding="utf-8")
         (out_dir / "content.xml").write_text(content_xml, encoding="utf-8")
+        (out_dir / "docsai.xml").write_text(docsai_xml, encoding="utf-8")
         (out_dir / "refmap.json").write_text(
             json.dumps(refmap, ensure_ascii=False, indent=1), encoding="utf-8")
 
@@ -273,7 +302,7 @@ def main() -> int:
         meta = {
             "name": args.name, "note": args.note, "url": args.url,
             "title": title, "document_id": doc_id, "wiki_token": info["wiki_token"],
-            "revision_id": revision, "frozen_at": datetime.now(timezone.utc).isoformat(),
+            "revision_id": revision, "frozen_at": datetime.now(UTC).isoformat(),
             "block_count": len(items), "block_types": counts, "comment_count": len(comments),
             "golden_chain": "lark-cli 1.x + claude-sdlc-skills parse_doc.py",
             "parse_doc_baseline": skills_head,

@@ -6,7 +6,7 @@
  "document_id": "PL5ndphOGoIoU5xQwwCcvcWWnIX",
  "wiki_token": "O86FwWwQViyikfkaz9jc7zUunBc",
  "revision_id": 9674,
- "frozen_at": "2026-10-28T10:58:40.275500+00:00",
+ "frozen_at": "2026-10-28T11:38:59.072460+00:00",
  "block_count": 788,
  "block_types": {
   "1:page": 1,
@@ -29,5 +29,5 @@
  },
  "comment_count": 29,
  "golden_chain": "lark-cli 1.x + claude-sdlc-skills parse_doc.py",
- "parse_doc_baseline": "0bd0674"
+ "parse_doc_baseline": "5b4f306"
 }
