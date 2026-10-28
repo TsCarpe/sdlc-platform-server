@@ -620,7 +620,7 @@ def test_run_command_curl_allowed() -> None:
     assert "curl" in tools._CMD_DOC
     assert "/".join(sorted(tools._CMD_ALLOW)) in tools._CMD_DOC  # 全集一致（增删命令自动跟随）
     # 装饰链：run_command 已是 FunctionTool（裸调用 function_tool 后重绑生效）
-    assert any(getattr(t, "name", "") == "run_command" for t in tools.ALL_TOOLS)
+    assert any(getattr(t, "name", "") == "run_command" for t in tools.build_tools(None))
 
 
 def test_dangling_pids_reported_not_rejected(env: tuple[TestClient, Database, Repos]) -> None:

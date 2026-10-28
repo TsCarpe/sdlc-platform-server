@@ -20,8 +20,9 @@ from openai import AsyncOpenAI
 
 from platform_sdlc.agent import prompts
 from platform_sdlc.agent.context import TaskRunContext
-from platform_sdlc.agent.tools import ALL_TOOLS
+from platform_sdlc.agent.tools import build_tools
 from platform_sdlc.config import Settings
+from platform_sdlc.integrations.feishu import FeishuClient
 from platform_sdlc.models import Task
 from platform_sdlc.repositories import Repos
 from platform_sdlc.services import Services
@@ -66,6 +67,12 @@ class AgentExecutor:
         workspace = (Path(self.settings.agent_workspace_root) / "sdlc" / safe_name).resolve()
         workspace.mkdir(parents=True, exist_ok=True)
 
+        # 飞书能力（§6）：凭据齐备才构造客户端——工具注册 / prompt 分支 / 命令白名单三处
+        # 以 ctx.feishu 是否为 None 联动（None = 无能力，不假绿）
+        feishu = (FeishuClient(self.settings.feishu_app_id, self.settings.feishu_app_secret)
+                  if self.settings.feishu_app_id and self.settings.feishu_app_secret else None)
+        tools = build_tools(feishu)
+
         repos_of = self.services.designs.repos_of(task.req_id) if task.type == "design_gen" else []
         # v4-3（DESIGN-v4 §3）：source_import 输出目录按任务 ID 定位（<根>/tasks/<task_id>/out），
         # 根与服务端完成回调同源（services.blocks.workspace_root = ResolvedPaths.workspace_root）——
@@ -73,7 +80,8 @@ class AgentExecutor:
         import_out_dir = (self.services.blocks.workspace_root / "tasks" / str(task.id) / "out").resolve()
         instructions = prompts.sys_prompt(
             task.type, r, skills_repo, repos_of,
-            import_out_dir=import_out_dir if task.type == "source_import" else None)
+            import_out_dir=import_out_dir if task.type == "source_import" else None,
+            feishu=feishu is not None)
 
         deadline = asyncio.get_running_loop().time() + self.settings.agent_timeout_min * 60
         text = ""
@@ -82,12 +90,13 @@ class AgentExecutor:
             agent = Agent(
                 name=f"sdlc-{task.type}",
                 instructions=instructions,
-                tools=ALL_TOOLS,
+                tools=tools,
                 model=self.settings.agent_model,
             )
             ctx = TaskRunContext(req_id=task.req_id, task_id=task.id, task_type=task.type,
                                  workspace=workspace, skills_repo=skills_repo, services=self.services,
-                                 repos=self.repos)
+                                 repos=self.repos, feishu=feishu,
+                                 feishu_media_max_bytes=self.settings.feishu_media_max_bytes)
             goal = prompts.goal_prompt(task.type) + prompts.resume_hint(workspace)
             if task.type == "design_rev":
                 goal += "\n本次落改工作项（任务备注）：\n" + prompts.payload_note(task.payload)

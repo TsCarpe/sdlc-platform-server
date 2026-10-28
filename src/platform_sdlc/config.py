@@ -35,6 +35,12 @@ class Settings(BaseSettings):
     agent_skills_repo: str = "~/IdeaProjects/claude-sdlc-skills"
     agent_workspace_root: str = "."
 
+    # 飞书接入（DESIGN-飞书接入Python化 §6/§8）：凭据为空 = 无飞书能力（prompt 不生成
+    # 飞书分支、工具不注册、lark-cli 命令白名单剔除——三处联动防模型 fallback）
+    feishu_app_id: str = ""
+    feishu_app_secret: str = ""
+    feishu_media_max_bytes: int = 10 * 1024 * 1024  # 大附件阈值：超限登记元数据 skipped:size-exceeded
+
 
 @dataclass(frozen=True)
 class ResolvedPaths:

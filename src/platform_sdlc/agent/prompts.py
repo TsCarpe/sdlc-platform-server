@@ -14,7 +14,7 @@ from platform_sdlc.models import Requirement
 
 
 def sys_prompt(task_type: str, card: Requirement, skills_repo: Path, repos_of: list[dict[str, str]],
-               import_out_dir: Path | None = None) -> str:
+               import_out_dir: Path | None = None, *, feishu: bool = False) -> str:
     repo = str(skills_repo)
     common = (
         "你是 SDLC 平台的任务执行器。平台能力以进程内工具提供（不要 curl 平台）。"
@@ -33,7 +33,7 @@ def sys_prompt(task_type: str, card: Requirement, skills_repo: Path, repos_of: l
         "已读过的文件不要重读，找不到文件先 run_command(ls; find . -name xxx) 而不是重跑上游步骤。\n"
     )
     if task_type == "source_import":
-        return _source_import_steps(common, card, repo, import_out_dir)
+        return _source_import_steps(common, card, repo, import_out_dir, feishu=feishu)
     if task_type == "quality_check":
         return f"{common}\n{_quality_check_steps(repo, card)}\n{_quality_quick_ref()}"
     if task_type == "incremental_check":
@@ -116,11 +116,11 @@ def sys_prompt(task_type: str, card: Requirement, skills_repo: Path, repos_of: l
     raise ValueError(f"未知任务类型：{task_type}")
 
 
-def _source_import_steps(common: str, card: Requirement, repo: str, out_dir: Path | None) -> str:
+def _source_import_steps(common: str, card: Requirement, repo: str, out_dir: Path | None,
+                         *, feishu: bool = False) -> str:
     """v4-3（DESIGN-v4 §3）：原文导入任务——拉取 + 解析 + 评论导入，产物 = parse_doc 输出文件，
     落库由任务完成回调（服务端直读文件字节）执行，不经对话上下文，不产草稿。"""
     out = str(out_dir) if out_dir is not None else "tasks/<任务ID>/out"
-    feishu = card.source_type == "feishu"
     head = (
         "你是 SDLC 平台的原文导入执行器。平台能力以进程内工具提供（不要 curl 平台）。\n"
         f"需求卡 {card.id}（{card.name}），工作区 sdlc/{card.name}/。\n"
@@ -139,25 +139,24 @@ def _source_import_steps(common: str, card: Requirement, repo: str, out_dir: Pat
         "7. 媒体必须全部 upload 成功后才可报 done（块引用的媒体不在平台将 missingMedia 阻断拒绝落库）。\n"
     )
     steps = "按以下步骤执行原文导入：\n1. run_command: mkdir -p raw intake/media\n"
-    if feishu:
+    if card.source_type == "feishu" and not feishu:
+        # 能力联动（§6）：无飞书凭据时明确失败——不保留 lark-cli 序列防模型 fallback
+        # （开发机有 lark-cli 会假绿，服务器必红）；配置凭据后重试即可恢复
         steps += (
-            "2. 飞书源固定拉取序列（<URL>=卡内 sourceUrl，逐条 run_command；"
-            "禁止自写 grep/inspect 类脚本重造解析管线）：\n"
-            "   lark-cli docs +fetch --doc <URL> --doc-format markdown > raw/doc.md\n"
-            "   lark-cli drive +list-comments --url <URL> --solved-status all --comment-scope all --need-relation --format json > raw/comments.json\n"
-            "   lark-cli docs +fetch --doc <URL> --doc-format xml --detail with-ids > raw/fetch.json\n"
-            "   write_file 落盘 tools/extract.py 后 run_command 执行（run_command 按 |;&& 分段校验，"
-            "引号感知——引号内的分号不切段，单行 python3 -c 整体加引号即可直接执行）：\n"
-            "     import json\n"
-            "     d = json.load(open('raw/fetch.json'))['data']['document']\n"
-            "     open('raw/content.xml', 'w').write(d['content'])\n"
-            "     rm = d['reference_map']\n"
-            "     open('raw/refmap.json', 'w').write(json.dumps(rm.get('comments', rm)))\n"
-            f"   python3 {repo}/skills/sdlc-intent/scripts/parse_doc.py --xml raw/content.xml --refmap raw/refmap.json"
-            f" --out {out}/doc.json --media-dir intake/media --download --url <URL>\n"
-            "3. run_command(ls intake/media) 盘点下载的媒体，逐个 upload_media"
-            "（mediaId=doc.media[].id，path=intake/media/<文件名>）。\n"
-            "4. 输出 SDLC_TASK_RESULT 行（块数/评论线程数/媒体数）。\n"
+            "2. 本源为飞书文档但平台未配置飞书能力（SDLC_FEISHU_APP_ID/SECRET 缺失）——"
+            "任务无法执行：以 {\"reason\": \"import-failed\", \"detail\": \"feishu-unconfigured\"} "
+            "收尾并如实说明。\n"
+        )
+    elif feishu:
+        out = str(out_dir) if out_dir is not None else "tasks/<任务ID>/out"
+        steps += (
+            "2. 调 feishu_fetch(url=卡内 sourceUrl, out_dir=\"" + out + "\") 一步完成"
+            "抓取+解析+评论+媒体下载+oracle 校验（工具内部跑 parse_doc 产 doc.json 与"
+            " intake/media/；权限错误按工具返回的 reason=feishu-forbidden 收尾——不可重试）。\n"
+            "3. run_command(ls " + out + "/intake/media) 盘点媒体，逐个 upload_media"
+            "（mediaId=doc.media[].id，path=媒体文件绝对路径；status=skipped:size-exceeded 的"
+            "大附件跳过不上传，如实计入摘要）。\n"
+            "4. 输出 SDLC_TASK_RESULT 行（块数/评论线程数/媒体数/skipped 数）。\n"
         )
     else:
         steps += (

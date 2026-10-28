@@ -19,12 +19,16 @@ from typing import Any
 from agents import RunContextWrapper, Tool, function_tool
 
 from platform_sdlc.agent.context import TaskRunContext
+from platform_sdlc.integrations.feishu import FeishuClient
 
-# run_command 分段白名单（每段首 token 必须命中；飞书原文抓取 / 平台数据 curl 直落 raw/（增量
-# 任务变更单冻结面数据源，三期 D-M 修复死路）/ 锚点解析脚本所需）。curl 信任面记档：进程内 agent
-# 可对任意端点发 HTTP——接受依据：python3 已在白名单（本就可执行任意代码，信任下界未降）、
-# runner 通道（独立进程）本就 curl 平台且数据面文件化一致、agent 会话由平台固定任务 prompt 驱动
-_CMD_ALLOW = {"lark-cli", "python3", "node", "mkdir", "cat", "ls", "jq", "grep", "find", "curl"}
+# run_command 分段白名单（每段首 token 必须命中；平台数据 curl 直落 raw/（增量任务变更单
+# 冻结面数据源）/ 锚点解析脚本所需）。curl 信任面记档：进程内 agent 可对任意端点发 HTTP——
+# 接受依据：python3 已在白名单（本就可执行任意代码，信任下界未降）、runner 通道（独立进程）
+# 本就 curl 平台且数据面文件化一致、agent 会话由平台固定任务 prompt 驱动。
+# lark-cli 已移除（DESIGN-飞书接入Python化 §6）：飞书原文抓取走 feishu_fetch 工具（纯
+# Python docs_ai 链路）；白名单留 lark-cli 会让无凭据部署的模型 fallback 到命令行抓取，
+# 开发机假绿、服务器失败——工具/白名单/prompt 三处能力联动
+_CMD_ALLOW = {"python3", "node", "mkdir", "cat", "ls", "jq", "grep", "find", "curl"}
 
 # 工具描述（LLM 可见面）运行时由 _CMD_ALLOW 构造——手抄清单会随白名单演进失修（三期 D-M：
 # 原文案 9 项只列 6 项即此病灶）；经显式 __doc__ 赋值 + 裸调用 function_tool 装饰生效
@@ -387,5 +391,60 @@ run_command.__doc__ = _CMD_DOC
 _run_command_tool: Tool = function_tool(run_command)
 
 
-ALL_TOOLS: list[Tool] = [get_requirement_card, list_clarify_items, list_req_comments, get_digest_bundle,
-             get_design_doc, list_cases, put_draft, upload_media, read_file, write_file, _run_command_tool]
+async def feishu_fetch(wrapper: RunContextWrapper[TaskRunContext], url: str, out_dir: str) -> str:
+    """抓取飞书文档为 source_import 产物（wiki/docx URL 均可）。
+
+    产出 <out_dir>/doc.json（平台完成回调直读）、intake/media/ 媒体文件与
+    media-manifest.json、raw/ 原始留档；内含 oracle 三方比对门禁（不一致即报错）。
+    大附件（>10MB）自动 skipped:size-exceeded 登记元数据，不算失败。
+    权限错误（文档未分享给应用）返回 reason=feishu-forbidden——按任务失败收尾，
+    该 reason 不可重试（重试接口会 409），需先把文档分享给应用。
+    """
+    from platform_sdlc.integrations.feishu.client import FeishuForbiddenError
+    from platform_sdlc.integrations.feishu.fetch import (
+        FetchResult,
+        SkillsVersionMismatch,
+        fetch_document,
+    )
+
+    ctx = wrapper.context
+    if ctx.feishu is None:
+        return _err("飞书能力未配置（需 SDLC_FEISHU_APP_ID / SDLC_FEISHU_APP_SECRET）——"
+                    "本任务无法执行原文导入，如实按 import-failed 终止并在摘要说明原因")
+
+    def impl() -> dict[str, object]:
+        client = ctx.feishu
+        assert client is not None  # 外层已判 None（闭包内 narrow 不穿透）
+        out = _resolve_in_workspace(ctx, out_dir)
+        parse_doc = ctx.skills_repo / "skills" / "sdlc-intent" / "scripts" / "parse_doc.py"
+        r: FetchResult = fetch_document(client, url, out, parse_doc,
+                                        max_media_bytes=ctx.feishu_media_max_bytes)
+        return {"ok": True, "documentId": r.document_id, "title": r.title,
+                "revisionId": r.revision_id, "blocks": r.blocks, "comments": r.comments,
+                "media": r.media_total, "mediaSkipped": r.media_skipped,
+                "outDir": str(r.out_dir)}
+
+    try:
+        return json.dumps(await asyncio.to_thread(impl), ensure_ascii=False)
+    except FeishuForbiddenError as e:
+        return json.dumps({"error": "飞书权限不足：" + str(e) + "——文档需分享给应用后重试。"
+                                    '请以 {"reason": "feishu-forbidden", ...} 收尾任务'
+                                    "（该 reason 不可重试）",
+                           "reason": "feishu-forbidden"}, ensure_ascii=False)
+    except SkillsVersionMismatch as e:
+        return _err(f"skills 仓版本不匹配：{e}")
+    except Exception as e:  # noqa: BLE001
+        return _err(f"飞书抓取失败：{type(e).__name__}: {e}")
+
+
+_feishu_fetch_tool: Tool = function_tool(feishu_fetch)
+
+_BASE_TOOLS: list[Tool] = [get_requirement_card, list_clarify_items, list_req_comments,
+                           get_digest_bundle, get_design_doc, list_cases, put_draft, upload_media,
+                           read_file, write_file, _run_command_tool]
+
+
+def build_tools(feishu: FeishuClient | None) -> list[Tool]:
+    """按能力装配工具面（DESIGN-飞书接入Python化 §6）：executor 依 Settings 注入 feishu
+    客户端，None = 无飞书能力（feishu_fetch 不注册，prompt 分支同步收敛）。"""
+    return _BASE_TOOLS + ([_feishu_fetch_tool] if feishu is not None else [])

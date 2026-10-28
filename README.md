@@ -46,9 +46,15 @@ export SDLC_AGENT_API_KEY=<key>
 | `SDLC_AGENT_SKILLS_REPO` | `~/IdeaProjects/claude-sdlc-skills` | 任务 agent 引用的技能仓 |
 | `SDLC_AGENT_WORKSPACE_ROOT` | `.` | 任务工作区根（`<root>/sdlc/<reqId>/`） |
 | `SDLC_AGENT_TIMEOUT_MIN` / `_MAX_ITERS` / `_POLL_INTERVAL_MS` | `30` / `160` / `3000` | agent 领任务节奏与单任务上限 |
+| `SDLC_FEISHU_APP_ID` / `SDLC_FEISHU_APP_SECRET` | 空 | 飞书应用凭据（docs_ai 服务端渲染链路，详见 `docs/DESIGN-飞书接入Python化.md`）。留空 = 无飞书能力：`feishu_fetch` 工具不注册、source_import 飞书源明确失败、`run_command` 白名单无 lark-cli（三处联动防模型 fallback） |
+| `SDLC_FEISHU_MEDIA_MAX_BYTES` | `10485760` | 飞书大附件阈值：超限附件登记元数据标 `skipped:size-exceeded` 不下载（任务不阻断） |
 | `SDLC_WRITE_TOKEN` | 空 | 设置后非 GET 的 `/api` 写接口要求 `X-Token` 头 |
 | `SDLC_DB_PATH` / `SDLC_MEDIA_DIR` | `./data/…` | 数据库与媒体目录 |
 | `SDLC_PLATFORM_URL` | `http://127.0.0.1:8888` | Runner 指向的平台地址（仅 runner 侧读取） |
+
+> **两仓版本对应**：进程内 agent 的飞书原文导入依赖姊妹仓 `claude-sdlc-skills` 的
+> `parse_doc.py --media-manifest`（≥ 2026-10-28 版本；旧版未知参数 exit 3 会被误报为
+> 用法错误）。`feishu_fetch` 工具启动时探测该参数，缺失即报「skills 仓版本不匹配」。
 
 ## 前端对接
 
