@@ -365,28 +365,22 @@ def test_loop_self_check_skips_no_draft_types(env: tuple[Database, Repos, Servic
     assert loop.self_check(t) is None  # 无草稿面：跳过（不查不存在的草稿）
 
 
-# ---------- 三处一致性守护纯函数 ----------
+# ---------- 两处一致性守护纯函数 ----------
 
 def test_check_consistency_detects_drift() -> None:
     check_consistency = _ctt.check_consistency
 
     base = ({"quality_check", "source_import"}, {"quality_check", "source_import"},
-            {"quality_check", "source_import"},
-            {"quality_check": "digest_bundle"}, {"source_import"}, {"digest_bundle"},
-            {"quality_check": "digest_bundle"}, {"source_import"}, {"digest_bundle"})
+            {"quality_check": "digest_bundle"}, {"source_import"})
     assert check_consistency(*base) == []  # 一致通过
 
     bad = list(base)
-    bad[2] = {"quality_check"}  # ② runner 漏 source_import 分支
+    bad[3] = set()  # ② task_rules 漏 source_import（NO_DRAFT_TYPES 漏登记）
     assert any("①②" in p for p in check_consistency(*bad))
 
     bad = list(base)
     bad[1] = {"quality_check"}  # goal_prompt 漏 source_import 分支（会静默落 case_gen 兜底句）
     assert any("goal_prompt" in p for p in check_consistency(*bad))
-
-    bad = list(base)
-    bad[6] = {}  # DEFAULT_RULES 陈旧（第三写面）
-    assert any("DEFAULT_RULES.draftTypes" in p for p in check_consistency(*bad))
 
 
 def test_check_task_templates_main_green() -> None:

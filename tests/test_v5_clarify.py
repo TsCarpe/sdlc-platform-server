@@ -475,17 +475,9 @@ def test_incremental_flows_whitelist_and_pids(env: tuple[TestClient, Database, R
 
 
 def test_prompt_channels_consume_answer_text() -> None:
-    """四通道契约锁（r4 按分支断言）：standard_doc = answerText + 〔Pxx〕/〔Pxx·挂起〕；
+    """prompt 契约锁（runner 下线后 prompts.py 单源）：standard_doc = answerText + 〔Pxx〕/〔Pxx·挂起〕；
     incremental = answerText 指令与其数据源步骤（list_clarify_items）共同在位——指令悬空即回退。"""
     root = Path(__file__).resolve().parents[1]
-    runner_src = (root / "runner" / "runner.mjs").read_text(encoding="utf-8")
-    # runner standard_doc 分支：answerText 消费 + 〔Pxx〕尾缀 + 挂起标注
-    std_seg = runner_src.split("task.type === 'standard_doc'")[1].split("task.type === 'case_gen'")[0]
-    assert "items[].answerText" in std_seg and "不要直接消费" in std_seg
-    assert "〔Pxx〕" in std_seg and "〔Pxx·挂起〕" in std_seg
-    # runner incremental 分支：输入侧 answerText 指令
-    inc_seg = runner_src.split("task.type === 'incremental_check'")[1].split("task.type === 'standard_doc'")[0]
-    assert "answerText" in inc_seg and "不要直接消费" in inc_seg
     # agent prompts：standard_doc = answerText + 〔Pxx〕；incremental = answerText 指令 + 数据源步骤
     card = Requirement(id="R", name="n")
     repo = Path("/repo")
@@ -517,20 +509,18 @@ def test_audit_view_layer_passthrough() -> None:
     assert set(audit_item_view(base)) == _AUDIT_KEYS            # 9 键白名单
 
 
-# ---------- 三期批 B1：runner ①② + agent 速查卡生产端（DESIGN-v5 §6.4/§8，v1.6 选择题化） ----------
+# ---------- 三期批 B1：agent 速查卡生产端（DESIGN-v5 §6.4/§8，v1.6 选择题化；runner 下线后单源） ----------
 
 def test_quality_prompt_carries_v16_fields() -> None:
-    """生产端 ①② 契约锁：runner quality_check/incremental 分支与 agent 速查卡携带 v1.6 字段
-    产出指令（options/module/layer/pids + 七层 + 契约版本引用）——静态断言防 prompt 回退。"""
-    root = Path(__file__).resolve().parents[1]
-    runner_src = (root / "runner" / "runner.mjs").read_text(encoding="utf-8")
-    assert "六层" not in runner_src, "runner 仍含过时「六层」文案（dimensions 已七层）"
-    qc_seg = runner_src.split("task.type === 'quality_check'")[1].split("task.type === 'incremental_check'")[0]
-    for kw in ("七层", "payload 契约 v1.6", "组装 v1.6 payload", "options", "module", "layer", "pids"):
-        assert kw in qc_seg, f"runner① quality_check 分支缺 v1.6 产出指令：{kw}"
-    inc_seg = runner_src.split("task.type === 'incremental_check'")[1].split("task.type === 'standard_doc'")[0]
+    """生产端 ①② 契约锁（prompts.py 单源）：quality_check 步骤与速查卡携带 v1.6 字段产出指令
+    （options/module/layer/pids + 七层 + v1.6 产出纪律）——静态断言防 prompt 回退。"""
+    prompts_src = (Path(__file__).resolve().parents[1] / "src" / "platform_sdlc" / "agent" / "prompts.py").read_text(encoding="utf-8")
+    assert "六层" not in prompts_src, "prompts 仍含过时「六层」文案（dimensions 已七层）"
+    qc_seg = prompts_src.split("def _quality_check_steps")[1].split("def _quality_quick_ref")[0]
+    for kw in ("七层", "v1.6 产出纪律", "options", "module", "layer", "pids"):
+        assert kw in qc_seg, f"quality_check 步骤缺 v1.6 产出指令：{kw}"
     for kw in ("options", "module", "layer", "pids", "存量已分配"):
-        assert kw in inc_seg, f"runner② incremental 分支缺 v1.6 产出指令：{kw}"
+        assert kw in prompts_src, f"prompts.py 缺 v1.6/incremental 产出指令：{kw}"
     # agent 速查卡（对话被压缩后的权威）：payload 字段行与 pm-checklist 选项化提示同源
     ref = _quality_quick_ref()
     for kw in ("options", "module", "layer", "pids"):

@@ -74,18 +74,13 @@ await call('PUT', `/api/requirements/${reqId}/answers/P03`, { status: 'deferred'
 const answers3 = Object.fromEntries((await call('GET', `/api/requirements/${reqId}/answers`)).map(a => [a.seq, a]))
 check('deferred：status/note 落库', [answers3.P03.status, answers3.P03.note], ['deferred', '下期确认'])
 
-// 5. 生产端静态断言（三期 ①②）：runner/agent prompt 携带 v1.6 产出指令与 D-M 白名单——防回退
+// 5. 生产端静态断言（runner 2026-10-28 下线后 prompts.py 单源）：v1.6 产出指令与 D-M 白名单——防回退
 const { readFileSync } = await import('node:fs')
 const root = new URL('..', import.meta.url)
-const runnerSrc = readFileSync(new URL('runner/runner.mjs', root), 'utf8')
-const qc = runnerSrc.split("task.type === 'quality_check'")[1]
-const inc = runnerSrc.split("task.type === 'incremental_check'")[1].split("task.type === 'standard_doc'")[0]
-check('runner①：六层文案已退役（qc/inc 产出段级负向，review #20b）', [/六层/.test(qc), /六层/.test(inc)], [false, false])
-check('runner①②：七层 + v1.6 契约引用 + 组装版本', [runnerSrc.includes('七层'), runnerSrc.includes('payload 契约 v1.6'), runnerSrc.includes('组装 v1.6 payload')], [true, true, true])
-check('runner①：options/module/layer/pids 产出指令', ['options', 'module', 'layer', 'pids'].every(k => qc.includes(k)), true)
-check('runner②：新字段 + 存量 pids 引用纪律', ['options', 'layer', 'pids', '存量已分配'].every(k => inc.includes(k)), true)
 const promptsPy = readFileSync(new URL('src/platform_sdlc/agent/prompts.py', root), 'utf8')
-check('agent 速查卡：options/pids/layer 字段', ['options', 'pids', 'layer'].every(k => promptsPy.includes(k)), true)
+check('agent ①：六层文案已退役（七层在位，review #20b）', [/六层/.test(promptsPy), /七层/.test(promptsPy)], [false, true])
+check('agent ①：v1.6 产出纪律 + options/module/layer/pids', [/v1\.6 产出纪律/.test(promptsPy), ['options', 'module', 'layer', 'pids'].every(k => promptsPy.includes(k))], [true, true])
+check('agent ②：增量 pids 存量引用纪律', /存量已分配/.test(promptsPy), true)
 const toolsPy = readFileSync(new URL('src/platform_sdlc/agent/tools.py', root), 'utf8')
 check('D-M：curl 白名单在位（_CMD_ALLOW 集合成员资格，review #20b）', /_CMD_ALLOW\s*=\s*\{[^}]*"curl"/.test(toolsPy), true)
 
