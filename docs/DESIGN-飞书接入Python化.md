@@ -1,7 +1,8 @@
 # DESIGN：飞书接入 Python 化（runner 下线前置）
 
 > 目标：让进程内 agent（openai-agents + DeepSeek）具备完整飞书原文导入能力，为 runner 进程下线铺路。
-> 状态：设计定稿（2026-10-28，经对抗审查修订 v2），未实施。
+> 状态：**已实施完毕（2026-10-28，验收八项全过——黄金比对/oracle 门禁/落库一致/媒体完整性/
+> feishu-forbidden 409/verify-all 全绿；架构经 §13 修订：docs_ai 服务端渲染替代自写序列化器）**。
 > 关联：`docs/EXEC-PLAN-K8S部署与中间件改造.md`（部署总计划，本方案是其「任务通道改造」前置）。
 
 ## §0 背景与教训
