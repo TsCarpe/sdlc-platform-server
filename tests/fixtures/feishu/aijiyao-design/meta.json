@@ -1,12 +1,12 @@
 {
  "name": "aijiyao-design",
- "note": "新版AI活动纪要 技术设计（用户分享）——扩样本，大表格密度（11 table/270 cell）+ mermaid 型画板(43)×3（type=mermaid 源码进 text）",
+ "note": "新版AI活动纪要 技术设计——大表格+mermaid 画板样本",
  "url": "https://hailiang.feishu.cn/wiki/UOYywT1TmicCBjkbYmlccQYInpc",
  "title": "新版AI活动纪要 技术设计",
  "document_id": "Jm4udNBpEogvIJxYj7kc0iu4nUf",
  "wiki_token": "UOYywT1TmicCBjkbYmlccQYInpc",
  "revision_id": 35,
- "frozen_at": "2026-10-28T10:41:32.935003+00:00",
+ "frozen_at": "2026-10-28T10:58:50.592195+00:00",
  "block_count": 607,
  "block_types": {
   "1:page": 1,
@@ -21,5 +21,5 @@
  },
  "comment_count": 0,
  "golden_chain": "lark-cli 1.x + claude-sdlc-skills parse_doc.py",
- "parse_doc_baseline": "be66ca8"
+ "parse_doc_baseline": "0bd0674"
 }

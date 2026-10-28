@@ -1,12 +1,12 @@
 {
  "name": "region-score",
- "note": "REQ-2026-1064/1164 源文档：区域成绩分析v0.1需求——扩样本，覆盖 quote_container(34)/大 ordered(356)/view(33)/95评论",
+ "note": "REQ-2026-1064/1164 源文档：区域成绩分析v0.1需求——扩样本，quote_container(34→quote 块)/view(33)/95评论",
  "url": "https://hailiang.feishu.cn/wiki/N0URw6NE9iPdzYkkrPOcMBqvnEb",
  "title": "区域成绩分析v0.1需求",
  "document_id": "Kr5mdN23UoouSdxbZNVct6aPnpd",
  "wiki_token": "N0URw6NE9iPdzYkkrPOcMBqvnEb",
  "revision_id": 5891,
- "frozen_at": "2026-10-28T10:41:51.488530+00:00",
+ "frozen_at": "2026-10-28T10:58:43.963127+00:00",
  "block_count": 685,
  "block_types": {
   "1:page": 1,
@@ -25,5 +25,5 @@
  },
  "comment_count": 95,
  "golden_chain": "lark-cli 1.x + claude-sdlc-skills parse_doc.py",
- "parse_doc_baseline": "be66ca8"
+ "parse_doc_baseline": "0bd0674"
 }

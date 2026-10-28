@@ -1,12 +1,12 @@
 {
  "name": "jiaoyan-background",
- "note": "鸿儒教研V3.0需求背景（主样本评论区发现）——扩样本，覆盖 divider(22)",
+ "note": "鸿儒教研V3.0需求背景——扩样本，divider(22)",
  "url": "https://hailiang.feishu.cn/wiki/IlthwJWHjiXoxAkNIxScyFHvnxd",
  "title": "鸿儒教研V3.0需求背景",
  "document_id": "R10WdSPGOo7N8SxDZA5crKbVnjc",
  "wiki_token": "IlthwJWHjiXoxAkNIxScyFHvnxd",
  "revision_id": 3,
- "frozen_at": "2026-10-28T10:41:54.538315+00:00",
+ "frozen_at": "2026-10-28T10:58:46.967076+00:00",
  "block_count": 609,
  "block_types": {
   "1:page": 1,
@@ -26,5 +26,5 @@
  },
  "comment_count": 0,
  "golden_chain": "lark-cli 1.x + claude-sdlc-skills parse_doc.py",
- "parse_doc_baseline": "be66ca8"
+ "parse_doc_baseline": "0bd0674"
 }

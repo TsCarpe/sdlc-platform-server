@@ -1,0 +1,25 @@
+{
+ "name": "blocktype-synthetic",
+ "note": "人工构造块型覆盖样本（API 写入）——code(14)×2/quote(15)×2/todo(17)×3（含 done 态）/heading5-9(7-11)；sheet(30) API 不可建待用户手插后重冻",
+ "url": "https://hailiang.feishu.cn/wiki/JgO8we6xdibkaHkMdczcmMJpnH2",
+ "title": "1",
+ "document_id": "KQiCdpLMXoygWbx878icrjsknpq",
+ "wiki_token": "JgO8we6xdibkaHkMdczcmMJpnH2",
+ "revision_id": 3,
+ "frozen_at": "2026-10-28T10:58:23.587200+00:00",
+ "block_count": 13,
+ "block_types": {
+  "1:page": 1,
+  "7:heading5": 1,
+  "8:heading6": 1,
+  "9:heading7": 1,
+  "10:heading8": 1,
+  "11:heading9": 1,
+  "14:code": 2,
+  "15:quote": 2,
+  "17:todo": 3
+ },
+ "comment_count": 0,
+ "golden_chain": "lark-cli 1.x + claude-sdlc-skills parse_doc.py",
+ "parse_doc_baseline": "0bd0674"
+}

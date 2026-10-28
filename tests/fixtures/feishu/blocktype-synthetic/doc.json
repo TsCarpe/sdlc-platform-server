@@ -1,0 +1,114 @@
+{
+ "generator": "sdlc-intent/parse_doc.py 0.5",
+ "source": {
+  "url": "https://hailiang.feishu.cn/wiki/JgO8we6xdibkaHkMdczcmMJpnH2",
+  "documentId": "KQiCdpLMXoygWbx878icrjsknpq",
+  "revisionId": "3"
+ },
+ "blocks": [
+  {
+   "id": "KQiCdpLMXoygWbx878icrjsknpq",
+   "type": "title",
+   "text": "1",
+   "path": "1"
+  },
+  {
+   "id": "doxcnPfCHfta9qE1coGvmhJL0kt",
+   "type": "heading",
+   "level": 5,
+   "text": "五级标题——块型覆盖样本",
+   "path": "五级标题——块型覆盖样本"
+  },
+  {
+   "id": "doxcnObhmIsOkitAcZBcW99VLZd",
+   "type": "heading",
+   "level": 6,
+   "text": "六级标题",
+   "path": "五级标题——块型覆盖样本 › 六级标题"
+  },
+  {
+   "id": "doxcnNXEGBhAfl9MCQ6fCea1QTc",
+   "type": "heading",
+   "level": 7,
+   "text": "七级标题",
+   "path": "五级标题——块型覆盖样本 › 六级标题 › 七级标题"
+  },
+  {
+   "id": "doxcnQhrcYiP4YoZKeDT0gA2aTf",
+   "type": "heading",
+   "level": 8,
+   "text": "八级标题",
+   "path": "五级标题——块型覆盖样本 › 六级标题 › 七级标题 › 八级标题"
+  },
+  {
+   "id": "doxcn8F67HUEq1Mi4JBmnsfYWvh",
+   "type": "heading",
+   "level": 9,
+   "text": "九级标题",
+   "path": "五级标题——块型覆盖样本 › 六级标题 › 七级标题 › 八级标题 › 九级标题"
+  },
+  {
+   "id": "doxcnopzcTehEiXq6t9S6o7kwxw",
+   "type": "code",
+   "text": "def hello():\n    print(\"hello sdlc\")",
+   "lang": "Plain Text",
+   "wrap": "true",
+   "path": "九级标题",
+   "parent": null
+  },
+  {
+   "id": "doxcnkg2uWgz3fUdzu961SMHOUA",
+   "type": "code",
+   "text": "{\"status\": \"ok\", \"blocks\": 784}",
+   "lang": "Plain Text",
+   "wrap": "true",
+   "path": "九级标题",
+   "parent": null
+  },
+  {
+   "id": "doxcn7Aafx1iyrr02SeBWpofqjc",
+   "type": "quote",
+   "text": "引用块一：本段用于验证 quote(15) 的 XML 序列化与守恒对账。",
+   "path": "九级标题",
+   "parent": null
+  },
+  {
+   "id": "doxcnr9BHTK4LPSmtVOijoi6sAf",
+   "type": "quote",
+   "text": "引用块二：紧邻第一条，验证连续引用的边界。",
+   "path": "九级标题",
+   "parent": null
+  },
+  {
+   "id": "doxcnSzSAKLPdPzibmzxy2Ngrgb",
+   "type": "todo",
+   "text": "待办一（未完成）：冻结黄金样本",
+   "done": false,
+   "path": "九级标题",
+   "parent": null
+  },
+  {
+   "id": "doxcnxBMyAKNYN1R6eTWpT0fGUd",
+   "type": "todo",
+   "text": "待办二（未完成）：序列化器实现",
+   "done": false,
+   "path": "九级标题",
+   "parent": null
+  },
+  {
+   "id": "doxcnqprLYQ4VK4F9UaGAlLIrCg",
+   "type": "todo",
+   "text": "待办三（已完成）：POC 验证",
+   "done": true,
+   "path": "九级标题",
+   "parent": null
+  }
+ ],
+ "media": [],
+ "guard": {
+  "algo": "conservation-v1",
+  "source": "xml",
+  "mediaTokens": [],
+  "textSha": "c5ecd58848cfc45ecf7ab9e82a41115675f6c4ffd37c097b06f115c81e1ffeb4"
+ }
+}

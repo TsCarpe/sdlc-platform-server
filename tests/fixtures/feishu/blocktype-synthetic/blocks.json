@@ -1,0 +1,359 @@
+{
+ "document_id": "KQiCdpLMXoygWbx878icrjsknpq",
+ "document_revision_id": 3,
+ "items": [
+  {
+   "block_id": "KQiCdpLMXoygWbx878icrjsknpq",
+   "block_type": 1,
+   "children": [
+    "doxcnPfCHfta9qE1coGvmhJL0kt",
+    "doxcnObhmIsOkitAcZBcW99VLZd",
+    "doxcnNXEGBhAfl9MCQ6fCea1QTc",
+    "doxcnQhrcYiP4YoZKeDT0gA2aTf",
+    "doxcn8F67HUEq1Mi4JBmnsfYWvh",
+    "doxcnopzcTehEiXq6t9S6o7kwxw",
+    "doxcnkg2uWgz3fUdzu961SMHOUA",
+    "doxcn7Aafx1iyrr02SeBWpofqjc",
+    "doxcnr9BHTK4LPSmtVOijoi6sAf",
+    "doxcnSzSAKLPdPzibmzxy2Ngrgb",
+    "doxcnxBMyAKNYN1R6eTWpT0fGUd",
+    "doxcnqprLYQ4VK4F9UaGAlLIrCg"
+   ],
+   "page": {
+    "elements": [
+     {
+      "text_run": {
+       "content": "1",
+       "text_element_style": {
+        "bold": false,
+        "inline_code": false,
+        "italic": false,
+        "strikethrough": false,
+        "underline": false
+       }
+      }
+     }
+    ],
+    "style": {
+     "align": 1
+    }
+   },
+   "parent_id": ""
+  },
+  {
+   "block_id": "doxcnPfCHfta9qE1coGvmhJL0kt",
+   "block_type": 7,
+   "heading5": {
+    "elements": [
+     {
+      "text_run": {
+       "content": "五级标题——块型覆盖样本",
+       "text_element_style": {
+        "bold": false,
+        "inline_code": false,
+        "italic": false,
+        "strikethrough": false,
+        "underline": false
+       }
+      }
+     }
+    ],
+    "style": {
+     "align": 1,
+     "folded": false
+    }
+   },
+   "parent_id": "KQiCdpLMXoygWbx878icrjsknpq"
+  },
+  {
+   "block_id": "doxcnObhmIsOkitAcZBcW99VLZd",
+   "block_type": 8,
+   "heading6": {
+    "elements": [
+     {
+      "text_run": {
+       "content": "六级标题",
+       "text_element_style": {
+        "bold": false,
+        "inline_code": false,
+        "italic": false,
+        "strikethrough": false,
+        "underline": false
+       }
+      }
+     }
+    ],
+    "style": {
+     "align": 1,
+     "folded": false
+    }
+   },
+   "parent_id": "KQiCdpLMXoygWbx878icrjsknpq"
+  },
+  {
+   "block_id": "doxcnNXEGBhAfl9MCQ6fCea1QTc",
+   "block_type": 9,
+   "heading7": {
+    "elements": [
+     {
+      "text_run": {
+       "content": "七级标题",
+       "text_element_style": {
+        "bold": false,
+        "inline_code": false,
+        "italic": false,
+        "strikethrough": false,
+        "underline": false
+       }
+      }
+     }
+    ],
+    "style": {
+     "align": 1,
+     "folded": false
+    }
+   },
+   "parent_id": "KQiCdpLMXoygWbx878icrjsknpq"
+  },
+  {
+   "block_id": "doxcnQhrcYiP4YoZKeDT0gA2aTf",
+   "block_type": 10,
+   "heading8": {
+    "elements": [
+     {
+      "text_run": {
+       "content": "八级标题",
+       "text_element_style": {
+        "bold": false,
+        "inline_code": false,
+        "italic": false,
+        "strikethrough": false,
+        "underline": false
+       }
+      }
+     }
+    ],
+    "style": {
+     "align": 1,
+     "folded": false
+    }
+   },
+   "parent_id": "KQiCdpLMXoygWbx878icrjsknpq"
+  },
+  {
+   "block_id": "doxcn8F67HUEq1Mi4JBmnsfYWvh",
+   "block_type": 11,
+   "heading9": {
+    "elements": [
+     {
+      "text_run": {
+       "content": "九级标题",
+       "text_element_style": {
+        "bold": false,
+        "inline_code": false,
+        "italic": false,
+        "strikethrough": false,
+        "underline": false
+       }
+      }
+     }
+    ],
+    "style": {
+     "align": 1,
+     "folded": false
+    }
+   },
+   "parent_id": "KQiCdpLMXoygWbx878icrjsknpq"
+  },
+  {
+   "block_id": "doxcnopzcTehEiXq6t9S6o7kwxw",
+   "block_type": 14,
+   "code": {
+    "elements": [
+     {
+      "text_run": {
+       "content": "def hello():\n",
+       "text_element_style": {
+        "bold": false,
+        "inline_code": false,
+        "italic": false,
+        "strikethrough": false,
+        "underline": false
+       }
+      }
+     },
+     {
+      "text_run": {
+       "content": "    print(\"hello sdlc\")",
+       "text_element_style": {
+        "bold": false,
+        "inline_code": false,
+        "italic": false,
+        "strikethrough": false,
+        "underline": false
+       }
+      }
+     }
+    ],
+    "style": {
+     "language": 1,
+     "wrap": true
+    }
+   },
+   "parent_id": "KQiCdpLMXoygWbx878icrjsknpq"
+  },
+  {
+   "block_id": "doxcnkg2uWgz3fUdzu961SMHOUA",
+   "block_type": 14,
+   "code": {
+    "elements": [
+     {
+      "text_run": {
+       "content": "{\"status\": \"ok\", \"blocks\": 784}",
+       "text_element_style": {
+        "bold": false,
+        "inline_code": false,
+        "italic": false,
+        "strikethrough": false,
+        "underline": false
+       }
+      }
+     }
+    ],
+    "style": {
+     "language": 1,
+     "wrap": true
+    }
+   },
+   "parent_id": "KQiCdpLMXoygWbx878icrjsknpq"
+  },
+  {
+   "block_id": "doxcn7Aafx1iyrr02SeBWpofqjc",
+   "block_type": 15,
+   "parent_id": "KQiCdpLMXoygWbx878icrjsknpq",
+   "quote": {
+    "elements": [
+     {
+      "text_run": {
+       "content": "引用块一：本段用于验证 quote(15) 的 XML 序列化与守恒对账。",
+       "text_element_style": {
+        "bold": false,
+        "inline_code": false,
+        "italic": false,
+        "strikethrough": false,
+        "underline": false
+       }
+      }
+     }
+    ],
+    "style": {
+     "align": 1,
+     "folded": false
+    }
+   }
+  },
+  {
+   "block_id": "doxcnr9BHTK4LPSmtVOijoi6sAf",
+   "block_type": 15,
+   "parent_id": "KQiCdpLMXoygWbx878icrjsknpq",
+   "quote": {
+    "elements": [
+     {
+      "text_run": {
+       "content": "引用块二：紧邻第一条，验证连续引用的边界。",
+       "text_element_style": {
+        "bold": false,
+        "inline_code": false,
+        "italic": false,
+        "strikethrough": false,
+        "underline": false
+       }
+      }
+     }
+    ],
+    "style": {
+     "align": 1,
+     "folded": false
+    }
+   }
+  },
+  {
+   "block_id": "doxcnSzSAKLPdPzibmzxy2Ngrgb",
+   "block_type": 17,
+   "parent_id": "KQiCdpLMXoygWbx878icrjsknpq",
+   "todo": {
+    "elements": [
+     {
+      "text_run": {
+       "content": "待办一（未完成）：冻结黄金样本",
+       "text_element_style": {
+        "bold": false,
+        "inline_code": false,
+        "italic": false,
+        "strikethrough": false,
+        "underline": false
+       }
+      }
+     }
+    ],
+    "style": {
+     "align": 1,
+     "done": false,
+     "folded": false
+    }
+   }
+  },
+  {
+   "block_id": "doxcnxBMyAKNYN1R6eTWpT0fGUd",
+   "block_type": 17,
+   "parent_id": "KQiCdpLMXoygWbx878icrjsknpq",
+   "todo": {
+    "elements": [
+     {
+      "text_run": {
+       "content": "待办二（未完成）：序列化器实现",
+       "text_element_style": {
+        "bold": false,
+        "inline_code": false,
+        "italic": false,
+        "strikethrough": false,
+        "underline": false
+       }
+      }
+     }
+    ],
+    "style": {
+     "align": 1,
+     "done": false,
+     "folded": false
+    }
+   }
+  },
+  {
+   "block_id": "doxcnqprLYQ4VK4F9UaGAlLIrCg",
+   "block_type": 17,
+   "parent_id": "KQiCdpLMXoygWbx878icrjsknpq",
+   "todo": {
+    "elements": [
+     {
+      "text_run": {
+       "content": "待办三（已完成）：POC 验证",
+       "text_element_style": {
+        "bold": false,
+        "inline_code": false,
+        "italic": false,
+        "strikethrough": false,
+        "underline": false
+       }
+      }
+     }
+    ],
+    "style": {
+     "align": 1,
+     "done": true,
+     "folded": false
+    }
+   }
+  }
+ ]
+}

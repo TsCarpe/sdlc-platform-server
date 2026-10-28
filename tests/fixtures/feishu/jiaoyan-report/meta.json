@@ -1,12 +1,12 @@
 {
  "name": "jiaoyan-report",
- "note": "REQ-2026-1165/1166 测试源文档：鸿儒教研AI纪要&教研报告——主样本（POC 同源），784块/29评论/42图/5附件/2画板",
+ "note": "REQ-2026-1165/1166 测试源文档：鸿儒教研AI纪要&教研报告——主样本（POC 同源）",
  "url": "https://hailiang.feishu.cn/wiki/O86FwWwQViyikfkaz9jc7zUunBc",
  "title": "鸿儒教研AI纪要&教研报告",
  "document_id": "PL5ndphOGoIoU5xQwwCcvcWWnIX",
  "wiki_token": "O86FwWwQViyikfkaz9jc7zUunBc",
  "revision_id": 9674,
- "frozen_at": "2026-10-28T10:41:47.812941+00:00",
+ "frozen_at": "2026-10-28T10:58:40.275500+00:00",
  "block_count": 788,
  "block_types": {
   "1:page": 1,
@@ -29,5 +29,5 @@
  },
  "comment_count": 29,
  "golden_chain": "lark-cli 1.x + claude-sdlc-skills parse_doc.py",
- "parse_doc_baseline": "be66ca8"
+ "parse_doc_baseline": "0bd0674"
 }
