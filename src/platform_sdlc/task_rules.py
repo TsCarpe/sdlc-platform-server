@@ -1,8 +1,8 @@
-"""任务通道共享规则（AUDIT D1-5，批次7）：双执行通道（进程内 loop / 外置 runner.mjs）的
-单一数据源——任务→草稿映射、机械自查阈值、结果行判据。
+"""任务通道共享规则（AUDIT D1-5，批次7）：任务→草稿映射的单一数据源。
 
-经 GET /api/meta/task-rules 下发，runner 启动拉取（失败回退本地同款默认）；
-阈值/映射变更只改此处，双通道不再各自漂移。判定文案与提示语留在各自实现（受众不同，不模板化）。
+原「双执行通道规则下发」面（GET /api/meta/task-rules + SELF_CHECK/RESULT_LINE_PATTERN）
+随外置 runner 下线（2026-10-28）退役：消费方仅 runner.mjs；进程内 loop.py 运行时直接
+import 本模块（self_check 阈值与结果行判据是 loop/executor 各自实现，不经此处下发）。
 """
 
 from __future__ import annotations
@@ -19,34 +19,6 @@ DRAFT_TYPES: dict[str, str] = {
 }
 
 # 不产草稿的任务类型（v4-3，DESIGN-v4 §3）：source_import 产物 = parse_doc 输出文件，由任务完成
-# 回调（服务端直读文件字节）落库——selfCheck 的「草稿回传了才记 done」对此类跳过（两通道各一处
-# 代码分支，漏改则 draftTypes 映射回退 'cases' 会错查不存在的草稿导致任务永远 failed）
+# 回调（服务端直读文件字节）落库——selfCheck 的「草稿回传了才记 done」对此类跳过
+# （漏登记则 DRAFT_TYPES 映射回退 'cases' 会错查不存在的草稿导致任务永远 failed）
 NO_DRAFT_TYPES: frozenset[str] = frozenset({"source_import"})
-
-# 机械自查阈值（done 判定的齐套下限；文案见 loop.self_check / runner.mjs selfCheck 各自实现）
-SELF_CHECK: dict[str, dict[str, object]] = {
-    "standard": {"minMd": 200},
-    "design": {"minMd": 200, "requireHeading": "§0"},
-    "gate_issues": {"minMd": 100, "issuesNonEmpty": True},
-    "digest_bundle": {"structure": ("digest", "audit", "items"), "itemsNonEmpty": True},
-    "cases": {"structure": ("items",), "itemsNonEmpty": True},
-    # v4-14（§6.1）：机械校验主体在服务端 put_draft 单点（anchor/作废清单/区间表示需查库），
-    # 此处只登记齐套下限；结构键 = 增量包骨架
-    "incremental_bundle": {"structure": ("changeId", "sections", "digestRows", "invalidate"),
-                           "sectionsNonEmpty": True},
-}
-
-# 结果行判据（SDLC_TASK_RESULT {json} 收尾行；两端均不强制——进程内有续跑强化，runner 仅警示）
-RESULT_LINE_PATTERN = r"SDLC_TASK_RESULT\s+(\{.*\})\s*$"
-
-
-def task_rules_payload(workspace_root: str) -> dict[str, object]:
-    """端点出参（runner 消费面）。v4-3（DESIGN-v4 §3）：noDraftTypes 登记 + workspaceRoot 统一下发
-    （runner 输出定位 <根>/tasks/<task_id>/out/doc.json；env 显式配置 SDLC_WORKSPACE 优先级最高）。"""
-    return {
-        "draftTypes": DRAFT_TYPES,
-        "noDraftTypes": sorted(NO_DRAFT_TYPES),
-        "selfCheck": SELF_CHECK,
-        "resultLinePattern": RESULT_LINE_PATTERN,
-        "workspaceRoot": workspace_root,
-    }

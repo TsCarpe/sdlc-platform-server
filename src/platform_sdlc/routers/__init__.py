@@ -18,13 +18,11 @@ def register_routers(app: FastAPI, ctx: AppContext) -> None:
         health,
         iterations,
         media,
-        meta,
         requirements,
         tasks,
     )
 
     app.include_router(health.router)
-    app.include_router(meta.router(ctx))  # 任务通道共享规则下发（AUDIT D1-5）
     app.include_router(requirements.router(ctx))
     app.include_router(changes.router(ctx))
     app.include_router(cases.router(ctx))

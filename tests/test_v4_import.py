@@ -349,13 +349,6 @@ def test_conservation_vector() -> None:
 
 # ---------- noDraftTypes 与 self_check 跳过 ----------
 
-def test_task_rules_payload_carry_new_keys() -> None:
-    from platform_sdlc.task_rules import task_rules_payload
-    p = task_rules_payload("/ws/x")
-    assert p["noDraftTypes"] == ["source_import"]
-    assert p["workspaceRoot"] == "/ws/x"
-
-
 def test_loop_self_check_skips_no_draft_types(env: tuple[Database, Repos, Services, Path]) -> None:
     _, repos, services, _ = env
     settings = Settings(_env_file=None)  # pyright: ignore[reportCallIssue]
