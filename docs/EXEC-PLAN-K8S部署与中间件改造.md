@@ -16,16 +16,19 @@
 | 通道 | 实现 | 执行器 | 依赖 |
 |---|---|---|---|
 | 外置 Runner | `runner/runner.mjs` 轮询领任务 → `spawn claude -p <prompt> --permission-mode bypassPermissions --output-format json` | **Claude Code CLI headless**，跑 `claude-sdlc-skills` 仓里的技能管线（质检/标准文档/设计/门禁…），产物以「草稿」回传平台 | node ≥18、claude CLI 二进制 + 认证态、`~/IdeaProjects/claude-sdlc-skills` 仓、lark-cli（仅飞书来源质检任务） |
-| 进程内 agent | `SDLC_AGENT_ENABLED=true` + openai-agents SDK（`agent/executor.py`） | server 进程内直连**任意 OpenAI 兼容端点**（如 DeepSeek），不依赖 claude CLI | 仅 `SDLC_AGENT_BASE_URL/MODEL/API_KEY` 三元组 |
+| 进程内 agent | `SDLC_AGENT_ENABLED=true` + openai-agents SDK（`agent/executor.py`） | server 进程内直连**任意 OpenAI 兼容端点**（如 DeepSeek），不依赖 claude CLI | `SDLC_AGENT_BASE_URL/MODEL/API_KEY` 三元组 + **skills 仓**（规范素材 + 确定性脚本，read_file/run_command 消费） |
 
-**部署含义**：只用进程内通道 → 镜像/服务器完全不需要 claude CLI、skills 仓、lark-cli，部署大幅简化；
-代价是放弃 claude CLI 技能管线的能力（两通道 prompt 各自实现，能力不完全对等——见 §8 决策点 4）。
+**部署含义**：只用进程内通道 → 镜像/服务器不需要 claude CLI、认证态与 lark-cli（执行框架消除）；
+但 **skills 仓（`claude-sdlc-skills`）是双通道共享依赖、不可消除**——进程内 agent 的 prompt 各任务
+分支全量引用它（`read_file` 读 SKILL.md/references 规范模板 + `run_command` 跑 `parse_doc.py` 等
+确定性脚本；`executor.py` 启动硬检查目录存在，缺失即任务全挂），须随镜像部署（见 §2.1/§3.5）。
 
 > **✅ 已拍板（2026-10-28，同日修订；同日执行完毕）**：上服务器的是**完整能力**。初版拍板 = runner（claude CLI）
 > 通道部署；**后修订为**：完整能力由「进程内 agent + 飞书 Python 接入」承载——
 > 详见 `docs/DESIGN-飞书接入Python化.md`（其验收通过是 runner 下线前置）。
 > **runner 已于 2026-10-28 下线**（本体 + task-rules 端点拆除，A/B 级评审扇出由进程内
-> `spawn_reviewer` 工具承载）；上表外置 Runner 行与 §2.1 的 runner 依赖项均已消除。
+> `spawn_reviewer` 工具承载）；上表外置 Runner 行与 §2.1 的 runner 依赖项均已消除
+> ——但 **skills 仓除外**：它是进程内通道共享的内容依赖（素材库 + 脚本），保留并须进镜像。
 
 ---
 
@@ -35,9 +38,9 @@
 |---|---|---|---|
 | 1 | SQLite 单连接 + RLock + WAL | `db.py`（`check_same_thread=False`、PRAGMA、可重入 `tx()`） | 单写者进程内锁 → 无法多副本/多 worker；容器重建丢库（必须 PVC） |
 | 2 | 助理会话是第二个 SQLite | `agent/assistant.py` `SqliteChatSession`（独立 `data/assistant.db`，模块级共享连接 + RLock） | 同上；且 `backup.sh` **不含它** |
-| 3 | 任务队列 = DB 表轮询 | `task_repo.claim()` 条件 UPDATE + `AgentLoop`/runner 双通道轮询（3s） | 无标准 MQ 的削峰/即时派发/消费可观测；换多执行器水平扩展受限 |
+| 3 | 任务队列 = DB 表轮询 | `task_repo.claim()` 条件 UPDATE + `AgentLoop` 进程内轮询（3s；`POST /api/tasks/next` 留作外部脚本原子领取面） | 无标准 MQ 的削峰/即时派发/消费可观测；换多执行器水平扩展受限 |
 | 4 | cwd 相对路径 | `config.py` `resolve_paths`（`./data`）、`static_dir="static"` | uvicorn 必须以仓根为 cwd；容器 WORKDIR 必须钉死 |
-| 5 | 本地文件系统三处 | `data/media/`（上传媒体，上限 64MB）、`tasks/<id>/out/`（source_import 服务端直读落库——**确定性管道红线**，不经 LLM 上下文）、`sdlc/<reqId>/`（任务工作区） | runner 与 server **必须共享同一文件系统路径**，否则 source_import 完成回调读不到输出文件 → K8s 里必须共 PVC（或同 Pod） |
+| 5 | 本地文件系统三处 | `data/media/`（上传媒体，上限 64MB）、`tasks/<id>/out/`（source_import 服务端直读落库——**确定性管道红线**，不经 LLM 上下文）、`sdlc/<reqId>/`（任务工作区） | 三目录必须持久化且同进程可达（进程内 agent 与 server 同进程天然同路径；K8s 挂同一 PVC 即满足） |
 | 6 | 前端产物 rsync 进 `static/` | web 仓 `npm run deploy`（`rsync -a --delete dist/ $SDLC_SERVER_STATIC_DIR`） | K8s 正解 = 多阶段构建打进 server 镜像（`base:'./'` 相对路径 + 同源 `/api`，无 CORS/域名假设，容器化友好） |
 | 7 | 备份脚本假设本机 | `backup.sh`（`sqlite3 .backup`，需 sqlite3 CLI，只备 platform.db） | 容器内无常驻 shell；MySQL 化后换 mysqldump CronJob |
 | 8 | 日志落本地文件 | `dev-log.sh` → `logs/server.log` | 容器正解 = stdout → K8s 采集 |
@@ -45,8 +48,8 @@
 | 10 | 无登录、绑 0.0.0.0、内网互信 | `config.py`；写防护可选 `SDLC_WRITE_TOKEN` | 纯内网 IP 直访（已确认）→ K8s Service 即可，无 TLS/反代硬需求；写令牌仍建议启用 |
 
 **现成有利条件**（盘点确认，不用新做）：`/api/health` 端点已有（probes 直接用）；SSE 已带
-`X-Accel-Buffering: no`（反代兼容）；runner 已支持 `X-Token` 注入（`SDLC_WRITE_TOKEN`）；
-`SDLC_PLATFORM_URL` 可指向任一实例；`verify-all.sh` 支持 `BASE` 参数指任意地址（黑盒回归 = 现成验收门）。
+`X-Accel-Buffering: no`（反代兼容）；写防护 `SDLC_WRITE_TOKEN` 可选启用；
+`verify-all.sh` 支持 `BASE` 参数指任意地址 + 自带进程内 agent 暂停/恢复（黑盒回归 = 现成验收门）。
 
 ---
 
@@ -60,7 +63,8 @@
 | MySQL 8.x | 无（SQLite） | **必须改造**（§3.1） |
 | RocketMQ | 无（DB 轮询） | **必须改造**（§3.2） |
 | node ≥18 | runner/verify 脚本 | **仅需配置**（CI 镜像；runner 已下线，仅 verify 脚本与 CI 需要） |
-| claude CLI + 认证态 + skills 仓 + lark-cli | 仅 runner 通道 | ~~决策点~~ 已消除（§8-4 拍板后 runner 于 2026-10-28 下线，全部不再需要） |
+| claude CLI + 认证态 + lark-cli | 原 runner 通道专属 | ~~决策点~~ 已消除（§8-4 拍板后 runner 于 2026-10-28 下线；lark-cli 由进程内 Python 飞书客户端 `feishu_fetch` 替代） |
+| **skills 仓（`claude-sdlc-skills`）** | **双通道共享**（进程内 `read_file` 规范素材 + `run_command` 确定性脚本，`executor.py` 启动硬检查） | **保留依赖，须进镜像**：`SDLC_AGENT_SKILLS_REPO` 指镜像内路径；版本 ≥ 2026-10-28（`parse_doc.py --media-manifest`，`feishu_fetch` 启动探测） |
 | sqlite3 CLI | backup.sh | MySQL 化后移除 |
 | OpenAI 兼容端点 + 余额 | 进程内 agent / 助理 | **仅需配置**（Secret） |
 
@@ -69,8 +73,9 @@
 | 配置 | 去向 |
 |---|---|
 | `SDLC_AGENT_BASE_URL/_MODEL`、`SDLC_AGENT_ENABLED`、`SDLC_PLATFORM_URL`（改 K8s Service 名）、TZ | ConfigMap |
-| `SDLC_AGENT_API_KEY`、`SDLC_WRITE_TOKEN`、MySQL 账号密码（新增 `SDLC_DB_DSN`）、（若留 runner）claude 认证态 | Secret（chmod 思路 = K8s 权限面，不进 git） |
+| `SDLC_AGENT_API_KEY`、`SDLC_WRITE_TOKEN`、MySQL 账号密码（新增 `SDLC_DB_DSN`）、飞书应用凭据（先共用 Askly 应用） | Secret（chmod 思路 = K8s 权限面，不进 git） |
 | `SDLC_DB_PATH`/`SDLC_MEDIA_DIR`/`SDLC_AGENT_WORKSPACE_ROOT` | 改指 PVC 挂载点（如 `/data/...`） |
+| `SDLC_AGENT_SKILLS_REPO` | 改指镜像内路径（如 `/app/skills`，构建期固化版本） |
 | 需新增 `.env.example`（两仓通用配置文档化，防配置漂移） | **小改造** |
 
 ### 2.3 数据层
@@ -123,7 +128,7 @@ fencing」「L2 只自动一次（`exists_by_type` 直查）」「终态锁拒�
 
 | 现状机制 | 目标机制 |
 |---|---|
-| `POST /api/tasks/next` 轮询 claim（runner 用） | 保留（兼容 + 兜底） |
+| `POST /api/tasks/next` 轮询 claim（外部脚本用） | 保留（兼容 + 兜底） |
 | `AgentLoop` 3s 轮询 | 订阅 `task.created` 消息即时唤醒 claim + 30s 轮询兜底（MQ 丢消息不丢任务） |
 | `create_guarded` 建任务 | 事务提交后发 `task.created`（失败仅日志，轮询兜底——起步不做本地消息表） |
 | finish / retry / fencing / recover-stale | **不变**（仍是 DB 条件 UPDATE） |
@@ -146,18 +151,18 @@ InnoDB 下原子性成立，「DB 权威 + 轮询」的收益损失很小，而 
 
 - PVC `sdlc-data`（建议 50Gi 起，现用量约 250M）：`data/media`、`tasks/`、`sdlc/` 三目录经
   `SDLC_MEDIA_DIR`/`SDLC_AGENT_WORKSPACE_ROOT`/workspace env 指到 `/data/` 挂载点。
-- **红线**：source_import 完成回调服务端直读 `tasks/<task_id>/out/doc.json` → 若保留 runner 通道，
-  runner 与 server 必须挂**同一 PVC**（RWO 则加 podAffinity 同节点；或 NFS RWX——§8-1 确认 storageclass 后定）。
+- **红线**：source_import 完成回调服务端直读 `tasks/<task_id>/out/doc.json` → 进程内 agent 与
+  server 同进程天然同路径，K8s 挂同一 PVC 即满足（RWO 单副本无共享诉求；storageclass §8-1 确认后定）。
 - `static/` → 多阶段构建打进镜像（web `dist` → server 镜像 `/app/static`），发布即发版，无运行时同步。
 
 ### 3.5 镜像与部署配套（全新新增，非业务代码改动）
 
 - `Dockerfile.server`（多阶段）：stage1 `node:20` build web（`npm ci && npm run build`）→ stage2
-  `python:3.12-slim` + uv sync + `COPY --from=stage1` dist → `static/`；WORKDIR 钉仓根；非 root 用户。
-- `Dockerfile.runner`（仅当保留 claude CLI 通道）：node:20 + claude CLI + skills 仓 + 认证态 Secret 挂载。
+  `python:3.12-slim` + uv sync + `COPY --from=stage1` dist → `static/` + **skills 仓（clone/COPY
+  `claude-sdlc-skills` → `/app/skills`，构建期固化版本 ≥ 2026-10-28）**；WORKDIR 钉仓根；非 root 用户。
 - `.dockerignore`（data/ tasks/ sdlc/ logs/ backups/ .venv .git static/）。
 - K8s manifests：`Deployment sdlc-server`（**replicas=1 硬约束**——MySQL 虽消除单写者，但 AgentLoop
-  进程内执行、共享 workspace、单 uvicorn worker 模型仍在；水平扩列远期）、`Deployment sdlc-runner`(0..1)、
+  进程内执行、共享 workspace、单 uvicorn worker 模型仍在；水平扩列远期）、
   `Service`（内网直访）、`PVC`、`ConfigMap`/`Secret`、`CronJob sdlc-backup`、probes（`/api/health`，
   readiness 加 MySQL 连通性）、`terminationGracePeriodSeconds`（SSE 流与在跑任务软着陆——超时任务由
   recover-stale 兜底回收）。
@@ -167,12 +172,12 @@ InnoDB 下原子性成立，「DB 权威 + 轮询」的收益损失很小，而 
 
 - 备份：阶段 1（SQLite 期）CronJob 跑 `backup.sh` 语义（sqlite3 .backup → PVC backups/）；
   阶段 2 后换 `mysqldump --single-transaction` CronJob → PVC/对象存储，保留 N 份滚动 + **每季 restore 演练**。
-- 日志：uvicorn/runner 全部 stdout（K8s 采集接公司体系）；`logs/` 目录退役。
+- 日志：uvicorn 全部 stdout（K8s 采集接公司体系）；`logs/` 目录退役。
 
 ### 3.7 验证脚本适配
 
-`verify-all.sh` 内部 `pgrep/pkill runner.mjs` 在 K8s 下失效 → 验收 runbook 改为「先 scale runner 0 →
-跑 verify → scale 回」（脚本加 `--pause-runner=api` 模式或纯文档化操作步骤）；`BASE` 参数已支持远程地址，无需改。
+`verify-all.sh` 已改为调 `/api/agent/pause` 自动暂停/恢复进程内 agent（runner 段随下线删除）；
+`BASE` 参数支持远程地址——容器/K8s 下无需改。
 
 ---
 
@@ -185,10 +190,10 @@ InnoDB 下原子性成立，「DB 权威 + 轮询」的收益损失很小，而 
 1. `Dockerfile.server`(+`.dockerignore`) + compose 本地起 → `verify-all.sh` 全绿（容器内首验）。
 2. K8s manifests（Deployment/PVC/Service/ConfigMap/Secret/probes/备份 CronJob）→ 内网集群上线。
 3. 数据：全新起库（✅ §6），PVC 空挂即可，无迁移步骤。
-4. 任务通道：**双通道完整能力**（✅ §0 拍板）——`deploy/Dockerfile.runner`（claude CLI + lark-cli +
-   skills 仓）与 server 同 PVC 同节点（RWO + podAffinity）；claude 认证走
-   `claude setup-token` 长效 token → Secret env 注入，lark-cli 认证目录 → Secret 挂载拷贝
-   （runbook 见 `deploy/README.md`）。
+4. 任务通道：**进程内 agent（唯一通道，✅ §0/§8-4 拍板）**——skills 仓 `claude-sdlc-skills` 在
+   `Dockerfile.server` 构建期固化进镜像（版本 ≥ 2026-10-28），`SDLC_AGENT_SKILLS_REPO` 指镜像内
+   路径（如 `/app/skills`）；飞书应用凭据（先共用 Askly）走 Secret env；容器内首验含
+   `feishu_fetch` 版本探测通过。
 5. **验收门**：内网 IP `curl /api/health` OK；`verify-all.sh BASE=<内网地址>` 全绿；浏览器走通一条业务流。
 
 ### 阶段 2：SQLite → MySQL——约 5~8 人日（含测试改造）
@@ -222,9 +227,7 @@ Namespace: sdlc
 │   ├─ PVC sdlc-data (media/tasks/sdlc 共享) │  └─────────────┘
 │   ├─ ConfigMap (SDLC_AGENT_* 非密/TZ/URL)  │  ┌─────────────┐
 │   └─ Secret (API_KEY/WRITE_TOKEN/DB DSN)   │  │ RocketMQ    │◄── task.created
-│ Deployment sdlc-runner (0..1, 视决策)       │  └─────────────┘
-│   container: node + claude CLI + skills 仓  │
-│   └─ 同一 PVC sdlc-data（source_import 直读红线）
+│   （skills 仓固化进镜像 /app/skills）       │  └─────────────┘
 │ CronJob sdlc-backup (mysqldump)            │
 │ Service sdlc-server ← 内网 IP 直访（无 TLS 需求）
 └────────────────────────────────────────────┘
@@ -245,7 +248,7 @@ Namespace: sdlc
 ## §7 验收总门（每次上线 + 每季度回归）
 
 1. `uv run pytest` 全绿（MySQL 后端）；
-2. `scripts/verify-all.sh BASE=<内网地址>` 全绿（先 scale runner 0）；
+2. `scripts/verify-all.sh BASE=<内网地址>` 全绿（自带进程内 agent 暂停/恢复）；
 3. 浏览器走通完整业务流：建卡 → source_import → 质检 → 澄清答复 → 发布 → 设计 → 门禁；
 4. `verify-agent.mjs` / `verify-assistant.mjs` 通过（需模型余额）；
 5. K8s 韧性演练：pod 删除重建数据无损；备份 CronJob 产出可恢复（restore 演练过一次才算数）；
@@ -291,7 +294,7 @@ label 宿主机采集。
 | tcpSocket 三段探针 | 换 httpGet（SDLC 有 `/api/health`） |
 | 日志 hostPath applogs + logType label | 对齐：容器日志写 stdout 或挂 hostPath applogs（二选一问运维采集方式） |
 | OTel annotation 注入 java agent | Python 亦有 otel operator 注入方案；**可选不阻塞** |
-| `nodeSelector: node.apptype: web` | 沿用（runner 若保留需 node 选型：claude CLI 任务 CPU 密集） |
+| `nodeSelector: node.apptype: web` | 沿用 |
 | 凭证全在 Apollo/Nacos | 起步 ConfigMap/Secret（§8-8 决策点） |
 | Jenkins `deploy_aliack_cluster_jdk21(map)` | JDK 专用函数；Python 需共享库加变体或走 GitLab CI 模板（§8-6） |
 
