@@ -222,6 +222,23 @@ def test_finish_rejects_media_status_failed(env: tuple[Database, Repos, Services
     assert "status 非 ok" in m["error"]
 
 
+def test_finish_allows_skipped_size_exceeded(env: tuple[Database, Repos, Services, Path]) -> None:
+    """media status=skipped:size-exceeded（大附件豁免，DESIGN-飞书接入Python化 §5）→ 放行：
+    status 终检与 missingMedia 面同步豁免（豁免媒体不上传不阻断，块的 media 引用不视为缺失）。"""
+    _, repos, services, ws = env
+    _mk_card(repos)
+    _seed_media(repos, "REQ-2026-001")
+    t = services.tasks.create_guarded("REQ-2026-001", "source_import", "", "")
+    services.tasks.claim("test-runner")
+    doctored = copy.deepcopy(_DOC)
+    doctored["media"][0]["status"] = "skipped:size-exceeded"
+    _mk_out(ws, t.id, _with_guard(doctored))
+
+    out = services.tasks.finish(t.id, True, {})
+    assert out.status == "done"
+    assert json.loads(out.result)["missingMedia"] == 0
+
+
 def test_finish_allows_markdown_fallback(env: tuple[Database, Repos, Services, Path]) -> None:
     """markdown-fallback（--md 回退）无原文可对账 → 仅结构校验：结构合法 + 媒体齐全即放行。"""
     _, repos, services, ws = env

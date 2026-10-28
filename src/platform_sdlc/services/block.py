@@ -98,13 +98,20 @@ def verify_doc_guard(doc: dict[str, Any]) -> None:
             "请重跑 parse_doc 重产（勿手工改写 doc.json）后重试")
 
 
+# 媒体豁免态（DESIGN-飞书接入Python化 §5 拍板）：skipped:size-exceeded = 大附件只登记元数据
+# 不下载，属预期而非失败——落库放行（缺失面由 missingMedia 校验同步剔除豁免）
+_MEDIA_EXEMPT_PREFIX = "skipped:"
+
+
 def _verify_media_status(media_entries: list[Any]) -> None:
-    """media 若存在则 status 须全 ok（parse_doc 下载失败标 failed:...，离线未下载标 pending——
-    两者都不可落库；文案带 token 定位）。"""
+    """media 若存在则 status 须全 ok 或豁免态（failed:.../pending 不可落库；skipped:size-
+    exceeded 是大附件豁免——文案带 token 定位）。"""
     bad: list[str] = []
     for i, m in enumerate(media_entries):
-        if is_json_obj(m) and str(m.get("status") or "") == "ok":
-            continue
+        if is_json_obj(m):
+            status = str(m.get("status") or "")
+            if status == "ok" or status.startswith(_MEDIA_EXEMPT_PREFIX):
+                continue
         bad.append(str(m.get("token") or m.get("id")) if is_json_obj(m) else f"#{i}")
     if bad:
         raise IntegrityException(
@@ -287,11 +294,15 @@ class BlockService:
                 attrs_json=json.dumps(attrs, ensure_ascii=False, separators=(",", ":")),
             ))
         present = set(self.repos.media.ids_of(req_id, wanted_media))
-        missing = [m for m in wanted_media if m not in present]
+        media_raw = raw.get("media")
+        exempt = {str(m.get("id")) for m in (media_raw if is_json_list(media_raw) else [])
+                  if is_json_obj(m) and str(m.get("status") or "").startswith(_MEDIA_EXEMPT_PREFIX)}
+        missing = [m for m in wanted_media if m not in present and m not in exempt]
         if missing:
             raise IntegrityException(
                 f"doc 产物引用的媒体未上传（missingMedia={len(missing)}：{missing[:5]}）——"
-                "先补齐媒体上传（mediaId 与 doc.media[].id 一致）再重试 done")
+                "先补齐媒体上传（mediaId 与 doc.media[].id 一致）再重试 done"
+                "（skipped:size-exceeded 大附件豁免）")
         n_comments = 0
         with self.db.tx():
             self.repos.req_block.replace_all(req_id, block_rows)
