@@ -72,6 +72,20 @@ def _resolve_in_workspace(ctx: TaskRunContext, rel: str) -> Path:
     return p
 
 
+def _resolve_fetch_out(ctx: TaskRunContext, out_dir: str) -> Path:
+    """feishu_fetch 的产物目录合法面：工作区内 ∪ 本任务产物目录（tasks/<本任务ID>/…）。
+
+    source_import 的 out_dir 是 executor 下发的绝对路径（<workspace_root>/tasks/<id>/out，
+    服务端完成回调的固定读取位）——不在 agent 工作区内，通用工作区校验必拒；拒了模型会
+    fallback 自造抓取管线（端到端实锤），故对本任务目录精确放行。"""
+    p = Path(out_dir)
+    resolved = p.resolve() if p.is_absolute() else (ctx.workspace / p).resolve()
+    task_root = (ctx.services.blocks.workspace_root / "tasks" / str(ctx.task_id)).resolve()
+    if resolved.is_relative_to(ctx.workspace.resolve()) or resolved.is_relative_to(task_root):
+        return resolved
+    raise ValueError(f"out_dir 越界（须在工作区内或 tasks/{ctx.task_id}/ 下）：{out_dir}")
+
+
 def _resolve(ctx: TaskRunContext, rel: str) -> Path:
     a = (ctx.skills_repo.resolve() / rel).resolve()
     if a.is_relative_to(ctx.skills_repo.resolve()) and a.exists():
@@ -415,7 +429,7 @@ async def feishu_fetch(wrapper: RunContextWrapper[TaskRunContext], url: str, out
     def impl() -> dict[str, object]:
         client = ctx.feishu
         assert client is not None  # 外层已判 None（闭包内 narrow 不穿透）
-        out = _resolve_in_workspace(ctx, out_dir)
+        out = _resolve_fetch_out(ctx, out_dir)
         parse_doc = ctx.skills_repo / "skills" / "sdlc-intent" / "scripts" / "parse_doc.py"
         r: FetchResult = fetch_document(client, url, out, parse_doc,
                                         max_media_bytes=ctx.feishu_media_max_bytes)

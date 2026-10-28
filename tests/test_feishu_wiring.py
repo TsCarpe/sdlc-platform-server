@@ -8,6 +8,9 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any, cast
+
+import pytest
 
 from platform_sdlc.agent import prompts
 from platform_sdlc.agent.tools import build_tools
@@ -53,6 +56,31 @@ def test_run_command_allowlist_drops_lark_cli() -> None:
 def test_feishu_forbidden_not_retryable() -> None:
     """§7：feishu-forbidden 不加白名单——重试接口直接 409，权限问题重试不烧 token。"""
     assert "feishu-forbidden" not in _RETRYABLE_REASONS
+
+
+def test_resolve_fetch_out_allows_task_dir_and_workspace(tmp_path: Path) -> None:
+    """feishu_fetch 产物目录合法面（端到端实锤的路径越界回归锁）。"""
+    from platform_sdlc.agent.tools import _resolve_fetch_out
+
+    class _Blocks:
+        workspace_root: Path = tmp_path
+
+    class _Services:
+        blocks: _Blocks = _Blocks()
+
+    class _Ctx:
+        workspace: Path = tmp_path / "sdlc" / "卡名"
+        services: _Services = _Services()
+        task_id: int = 2526
+
+    ctx = cast("Any", _Ctx())  # 鸭子类型桩（属性面子集）——被测函数只读这三个属性
+    _Ctx.workspace.mkdir(parents=True)
+    task_out = tmp_path / "tasks" / "2526" / "out"
+    assert _resolve_fetch_out(ctx, str(task_out)) == task_out.resolve()  # executor 下发的绝对路径
+    assert _resolve_fetch_out(ctx, "out") == (ctx.workspace / "out").resolve()  # 工作区相对
+    other = tmp_path / "tasks" / "9999" / "out"
+    with pytest.raises(ValueError):
+        _resolve_fetch_out(ctx, str(other))  # 他任务目录应被拒
 
 
 def test_settings_feishu_fields() -> None:
