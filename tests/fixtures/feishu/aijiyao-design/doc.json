@@ -1,0 +1,1897 @@
+{
+ "generator": "sdlc-intent/parse_doc.py 0.5",
+ "source": {
+  "url": "https://hailiang.feishu.cn/wiki/UOYywT1TmicCBjkbYmlccQYInpc",
+  "documentId": "Jm4udNBpEogvIJxYj7kc0iu4nUf",
+  "revisionId": "35"
+ },
+ "blocks": [
+  {
+   "id": "Jm4udNBpEogvIJxYj7kc0iu4nUf",
+   "type": "title",
+   "text": "新版AI活动纪要 技术设计",
+   "path": "新版AI活动纪要 技术设计"
+  },
+  {
+   "id": "x-0001",
+   "type": "table-row",
+   "head": [
+    "项目",
+    "信息"
+   ],
+   "cells": [
+    "需求编号",
+    "REQ-2026-1166（迭代 v3.8.0-1）｜优先级 P1"
+   ],
+   "rowLabel": "需求编号",
+   "path": "需求编号",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0002",
+   "type": "table-row",
+   "head": [
+    "项目",
+    "信息"
+   ],
+   "cells": [
+    "需求文档",
+    "鸿儒教研AI纪要&教研报告 PRD"
+   ],
+   "rowLabel": "需求文档",
+   "path": "需求文档",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0003",
+   "type": "table-row",
+   "head": [
+    "项目",
+    "信息"
+   ],
+   "cells": [
+    "文档状态",
+    "设计评审稿（2026-10-27；2026-10-28 补充资源上下文处理：抽取优先 + 源文件兜底）｜风险分级 A（对抗评审 4 子代理）"
+   ],
+   "rowLabel": "文档状态",
+   "path": "文档状态",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0004",
+   "type": "table-row",
+   "head": [
+    "项目",
+    "信息"
+   ],
+   "cells": [
+    "涉及服务",
+    "hrsystem（AI 对接、共思随记、分析模板、声纹，新增）｜lesson（采集与集备）｜listen（活动列表与日程展示）"
+   ],
+   "rowLabel": "涉及服务",
+   "path": "涉及服务",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "doxcnbRpbaUC3Ioa7sdei6L6Sbb",
+   "type": "heading",
+   "level": 1,
+   "text": "一、业务背景与需求",
+   "path": "一、业务背景与需求"
+  },
+  {
+   "id": "doxcn7IO3J6O4nRacNB2f0NUKCc",
+   "type": "heading",
+   "level": 2,
+   "text": "1.1 背景",
+   "path": "一、业务背景与需求 › 1.1 背景"
+  },
+  {
+   "id": "doxcn52wSuZACZF0KYMElRKMQU4",
+   "type": "paragraph",
+   "text": "教研会议目前依靠教师手写记录：要点与待办容易遗漏，会后整理负担重，缺席教师难以快速了解结论。管理者无法参与全部教研活动，难以掌握真实的教研过程与决议落地情况；而现有\"手动提交纪要\"的方式存在拖延与美化，教研过程不可追溯。",
+   "path": "1.1 背景",
+   "comments": null
+  },
+  {
+   "id": "doxcn17JfqCBGAwAYMbkouM3Azh",
+   "type": "paragraph",
+   "text": "本期在教研活动链路上新增 AI 活动纪要能力：教师在活动页一键采集素材（实时录音 / 上传音视频 / 上传已有纪要文件三种方式任选其一），系统自动生成结构化纪要——核心结论、关键问题、讨论内容、决议事项、待办分工五段式呈现，每条结论可回溯到原始音频位置或原文片段，并通过声纹识别区分不同发言人。",
+   "path": "1.1 背景",
+   "comments": null
+  },
+  {
+   "id": "doxcnuV9Cf7bRWcRyrWiXMvHREc",
+   "type": "heading",
+   "level": 2,
+   "text": "1.2 本次解决的业务问题",
+   "path": "一、业务背景与需求 › 1.2 本次解决的业务问题"
+  },
+  {
+   "id": "doxcnpL5yVa15cTZnfubWozPWBc",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "教师免手写记录，专注研讨本身；会后即时获得要点与待办分工",
+   "path": "1.2 本次解决的业务问题 › 1",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "doxcntetzCu6ocjIGtMLXJ1lHyh",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "缺席教师通过纪要（含证据溯源与发言人认领）快速还原会议",
+   "path": "1.2 本次解决的业务问题 › 2",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "doxcnOOPASkZDvODqLZfsXPK6Fc",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "3",
+   "depth": 1,
+   "text": "管理者可追溯教研过程原始记录，取代拖延与美化过的手写纪要",
+   "path": "1.2 本次解决的业务问题 › 3",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "doxcn44h3AMoxjNjptNYsUdtbud",
+   "type": "list-item",
+   "marker": "4.",
+   "ordinal": "4",
+   "depth": 1,
+   "text": "配套改造：活动检查列表按纪要状态切换操作入口、日程卡片透出纪要状态、教研设置新增 AI 分析模板",
+   "path": "1.2 本次解决的业务问题 › 4",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "doxcnCW2NBBkp0iDgHZNd1h4Pkh",
+   "type": "heading",
+   "level": 2,
+   "text": "1.3 范围说明",
+   "path": "一、业务背景与需求 › 1.3 范围说明"
+  },
+  {
+   "id": "doxcnotUbVa4nIHXZeYYWkhQbsb",
+   "type": "paragraph",
+   "text": "本期范围：AI 活动纪要、声纹库、活动列表/日程卡片/教研设置配套改造、移动端（仅录音、查看纪要、上传纪要）。",
+   "path": "1.3 范围说明",
+   "comments": null
+  },
+  {
+   "id": "doxcnPxoxZJfgQyKSzZJIMk8f51",
+   "type": "paragraph",
+   "text": "本期不做：AI 教研报告、个备资源分析（另行排期）；老录制业务不新增入口、原样保留。",
+   "path": "1.3 范围说明",
+   "comments": null
+  },
+  {
+   "id": "doxcnVei4x4zLMxvoHgKt2g6A6e",
+   "type": "heading",
+   "level": 1,
+   "text": "二、方案总览",
+   "path": "二、方案总览"
+  },
+  {
+   "id": "doxcnIwQIGTzbaW3BXK6bcaL8Mb",
+   "type": "heading",
+   "level": 2,
+   "text": "2.1 一句话方案",
+   "path": "二、方案总览 › 2.1 一句话方案"
+  },
+  {
+   "id": "doxcnQMUOpiXWa7QY0xx3KOad2m",
+   "type": "paragraph",
+   "text": "教师在开始活动页采集素材（录音/上传音视频/上传已有纪要三选一），点击【生成纪要】后由全新 AI 服务产出带证据溯源与发言人识别的结构化纪要；新能力建在全新链路上，与在用的老录制业务并行运行、互不影响。",
+   "path": "2.1 一句话方案",
+   "comments": null
+  },
+  {
+   "id": "doxcn5zS5sFFyJUjRX1WH4TQTzc",
+   "type": "heading",
+   "level": 2,
+   "text": "2.2 改动维度",
+   "path": "二、方案总览 › 2.2 改动维度"
+  },
+  {
+   "id": "x-0005",
+   "type": "table-row",
+   "head": [
+    "维度",
+    "内容"
+   ],
+   "cells": [
+    "AI 纪要域（新增）",
+    ""
+   ],
+   "rowLabel": "AI纪要域（新增）",
+   "path": "2.2 改动维度 › AI纪要域（新增）",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "doxcnUnwRO5pPwf4V8Jnu2TpHjh",
+   "type": "paragraph",
+   "text": "hrsystem 对接兄弟部门新 AI 接口：采集建档与模式互斥、资源上传、生成提交、结果回调、超时兜底、纪要与转写存储、发言人音频切片、共思随记、AI 分析模板维护、素材上下文组装（随记/资源/目标/模板本地解析为生成上下文快照，见 4.4 第 7 条）",
+   "path": "2.2 改动维度",
+   "parent": "x-0005",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "x-0006",
+   "type": "table-row",
+   "head": [
+    "维度",
+    "内容"
+   ],
+   "cells": [
+    "采集改造（lesson）",
+    "实时录音能力：录制控制、分片上传、拼接与就绪回调（携带纪要单号，不判互斥）；集备资源同步我的备课"
+   ],
+   "rowLabel": "采集改造（lesson）",
+   "path": "2.2 改动维度 › 采集改造（lesson）",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0007",
+   "type": "table-row",
+   "head": [
+    "维度",
+    "内容"
+   ],
+   "cells": [
+    "展示改造（listen）",
+    "活动列表按钮随纪要状态切换、日程卡片纪要状态、活动详情按新老数据分流"
+   ],
+   "rowLabel": "展示改造（listen）",
+   "path": "2.2 改动维度 › 展示改造（listen）",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0008",
+   "type": "table-row",
+   "head": [
+    "维度",
+    "内容"
+   ],
+   "cells": [
+    "声纹库（新增）",
+    "嗨夫子小程序声纹管理（录制/更新/删除）+ 纪要页【智能认领】（声纹比对自动设置发言人）"
+   ],
+   "rowLabel": "声纹库（新增）",
+   "path": "2.2 改动维度 › 声纹库（新增）",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "doxcnKaoVilSlxmQ2FyM5kgfQAc",
+   "type": "heading",
+   "level": 2,
+   "text": "2.3 关键决策",
+   "path": "二、方案总览 › 2.3 关键决策"
+  },
+  {
+   "id": "x-0009",
+   "type": "table-row",
+   "head": [
+    "决策",
+    "业务理由"
+   ],
+   "cells": [
+    "新老业务并行、互不影响",
+    "因为老录制业务在用，所以新纪要走全新链路与全新存储；老活动与老纪要原样可查，杜绝改造风险传导给在用功能"
+   ],
+   "rowLabel": "新老业务并行、互不影响",
+   "path": "2.3 关键决策 › 新老业务并行、互不影响",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0010",
+   "type": "table-row",
+   "head": [
+    "决策",
+    "业务理由"
+   ],
+   "cells": [
+    "生成需手动点击触发",
+    "因为录制了不等于需要 AI 纪要（算力成本），所以录制结束不自动生成，展示【生成纪要】按钮；5 分钟未点击发送消息提醒"
+   ],
+   "rowLabel": "生成需手动点击触发",
+   "path": "2.3 关键决策 › 生成需手动点击触发",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0011",
+   "type": "table-row",
+   "head": [
+    "决策",
+    "业务理由"
+   ],
+   "cells": [
+    "老活动在新页只读展示",
+    "因为老活动数据无法补充新版所需能力（声纹置信度等），所以已转文本的老活动仅展示原内容，不提供直接生成；需要新版纪要须重新录音或上传走新流程"
+   ],
+   "rowLabel": "老活动在新页只读展示",
+   "path": "2.3 关键决策 › 老活动在新页只读展示",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0012",
+   "type": "table-row",
+   "head": [
+    "决策",
+    "业务理由"
+   ],
+   "cells": [
+    "资源与随记作为 AI 素材：抽取优先 + 源文件兜底",
+    ""
+   ],
+   "rowLabel": "资源与随记作为AI素材：抽取优先+源文件兜底",
+   "path": "2.3 关键决策 › 资源与随记作为AI素材：抽取优先+源文件兜底",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "doxcnQMopiwMycjH4MjHcOj7uwf",
+   "type": "paragraph",
+   "text": "因为活动关联的资源与共思随记要参与生成、但不可能整文件塞给大模型（体积/成本/时延），所以默认本地解析（PDF/Word/PPT/Excel 抽取文本）按优先级与字数预算裁剪后进入生成上下文；仅图片/扫描件等抽取不到内容的文件，待兄弟部门确认支持后按白名单改传短时效文件链接兜底；两条路都失败仅保留文件元数据，不阻塞生成（2026-10-28 拍板）",
+   "path": "2.3 关键决策",
+   "parent": "x-0012",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "doxcnoS1dXOyVN3yfSb3taTQOoG",
+   "type": "heading",
+   "level": 2,
+   "text": "2.4 架构总览",
+   "path": "二、方案总览 › 2.4 架构总览"
+  },
+  {
+   "id": "doxcnehIWluiBeFm5hKTtF0BETc",
+   "type": "whiteboard",
+   "token": "Obz3wH73Mhc7t3bNUt9cwHZFnwc",
+   "media": "m-21c5f34ddc9a",
+   "text": "",
+   "path": "2.4 架构总览"
+  },
+  {
+   "id": "doxcnfIGT0F9s5EoITI9M2GABgd",
+   "type": "heading",
+   "level": 1,
+   "text": "三、业务流程与用户影响",
+   "path": "三、业务流程与用户影响"
+  },
+  {
+   "id": "doxcnrSVtPS185Dc613E8eLpO2d",
+   "type": "heading",
+   "level": 2,
+   "text": "3.1 主流程（教师视角）",
+   "path": "三、业务流程与用户影响 › 3.1 主流程（教师视角）"
+  },
+  {
+   "id": "doxcnmyCRNxyClC8lvkYrb4Y1ef",
+   "type": "whiteboard",
+   "token": "INEHw09myhFS6qbPUUScC1f7n2f",
+   "media": "m-44bdaa20b9b8",
+   "text": "sequenceDiagram\n  participant T as 教师\n  participant L as lesson 采集通道\n  participant H as hrsystem 纪要域\n  participant A as 兄弟部门 AI\n  participant N as 消息通知\n  T->>H: 选定采集动作（点录制/传音频/传纪要）→ 建档\n  H-->>T: 返回纪要单号（模式互斥校验在此）\n  T->>L: 录音（录制控制 / 分片上传，携带纪要单号）\n  L->>H: 拼接完成就绪回调（仅录音模式）\n  T->>H: 上传音视频 / 纪要文档（资源上传与就绪回写均在 hrsystem）\n  T->>H: 共思随记发言（生成前可撤回）\n  T->>H: 点击【生成纪要】\n  H->>A: 转写与纪要生成（契约定稿中）\n  A-->>H: 结果回调（超时自动兜底查询）\n  H->>H: 解析入库 + 发言人音频切片 + 参会统计\n  H-->>N: 生成完成通知（站内信 / 订阅消息）\n  T->>H: 查看纪要（五段内容 / 证据溯源 / 参会百分比）\n  T->>H: 试听发言人片段 → 认领 / 智能认领（声纹比对）\n  T->>H: 导出 Word；删除并重新生成（备课组长及以上）",
+   "path": "3.1 主流程（教师视角）"
+  },
+  {
+   "id": "doxcnUXLr0UtY2zuP15SOYwqPib",
+   "type": "paragraph",
+   "text": "采集模式互斥与建档在 hrsystem：三个动作（点击录制 / 上传音频 / 上传纪要）之一触发建档并决定模式；lesson 只做资源通道（录音引擎与上传执行），不判断互斥。未点击生成时的补偿：素材就绪 5 分钟后发送提醒消息\"课堂要点已可提取，点击查看纪要\"，点击后才真正触发生成。",
+   "path": "3.1 主流程（教师视角）",
+   "comments": null
+  },
+  {
+   "id": "doxcniMmewUHxvSJdWKChPIf9tN",
+   "type": "heading",
+   "level": 2,
+   "text": "3.2 纪要状态机",
+   "path": "三、业务流程与用户影响 › 3.2 纪要状态机"
+  },
+  {
+   "id": "doxcnmOMUdeVda8GSdtSwZScUYc",
+   "type": "whiteboard",
+   "token": "Q1dowoDBohK2F9bbh6NcQ47Pnyi",
+   "media": "m-f26a6d6d2ffd",
+   "text": "",
+   "path": "3.2 纪要状态机"
+  },
+  {
+   "id": "doxcnhK1kXhctvCwk0iaK3pW3ih",
+   "type": "heading",
+   "level": 2,
+   "text": "3.3 新老分流判定（产品 / 测试重点验证）",
+   "path": "三、业务流程与用户影响 › 3.3 新老分流判定（产品 / 测试重点验证）"
+  },
+  {
+   "id": "x-0013",
+   "type": "table-row",
+   "head": [
+    "活动情形",
+    "列表 / 卡片按钮",
+    "点击后去向"
+   ],
+   "cells": [
+    "活动未结束",
+    "开始活动",
+    "新版开始活动页"
+   ],
+   "rowLabel": "活动未结束",
+   "path": "3.3 新老分流判定（产品 / 测试重点验证） › 活动未结束",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0014",
+   "type": "table-row",
+   "head": [
+    "活动情形",
+    "列表 / 卡片按钮",
+    "点击后去向"
+   ],
+   "cells": [
+    "已结束，无任何纪要",
+    "生成纪要",
+    "新版开始活动页，选动作建档采集"
+   ],
+   "rowLabel": "已结束，无任何纪要",
+   "path": "3.3 新老分流判定（产品 / 测试重点验证） › 已结束，无任何纪要",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0015",
+   "type": "table-row",
+   "head": [
+    "活动情形",
+    "列表 / 卡片按钮",
+    "点击后去向"
+   ],
+   "cells": [
+    "已结束，采集中（素材未就绪）",
+    "生成纪要",
+    "续用已有纪要单进入开始活动页继续采集"
+   ],
+   "rowLabel": "已结束，采集中（素材未就绪）",
+   "path": "3.3 新老分流判定（产品 / 测试重点验证） › 已结束，采集中（素材未就绪）",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0016",
+   "type": "table-row",
+   "head": [
+    "活动情形",
+    "列表 / 卡片按钮",
+    "点击后去向"
+   ],
+   "cells": [
+    "已结束，素材已就绪未生成",
+    "生成纪要",
+    "点击即提交生成；超 5 分钟未点击收到消息提醒"
+   ],
+   "rowLabel": "已结束，素材已就绪未生成",
+   "path": "3.3 新老分流判定（产品 / 测试重点验证） › 已结束，素材已就绪未生成",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0017",
+   "type": "table-row",
+   "head": [
+    "活动情形",
+    "列表 / 卡片按钮",
+    "点击后去向"
+   ],
+   "cells": [
+    "已结束，新纪要生成中",
+    "生成纪要（生成中）",
+    "查看生成中页面（流式展示）"
+   ],
+   "rowLabel": "已结束，新纪要生成中",
+   "path": "3.3 新老分流判定（产品 / 测试重点验证） › 已结束，新纪要生成中",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0018",
+   "type": "table-row",
+   "head": [
+    "活动情形",
+    "列表 / 卡片按钮",
+    "点击后去向"
+   ],
+   "cells": [
+    "已结束，新纪要已生成",
+    "查看纪要 + AI 标识",
+    "新版纪要页（五段内容 / 溯源 / 认领）"
+   ],
+   "rowLabel": "已结束，新纪要已生成",
+   "path": "3.3 新老分流判定（产品 / 测试重点验证） › 已结束，新纪要已生成",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0019",
+   "type": "table-row",
+   "head": [
+    "活动情形",
+    "列表 / 卡片按钮",
+    "点击后去向"
+   ],
+   "cells": [
+    "已结束，上传了纪要文件",
+    "查看纪要（无 AI 标识）",
+    "非 AI 纪要页（原文件预览，不可再生成）"
+   ],
+   "rowLabel": "已结束，上传了纪要文件",
+   "path": "3.3 新老分流判定（产品 / 测试重点验证） › 已结束，上传了纪要文件",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0020",
+   "type": "table-row",
+   "head": [
+    "活动情形",
+    "列表 / 卡片按钮",
+    "点击后去向"
+   ],
+   "cells": [
+    "老活动，已转文本（老 AI 纪要）",
+    "查看纪要 + AI 标识",
+    "新版纪要页展示老内容；无生成按钮，需重新录音 / 上传走新流程**只读**"
+   ],
+   "rowLabel": "老活动，已转文本（老AI纪要）",
+   "path": "3.3 新老分流判定（产品 / 测试重点验证） › 老活动，已转文本（老AI纪要）",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0021",
+   "type": "table-row",
+   "head": [
+    "活动情形",
+    "列表 / 卡片按钮",
+    "点击后去向"
+   ],
+   "cells": [
+    "老活动，已上传纪要文件",
+    "查看纪要（无 AI 标识）",
+    "非 AI 纪要页（同上，不可再生成）"
+   ],
+   "rowLabel": "老活动，已上传纪要文件",
+   "path": "3.3 新老分流判定（产品 / 测试重点验证） › 老活动，已上传纪要文件",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "doxcnJm9U8rZzbQNOG20103cy4b",
+   "type": "heading",
+   "level": 2,
+   "text": "3.4 角色影响矩阵",
+   "path": "三、业务流程与用户影响 › 3.4 角色影响矩阵"
+  },
+  {
+   "id": "x-0022",
+   "type": "table-row",
+   "head": [
+    "角色",
+    "现状",
+    "改造后",
+    "变化"
+   ],
+   "cells": [
+    "普通教师（参会）",
+    "小程序录音，会后手写纪要",
+    "新页采集三模式 + 共思随记 + 查看 AI 纪要",
+    "新增能力；移动端仅录音 / 查看 / 上传"
+   ],
+   "rowLabel": "普通教师（参会）",
+   "path": "3.4 角色影响矩阵 › 普通教师（参会）",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0023",
+   "type": "table-row",
+   "head": [
+    "角色",
+    "现状",
+    "改造后",
+    "变化"
+   ],
+   "cells": [
+    "当前录制人",
+    "控制录音起止",
+    "同左，另可暂停 / 继续；生成需其点击",
+    "控制权不变，新增生成触发"
+   ],
+   "rowLabel": "当前录制人",
+   "path": "3.4 角色影响矩阵 › 当前录制人",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0024",
+   "type": "table-row",
+   "head": [
+    "角色",
+    "现状",
+    "改造后",
+    "变化"
+   ],
+   "cells": [
+    "非录制人",
+    "可自由操作",
+    "录制中操作按钮置灰，仅查看",
+    "录制期间受限"
+   ],
+   "rowLabel": "非录制人",
+   "path": "3.4 角色影响矩阵 › 非录制人",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0025",
+   "type": "table-row",
+   "head": [
+    "角色",
+    "现状",
+    "改造后",
+    "变化"
+   ],
+   "cells": [
+    "主备人（集备）",
+    "—",
+    "编辑单元设计；集备资源同步我的备课",
+    "新增"
+   ],
+   "rowLabel": "主备人（集备）",
+   "path": "3.4 角色影响矩阵 › 主备人（集备）",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0026",
+   "type": "table-row",
+   "head": [
+    "角色",
+    "现状",
+    "改造后",
+    "变化"
+   ],
+   "cells": [
+    "备课组长及以上",
+    "—",
+    "删除本次纪要并重新生成（连带音视频）",
+    "新增（沿用现有角色矩阵）"
+   ],
+   "rowLabel": "备课组长及以上",
+   "path": "3.4 角色影响矩阵 › 备课组长及以上",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0027",
+   "type": "table-row",
+   "head": [
+    "角色",
+    "现状",
+    "改造后",
+    "变化"
+   ],
+   "cells": [
+    "嗨夫子教师",
+    "—",
+    "声纹录制 / 更新 / 删除（首次强制授权协议）",
+    "新增模块"
+   ],
+   "rowLabel": "嗨夫子教师",
+   "path": "3.4 角色影响矩阵 › 嗨夫子教师",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "doxcnpgcEZFoD5Ki3nR9Dr4m2Gf",
+   "type": "heading",
+   "level": 2,
+   "text": "3.5 边界场景",
+   "path": "三、业务流程与用户影响 › 3.5 边界场景"
+  },
+  {
+   "id": "x-0028",
+   "type": "table-row",
+   "head": [
+    "场景",
+    "行为"
+   ],
+   "cells": [
+    "采集模式切换",
+    "非录音态三模式自由切换；录音进行中仅允许切\"上传已有纪要文件\"（成功后自动关闭录音），切\"上传音视频\"须先结束或取消录音"
+   ],
+   "rowLabel": "采集模式切换",
+   "path": "3.5 边界场景 › 采集模式切换",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0029",
+   "type": "table-row",
+   "head": [
+    "场景",
+    "行为"
+   ],
+   "cells": [
+    "选\"上传已有纪要\"并成功",
+    "自动关闭该活动的录音与 AI 生成入口，不消耗 AI 算力"
+   ],
+   "rowLabel": "选\"上传已有纪要\"并成功",
+   "path": "3.5 边界场景 › 选\"上传已有纪要\"并成功",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0030",
+   "type": "table-row",
+   "head": [
+    "场景",
+    "行为"
+   ],
+   "cells": [
+    "生成失败",
+    "状态标失败并提示原因，可重新提交；不影响已采集素材"
+   ],
+   "rowLabel": "生成失败",
+   "path": "3.5 边界场景 › 生成失败",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0031",
+   "type": "table-row",
+   "head": [
+    "场景",
+    "行为"
+   ],
+   "cells": [
+    "AI 结果超时未回调",
+    "定时任务每 5 分钟兜底查询，超 15 分钟主动拉取结果"
+   ],
+   "rowLabel": "AI结果超时未回调",
+   "path": "3.5 边界场景 › AI结果超时未回调",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0032",
+   "type": "table-row",
+   "head": [
+    "场景",
+    "行为"
+   ],
+   "cells": [
+    "重复点击生成",
+    "后端锁拦截，同活动至多一条有效纪要档"
+   ],
+   "rowLabel": "重复点击生成",
+   "path": "3.5 边界场景 › 重复点击生成",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0033",
+   "type": "table-row",
+   "head": [
+    "场景",
+    "行为"
+   ],
+   "cells": [
+    "共思随记撤回",
+    "仅纪要开始生成前可撤回（后端双校验）；已进生成的素材不可撤"
+   ],
+   "rowLabel": "共思随记撤回",
+   "path": "3.5 边界场景 › 共思随记撤回",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0034",
+   "type": "table-row",
+   "head": [
+    "场景",
+    "行为"
+   ],
+   "cells": [
+    "资源附件作为 AI 素材",
+    ""
+   ],
+   "rowLabel": "资源附件作为AI素材",
+   "path": "3.5 边界场景 › 资源附件作为AI素材",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "doxcnPJqqTNrTmyRKtPoQt5kXlc",
+   "type": "paragraph",
+   "text": "共思随记附件、集备资源、活动/日程附件在生成时本地解析文本进入上下文（按\"随记文字>随记附件>集备资源>日程附件\"优先级与字数预算裁剪）；图片/扫描件等解析不到内容的保留文件元数据（文件名/类型/上传人），待 Q6 确认后走源文件兜底；解析失败不阻塞生成",
+   "path": "3.5 边界场景",
+   "parent": "x-0034",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "x-0035",
+   "type": "table-row",
+   "head": [
+    "场景",
+    "行为"
+   ],
+   "cells": [
+    "声纹删除后智能认领",
+    "该教师声纹不再参与比对；其余人不受影响；删除需二次确认且不可恢复、通知海思谷解绑"
+   ],
+   "rowLabel": "声纹删除后智能认领",
+   "path": "3.5 边界场景 › 声纹删除后智能认领",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0036",
+   "type": "table-row",
+   "head": [
+    "场景",
+    "行为"
+   ],
+   "cells": [
+    "声纹比对均不达阈值",
+    "保持\"发言人 n\"展示，不自动改名（置信度阈值 0.6）"
+   ],
+   "rowLabel": "声纹比对均不达阈值",
+   "path": "3.5 边界场景 › 声纹比对均不达阈值",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0037",
+   "type": "table-row",
+   "head": [
+    "场景",
+    "行为"
+   ],
+   "cells": [
+    "权限不足者删除纪要",
+    "拒绝（仅备课组长及以上）；导出与下载不受限"
+   ],
+   "rowLabel": "权限不足者删除纪要",
+   "path": "3.5 边界场景 › 权限不足者删除纪要",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "doxcnOw3gJyGqLpyJAgkhnlBgOb",
+   "type": "heading",
+   "level": 2,
+   "text": "3.6 对老用户的影响",
+   "path": "三、业务流程与用户影响 › 3.6 对老用户的影响"
+  },
+  {
+   "id": "doxcnlKKOGFvTVGkpOuisyOqYmg",
+   "type": "paragraph",
+   "text": "老录制业务零改动：老入口、老流程、老纪要查看全部保持原样，老用户无感知。新纪要能力只通过新版页面入口触达；老活动在新版列表中按上表只读展示。",
+   "path": "3.6 对老用户的影响",
+   "comments": null
+  },
+  {
+   "id": "doxcnDZATp9VoqZYRYwdxBZjTLb",
+   "type": "heading",
+   "level": 1,
+   "text": "四、接口契约与数据变更",
+   "path": "四、接口契约与数据变更"
+  },
+  {
+   "id": "doxcn2wh11EA2c9grHuMyqGr0Oe",
+   "type": "paragraph",
+   "text": "：本期处于设计阶段，兄弟部门 AI 接口与海思谷接口契约尚未定稿（设计 Q2 / Q3 锁定中），字段级契约暂不落 YApi，以本文清单为准；契约定稿后补录 YApi 并回填链接。**接口初期声明**",
+   "path": "四、接口契约与数据变更",
+   "comments": null
+  },
+  {
+   "id": "doxcnYik6tDvMmNSWVL74Trixog",
+   "type": "heading",
+   "level": 2,
+   "text": "4.1 新增接口清单",
+   "path": "四、接口契约与数据变更 › 4.1 新增接口清单"
+  },
+  {
+   "id": "x-0038",
+   "type": "table-row",
+   "head": [
+    "服务",
+    "方法 + 路径",
+    "业务说明",
+    "契约状态"
+   ],
+   "cells": [
+    "hrsystem",
+    "POST /v1/ai-summary/collect/start",
+    "采集建档与模式互斥（三个动作触发建档并决定模式；录音中仅可切\"上传已有纪要\"；返回纪要单号）",
+    "设计定稿"
+   ],
+   "rowLabel": "hrsystem",
+   "path": "4.1 新增接口清单 › hrsystem",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0039",
+   "type": "table-row",
+   "head": [
+    "服务",
+    "方法 + 路径",
+    "业务说明",
+    "契约状态"
+   ],
+   "cells": [
+    "hrsystem",
+    "POST /v1/ai-summary/resource/upload",
+    "资源上传（音视频格式与 1GB / 文档 500MB 限 1 份），上传完成即回写就绪——**无跨服务回调**",
+    "设计定稿"
+   ],
+   "rowLabel": "hrsystem",
+   "path": "4.1 新增接口清单 › hrsystem",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0040",
+   "type": "table-row",
+   "head": [
+    "服务",
+    "方法 + 路径",
+    "业务说明",
+    "契约状态"
+   ],
+   "cells": [
+    "lesson",
+    "POST /v1/ai-meeting/recording/*（+录音分片上传）",
+    "实时录音：录制控制（起 / 暂停 / 继续 / 止 / 取消）与分片上传，携带纪要单号，不判互斥——lesson 唯一新采集能力",
+    "复用边界待定 Q4"
+   ],
+   "rowLabel": "lesson",
+   "path": "4.1 新增接口清单 › lesson",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0041",
+   "type": "table-row",
+   "head": [
+    "服务",
+    "方法 + 路径",
+    "业务说明",
+    "契约状态"
+   ],
+   "cells": [
+    "lesson",
+    "POST /inner/ai-summary/collect/ready",
+    "素材就绪服务间回调（**仅录音模式**：拼接完成回写）——5 分钟未生成提醒的计时起点",
+    "设计定稿"
+   ],
+   "rowLabel": "lesson",
+   "path": "4.1 新增接口清单 › lesson",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0042",
+   "type": "table-row",
+   "head": [
+    "服务",
+    "方法 + 路径",
+    "业务说明",
+    "契约状态"
+   ],
+   "cells": [
+    "lesson",
+    "GET /inner/ai-summary/resources",
+    "集备资源只读查询（供生成上下文组装取数；既有资源查询包装为内部只读接口，不改老业务、不迁数据）",
+    "设计定稿"
+   ],
+   "rowLabel": "lesson",
+   "path": "4.1 新增接口清单 › lesson",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0043",
+   "type": "table-row",
+   "head": [
+    "服务",
+    "方法 + 路径",
+    "业务说明",
+    "契约状态"
+   ],
+   "cells": [
+    "listen",
+    "GET /inner/ai-summary/resources",
+    "活动 / 日程附件只读查询（用途同上，附件只读包装）",
+    "设计定稿"
+   ],
+   "rowLabel": "listen",
+   "path": "4.1 新增接口清单 › listen",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0044",
+   "type": "table-row",
+   "head": [
+    "服务",
+    "方法 + 路径",
+    "业务说明",
+    "契约状态"
+   ],
+   "cells": [
+    "hrsystem",
+    "POST /v1/summary-note/save｜revoke",
+    "共思随记发送与撤回（生成前窗口双校验）",
+    "设计定稿"
+   ],
+   "rowLabel": "hrsystem",
+   "path": "4.1 新增接口清单 › hrsystem",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0045",
+   "type": "table-row",
+   "head": [
+    "服务",
+    "方法 + 路径",
+    "业务说明",
+    "契约状态"
+   ],
+   "cells": [
+    "hrsystem",
+    "/v1/ai-analysis-template 四件套",
+    "教研设置 · AI 分析模板增删改查（适用模块默认 AI 活动纪要）",
+    "设计定稿"
+   ],
+   "rowLabel": "hrsystem",
+   "path": "4.1 新增接口清单 › hrsystem",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0046",
+   "type": "table-row",
+   "head": [
+    "服务",
+    "方法 + 路径",
+    "业务说明",
+    "契约状态"
+   ],
+   "cells": [
+    "hrsystem",
+    "POST /v1/ai-summary/generate",
+    "生成触发：校验素材已就绪后组装上下文并提交 AI（点击【生成纪要】调用；锁防重）",
+    "设计定稿"
+   ],
+   "rowLabel": "hrsystem",
+   "path": "4.1 新增接口清单 › hrsystem",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0047",
+   "type": "table-row",
+   "head": [
+    "服务",
+    "方法 + 路径",
+    "业务说明",
+    "契约状态"
+   ],
+   "cells": [
+    "hrsystem",
+    "POST /v1/ai-summary/regenerate",
+    "删除并重新生成（备课组长及以上；连带删除音视频与纪要文件）",
+    "设计定稿"
+   ],
+   "rowLabel": "hrsystem",
+   "path": "4.1 新增接口清单 › hrsystem",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0048",
+   "type": "table-row",
+   "head": [
+    "服务",
+    "方法 + 路径",
+    "业务说明",
+    "契约状态"
+   ],
+   "cells": [
+    "hrsystem",
+    "POST /v1/ai-summary/claim",
+    "发言人认领：单条 / 全局 / 智能认领（声纹 1:N，阈值 0.6）",
+    "智能认领依赖 Q3"
+   ],
+   "rowLabel": "hrsystem",
+   "path": "4.1 新增接口清单 › hrsystem",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0049",
+   "type": "table-row",
+   "head": [
+    "服务",
+    "方法 + 路径",
+    "业务说明",
+    "契约状态"
+   ],
+   "cells": [
+    "hrsystem",
+    "GET /v1/ai-summary/get_row｜transcript｜export-word｜uploaded-view",
+    "纪要详情 / 文字记录（游标分页 + 搜索）/ Word 导出 / 已上传视图",
+    "设计定稿"
+   ],
+   "rowLabel": "hrsystem",
+   "path": "4.1 新增接口清单 › hrsystem",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0050",
+   "type": "table-row",
+   "head": [
+    "服务",
+    "方法 + 路径",
+    "业务说明",
+    "契约状态"
+   ],
+   "cells": [
+    "hrsystem",
+    "GET /inner/ai-summary/status_batch｜legacy-get_row",
+    "列表批量状态（listen 专用，单次列表仅一次批量调用）/ 老数据适配视图",
+    "设计定稿"
+   ],
+   "rowLabel": "hrsystem",
+   "path": "4.1 新增接口清单 › hrsystem",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0051",
+   "type": "table-row",
+   "head": [
+    "服务",
+    "方法 + 路径",
+    "业务说明",
+    "契约状态"
+   ],
+   "cells": [
+    "hrsystem",
+    "POST /callback/ai-provider/asr",
+    "兄弟部门 AI 结果回调（独立鉴权 + 任务号幂等）",
+    "锁定待契约 Q2"
+   ],
+   "rowLabel": "hrsystem",
+   "path": "4.1 新增接口清单 › hrsystem",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0052",
+   "type": "table-row",
+   "head": [
+    "服务",
+    "方法 + 路径",
+    "业务说明",
+    "契约状态"
+   ],
+   "cells": [
+    "hrsystem",
+    "/v1/voiceprint/*（save / update / delete / authorize / get_row）",
+    "嗨夫子声纹管理：3 条录制、更新覆盖、二次确认删除、授权记录",
+    "设计定稿"
+   ],
+   "rowLabel": "hrsystem",
+   "path": "4.1 新增接口清单 › hrsystem",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0053",
+   "type": "table-row",
+   "head": [
+    "服务",
+    "方法 + 路径",
+    "业务说明",
+    "契约状态"
+   ],
+   "cells": [
+    "hrsystem",
+    "POST /inner/voiceprint/sync-hsg",
+    "声纹同步海思谷（注册 / 更新），失败定时重试",
+    "锁定待契约 Q3"
+   ],
+   "rowLabel": "hrsystem",
+   "path": "4.1 新增接口清单 › hrsystem",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "doxcnrqkDTj4x44g1RWbwsbKwUb",
+   "type": "heading",
+   "level": 2,
+   "text": "4.2 存量接口扩展（不破坏现有出参）",
+   "path": "四、接口契约与数据变更 › 4.2 存量接口扩展（不破坏现有出参）"
+  },
+  {
+   "id": "x-0054",
+   "type": "table-row",
+   "head": [
+    "接口",
+    "新增出参"
+   ],
+   "cells": [
+    "listen 活动列表 / 集备列表 get_list",
+    "纪要状态、按钮文案（状态机推导）、老数据标记、集备范围（复用既有内部接口反查）"
+   ],
+   "rowLabel": "listen活动列表/集备列表get_list",
+   "path": "4.2 存量接口扩展（不破坏现有出参） › listen活动列表/集备列表get_list",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0055",
+   "type": "table-row",
+   "head": [
+    "接口",
+    "新增出参"
+   ],
+   "cells": [
+    "listen 日程卡片 get_lists 族",
+    "纪要状态文案（未生成 / 已生成 / 已上传 / 待生成）、主操作与列表一致"
+   ],
+   "rowLabel": "listen日程卡片get_lists族",
+   "path": "4.2 存量接口扩展（不破坏现有出参） › listen日程卡片get_lists族",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0056",
+   "type": "table-row",
+   "head": [
+    "接口",
+    "新增出参"
+   ],
+   "cells": [
+    "listen 活动详情 get_row",
+    "分流标记（未进行 / 老已转文本 / 老已上传 / 新版各态），前端按标记路由页面"
+   ],
+   "rowLabel": "listen活动详情get_row",
+   "path": "4.2 存量接口扩展（不破坏现有出参） › listen活动详情get_row",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "doxcnCSylEQ5BGY4iQRL6NZnKJe",
+   "type": "heading",
+   "level": 2,
+   "text": "4.3 数据模型变更",
+   "path": "四、接口契约与数据变更 › 4.3 数据模型变更"
+  },
+  {
+   "id": "x-0057",
+   "type": "table-row",
+   "head": [
+    "对象",
+    "类型 / 位置",
+    "要点"
+   ],
+   "cells": [
+    "ai_summary 纪要主档",
+    "MongoDB · hragent",
+    "活动弱关联（bizId + bizType）、状态机、五段内容、证据锚点、认领映射、参会统计、模板快照、生成上下文快照 contextSnapshot（随记/资源素材清单与裁剪后文本，生成时固化，见 4.4 第 7 条）"
+   ],
+   "rowLabel": "ai_summary纪要主档",
+   "path": "4.3 数据模型变更 › ai_summary纪要主档",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0058",
+   "type": "table-row",
+   "head": [
+    "对象",
+    "类型 / 位置",
+    "要点"
+   ],
+   "cells": [
+    "ai_summary_transcript 文字记录",
+    "MongoDB · hragent",
+    "段落级转写：发言人标识、单条认领覆盖、时间戳、置信度、试听片段地址；全文索引"
+   ],
+   "rowLabel": "ai_summary_transcript文字记",
+   "path": "4.3 数据模型变更 › ai_summary_transcript文字记",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0059",
+   "type": "table-row",
+   "head": [
+    "对象",
+    "类型 / 位置",
+    "要点"
+   ],
+   "cells": [
+    "shared_note 公共随记",
+    "MySQL · hrsystem（base 域）",
+    "通用 biz_type 弱关联（不绑死纪要域，可复用）；文字 / 附件、撤回标记、时间序分页；撤回窗口规则由纪要域校验"
+   ],
+   "rowLabel": "shared_note公共随记",
+   "path": "4.3 数据模型变更 › shared_note公共随记",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0060",
+   "type": "table-row",
+   "head": [
+    "对象",
+    "类型 / 位置",
+    "要点"
+   ],
+   "cells": [
+    "voiceprint_profile 声纹档案",
+    "MySQL · hrsystem",
+    "教师唯一、状态机（未录制 / 已生效 / 更新中）、授权时间、海思谷绑定"
+   ],
+   "rowLabel": "voiceprint_profile声纹档案",
+   "path": "4.3 数据模型变更 › voiceprint_profile声纹档案",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0061",
+   "type": "table-row",
+   "head": [
+    "对象",
+    "类型 / 位置",
+    "要点"
+   ],
+   "cells": [
+    "ai_analysis_template 分析模板",
+    "MySQL · hrsystem",
+    "模板名、适用模块、文件引用（hrsystem 文件存储）"
+   ],
+   "rowLabel": "ai_analysis_template分析模板",
+   "path": "4.3 数据模型变更 › ai_analysis_template分析模板",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0062",
+   "type": "table-row",
+   "head": [
+    "对象",
+    "类型 / 位置",
+    "要点"
+   ],
+   "cells": [
+    "文件存储方案",
+    "hrsystem 文件能力",
+    ""
+   ],
+   "rowLabel": "文件存储方案",
+   "path": "4.3 数据模型变更 › 文件存储方案",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "doxcnbfb15zSZ1jQAe5sDAX9uQc",
+   "type": "paragraph",
+   "text": "除录音音频（沿用 lesson 既有体系）外，全部素材与产物（上传音视频 / 文档、切片、Word、随记附件、模板、声纹文件）走 hrsystem 存储；既有集备资源与日程附件不迁移不复制，按文件引用只读参与生成上下文；lesson 零枚举扩展",
+   "path": "4.3 数据模型变更",
+   "parent": "x-0062",
+   "comments": null,
+   "cell": 2
+  },
+  {
+   "id": "doxcnh2gKz0OhFjOaEPNiwdX8ue",
+   "type": "paragraph",
+   "text": "老数据不搬迁，通过读时适配层映射到新版页面结构（能力降级标注：老转写无声纹置信度，试听可用、智能认领不可用）。存量表无结构变更。**数据迁移：无需。**",
+   "path": "4.3 数据模型变更",
+   "comments": null
+  },
+  {
+   "id": "doxcnq3cwlCLuhHYi2Z7wcBC9cf",
+   "type": "heading",
+   "level": 2,
+   "text": "4.4 关键技术约束（开发对接必读）",
+   "path": "四、接口契约与数据变更 › 4.4 关键技术约束（开发对接必读）"
+  },
+  {
+   "id": "doxcnLKZ1QgjE1wW7qM7ARwmKmd",
+   "type": "paragraph",
+   "text": "1. 同活动至多一条有效纪要：生成提交加分布式锁 + 锁内查重；回调按任务号幂等。",
+   "path": "4.4 关键技术约束（开发对接必读）",
+   "comments": null
+  },
+  {
+   "id": "doxcnHNROZuPIfTvJGyphiC9LKe",
+   "type": "paragraph",
+   "text": "2. 列表取数单次批量：listen 组装列表 / 日程时仅调用一次批量状态接口（上限分片），禁止逐活动查询。",
+   "path": "4.4 关键技术约束（开发对接必读）",
+   "comments": null
+  },
+  {
+   "id": "doxcnvBxOR6BCPEY99Jf1wTXkUf",
+   "type": "paragraph",
+   "text": "3. 文字记录游标分页 + 全文索引，禁止全量内存分页。",
+   "path": "4.4 关键技术约束（开发对接必读）",
+   "comments": null
+  },
+  {
+   "id": "doxcnsf0tdCQSOxEsmW7tHQSD4g",
+   "type": "paragraph",
+   "text": "4. 新老分流判定三处（列表 / 详情 / 日程）共用同一实现，禁止各写一份判定逻辑。",
+   "path": "4.4 关键技术约束（开发对接必读）",
+   "comments": null
+  },
+  {
+   "id": "doxcn9XVgXgsfEppg4Dl6spUqEd",
+   "type": "paragraph",
+   "text": "5. 权限：删除重生成的\"备课组长及以上\"经 lesson 内部权限接口判定，沿用现有角色矩阵。",
+   "path": "4.4 关键技术约束（开发对接必读）",
+   "comments": null
+  },
+  {
+   "id": "doxcnOmMSl3POIR32axcCW1eDCd",
+   "type": "paragraph",
+   "text": "6. 外部依赖降级：AI 接口失败可重试；海思谷异常时声纹能力降级但纪要主体不受影响；切片失败仅影响试听与智能认领。",
+   "path": "4.4 关键技术约束（开发对接必读）",
+   "comments": null
+  },
+  {
+   "id": "doxcn5Szw4MaMz65tGtJp9BwtAb",
+   "type": "paragraph",
+   "text": "7. 素材上下文组装单点：生成时统一拉取共思随记（未撤回）、集备资源（lesson 只读）、活动/日程附件（listen 只读）、活动目标与 AI 模板，本地抽取文本（PDF/Word/PPT/Excel）后按优先级（随记文字>随记附件>集备资源>日程附件）与字数预算裁剪（默认总计 2 万字符、单文件 5 千），固化生成上下文快照；Map-Reduce 场景素材只在聚合 prompt 注入一次；模板/目标/参与人不占资源预算。",
+   "path": "4.4 关键技术约束（开发对接必读）",
+   "comments": null
+  },
+  {
+   "id": "doxcnwGd5jxXNF3RKsUcEICZvlb",
+   "type": "paragraph",
+   "text": "8. 资源证据锚点白名单 + 注入防护 + 降级：RESOURCE 证据锚点只能引用快照内文件，模型输出的未知引用直接丢弃；随记/资源内容按不可信数据分隔（不拼进系统指令区）；解析失败仅保留文件元数据、不阻塞生成；源文件兜底默认关闭，待 Q6 确认支持后按格式/大小白名单以短时效签名链接开启。",
+   "path": "4.4 关键技术约束（开发对接必读）",
+   "comments": null
+  },
+  {
+   "id": "doxcn824wbUDKEM3UaMDa3UDUvh",
+   "type": "heading",
+   "level": 1,
+   "text": "五、风险点",
+   "path": "五、风险点"
+  },
+  {
+   "id": "x-0063",
+   "type": "table-row",
+   "head": [
+    "风险",
+    "等级",
+    "缓解措施"
+   ],
+   "cells": [
+    "兄弟部门 AI 接口契约未定稿",
+    "高",
+    "适配层抽象隔离（提交 / 回调 / 解析独立门面），契约到手仅改映射层；评审按锁定项处理不虚构字段"
+   ],
+   "rowLabel": "兄弟部门AI接口契约未定稿",
+   "path": "五、风险点 › 兄弟部门AI接口契约未定稿",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0064",
+   "type": "table-row",
+   "head": [
+    "风险",
+    "等级",
+    "缓解措施"
+   ],
+   "cells": [
+    "海思谷接口契约未定稿",
+    "高",
+    "声纹对接独立门面；声纹档案管理不受影响先行开发；比对入参按切片文件预置"
+   ],
+   "rowLabel": "海思谷接口契约未定稿",
+   "path": "五、风险点 › 海思谷接口契约未定稿",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0065",
+   "type": "table-row",
+   "head": [
+    "风险",
+    "等级",
+    "缓解措施"
+   ],
+   "cells": [
+    "新老并存数据一致性",
+    "高",
+    "分流真值表单点实现（列表 / 详情 / 日程共用）；评审重点核对；测试覆盖新老混合场景"
+   ],
+   "rowLabel": "新老并存数据一致性",
+   "path": "五、风险点 › 新老并存数据一致性",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0066",
+   "type": "table-row",
+   "head": [
+    "风险",
+    "等级",
+    "缓解措施"
+   ],
+   "cells": [
+    "多租户数据隔离",
+    "高",
+    "新集合 / 新表统一带租户字段，骨架切片统一查询模板，检查清单强制项"
+   ],
+   "rowLabel": "多租户数据隔离",
+   "path": "五、风险点 › 多租户数据隔离",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0067",
+   "type": "table-row",
+   "head": [
+    "风险",
+    "等级",
+    "缓解措施"
+   ],
+   "cells": [
+    "音频切片技术选型未验证",
+    "中",
+    "优先探测既有音视频服务能力，备选轻量处理方案；切片失败降级不阻塞主流程"
+   ],
+   "rowLabel": "音频切片技术选型未验证",
+   "path": "五、风险点 › 音频切片技术选型未验证",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0068",
+   "type": "table-row",
+   "head": [
+    "风险",
+    "等级",
+    "缓解措施"
+   ],
+   "cells": [
+    "大文件上传（1GB 音视频 / 500MB 文档）",
+    "中",
+    "分片上传沿用既有能力；结果文件流式下载解析"
+   ],
+   "rowLabel": "大文件上传（1GB音视频/500MB文档）",
+   "path": "五、风险点 › 大文件上传（1GB音视频/500MB文档）",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0069",
+   "type": "table-row",
+   "head": [
+    "风险",
+    "等级",
+    "缓解措施"
+   ],
+   "cells": [
+    "列表跨服务取数膨胀",
+    "中",
+    "批量状态接口单次调用 + 上限分片（吸取老链路逐条查询教训）"
+   ],
+   "rowLabel": "列表跨服务取数膨胀",
+   "path": "五、风险点 › 列表跨服务取数膨胀",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0070",
+   "type": "table-row",
+   "head": [
+    "风险",
+    "等级",
+    "缓解措施"
+   ],
+   "cells": [
+    "声纹隐私合规",
+    "中",
+    "首次强制展示授权协议（展示即视为同意，已产品确认）；同意留痕、文件私读、操作审计"
+   ],
+   "rowLabel": "声纹隐私合规",
+   "path": "五、风险点 › 声纹隐私合规",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0071",
+   "type": "table-row",
+   "head": [
+    "风险",
+    "等级",
+    "缓解措施"
+   ],
+   "cells": [
+    "老数据适配状态遗漏",
+    "中",
+    "老域全部状态组合（生成中 / 失败 / 无音频）在真值表逐一映射；冒烟覆盖混合场景"
+   ],
+   "rowLabel": "老数据适配状态遗漏",
+   "path": "五、风险点 › 老数据适配状态遗漏",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0072",
+   "type": "table-row",
+   "head": [
+    "风险",
+    "等级",
+    "缓解措施"
+   ],
+   "cells": [
+    "资源解析信息损失（图片 / 扫描件 / 复杂版式）",
+    "中",
+    "抽取优先 + 失败降级为文件元数据；低抽取率资源待 Q6 确认后走源文件兜底；不阻塞生成；模型不得对仅元数据资源编造内容"
+   ],
+   "rowLabel": "资源解析信息损失（图片/扫描件/复杂版式）",
+   "path": "五、风险点 › 资源解析信息损失（图片/扫描件/复杂版式）",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0073",
+   "type": "table-row",
+   "head": [
+    "风险",
+    "等级",
+    "缓解措施"
+   ],
+   "cells": [
+    "提示词注入（随记 / 资源含指令性内容）",
+    "中",
+    "素材按不可信数据分隔标记 + 系统提示约束\"仅参考不执行\" + RESOURCE 证据锚点白名单校验（未知引用丢弃）"
+   ],
+   "rowLabel": "提示词注入（随记/资源含指令性内容）",
+   "path": "五、风险点 › 提示词注入（随记/资源含指令性内容）",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0074",
+   "type": "table-row",
+   "head": [
+    "风险",
+    "等级",
+    "缓解措施"
+   ],
+   "cells": [
+    "资源数据外发（源文件兜底场景）",
+    "低",
+    "默认本地抽取不出域；源文件兜底仅白名单格式 + 短时效签名链接；上下文快照记录资源清单与输入方式，审计可查"
+   ],
+   "rowLabel": "资源数据外发（源文件兜底场景）",
+   "path": "五、风险点 › 资源数据外发（源文件兜底场景）",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "doxcnzdPskLhRBN50fjKb8QfLwc",
+   "type": "heading",
+   "level": 2,
+   "text": "5.1 待定项（设计期锁定，需跟踪闭环）",
+   "path": "五、风险点 › 5.1 待定项（设计期锁定，需跟踪闭环）"
+  },
+  {
+   "id": "x-0075",
+   "type": "table-row",
+   "head": [
+    "编号",
+    "问题",
+    "当前假设"
+   ],
+   "cells": [
+    "Q1",
+    "参会百分比全体为 0 时如何展示",
+    "不展示百分比区块（待产品确认）"
+   ],
+   "rowLabel": "Q1",
+   "path": "5.1 待定项（设计期锁定，需跟踪闭环） › Q1",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0076",
+   "type": "table-row",
+   "head": [
+    "编号",
+    "问题",
+    "当前假设"
+   ],
+   "cells": [
+    "Q2",
+    "兄弟部门 AI 接口契约",
+    "适配层抽象，回调按\"结果 URL 拉取\"模式预置"
+   ],
+   "rowLabel": "Q2",
+   "path": "5.1 待定项（设计期锁定，需跟踪闭环） › Q2",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0077",
+   "type": "table-row",
+   "head": [
+    "编号",
+    "问题",
+    "当前假设"
+   ],
+   "cells": [
+    "Q3",
+    "海思谷接口契约（比对入参形态）",
+    "比对入参为切片文件地址（已定切片产文件）"
+   ],
+   "rowLabel": "Q3",
+   "path": "5.1 待定项（设计期锁定，需跟踪闭环） › Q3",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0078",
+   "type": "table-row",
+   "head": [
+    "编号",
+    "问题",
+    "当前假设"
+   ],
+   "cells": [
+    "Q4",
+    "新版录音与既有录制能力的复用边界",
+    "复用底层引擎与分片上传，新版独立入口与状态"
+   ],
+   "rowLabel": "Q4",
+   "path": "5.1 待定项（设计期锁定，需跟踪闭环） › Q4",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0079",
+   "type": "table-row",
+   "head": [
+    "编号",
+    "问题",
+    "当前假设"
+   ],
+   "cells": [
+    "Q5",
+    "老活动生成按钮口径修正需回平台确认",
+    "本地已按\"只读 + 重新采集\"实现（原文条款有误），平台变更单待发起"
+   ],
+   "rowLabel": "Q5",
+   "path": "5.1 待定项（设计期锁定，需跟踪闭环） › Q5",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0080",
+   "type": "table-row",
+   "head": [
+    "编号",
+    "问题",
+    "当前假设"
+   ],
+   "cells": [
+    "Q6",
+    "兄弟部门是否支持资源源文件 / 多模态输入（支持格式、单文件大小、链接拉取还是上传、计费口径）",
+    "默认不支持：仅本地抽取文本进入上下文；能力确认后按白名单开启源文件兜底（图片 / 扫描件等低抽取率资源）"
+   ],
+   "rowLabel": "Q6",
+   "path": "5.1 待定项（设计期锁定，需跟踪闭环） › Q6",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0081",
+   "type": "table-row",
+   "head": [
+    "编号",
+    "问题",
+    "当前假设"
+   ],
+   "cells": [
+    "Q7",
+    "纪要 prompt 组装与资源上下文注入归属（我方组装提交，还是兄弟部门内部组装）",
+    "我方组装上下文与 prompt；若最终归兄弟部门，上下文快照降级为素材清单按其接口传递，抽取优先策略不变"
+   ],
+   "rowLabel": "Q7",
+   "path": "5.1 待定项（设计期锁定，需跟踪闭环） › Q7",
+   "parent": null,
+   "comments": null
+  }
+ ],
+ "media": [
+  {
+   "id": "m-21c5f34ddc9a",
+   "token": "Obz3wH73Mhc7t3bNUt9cwHZFnwc",
+   "kind": "whiteboard",
+   "name": "whiteboard",
+   "mime": "image/jpeg",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-44bdaa20b9b8",
+   "token": "INEHw09myhFS6qbPUUScC1f7n2f",
+   "kind": "whiteboard",
+   "name": "whiteboard",
+   "mime": "image/jpeg",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-f26a6d6d2ffd",
+   "token": "Q1dowoDBohK2F9bbh6NcQ47Pnyi",
+   "kind": "whiteboard",
+   "name": "whiteboard",
+   "mime": "image/jpeg",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  }
+ ],
+ "guard": {
+  "algo": "conservation-v1",
+  "source": "xml",
+  "mediaTokens": [
+   "INEHw09myhFS6qbPUUScC1f7n2f",
+   "Obz3wH73Mhc7t3bNUt9cwHZFnwc",
+   "Q1dowoDBohK2F9bbh6NcQ47Pnyi"
+  ],
+  "textSha": "16898e78dfc0986a6f03d44f1d57000f305b011a1d9c2409627b67990fe94b9a"
+ }
+}

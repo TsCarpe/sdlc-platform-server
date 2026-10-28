@@ -3,7 +3,7 @@
  "source": {
   "url": "https://hailiang.feishu.cn/wiki/O86FwWwQViyikfkaz9jc7zUunBc",
   "documentId": "PL5ndphOGoIoU5xQwwCcvcWWnIX",
-  "revisionId": "9639"
+  "revisionId": "9674"
  },
  "blocks": [
   {
@@ -125,14 +125,50 @@
    "id": "WHMLdydk8oo4kTxpcoRcVC1pnHe",
    "type": "heading",
    "level": 1,
-   "text": "二、需求背景：",
-   "path": "二、需求背景："
+   "text": "二、相关结论",
+   "path": "二、相关结论"
+  },
+  {
+   "id": "ZgoNdYT1gofOVVxnJHrcflRJnod",
+   "type": "heading",
+   "level": 2,
+   "text": "10.28 技术评审：",
+   "path": "二、相关结论 › 10.28 技术评审："
+  },
+  {
+   "id": "DmXtdqDkqoCtbfxNoT7cIA2znqg",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "老版已生成会议纪要的，还使用之前的页面，但是删除纪要后或者没有开始的会议都走全新的流程",
+   "path": "10.28 技术评审： › 1",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "OMiaduF7nogbMsxCfZvc2BKHn5g",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "共思随记区要补充用户在共思随记区浏览上方内容的时候，有消息更新，补充交互@刘雨晨",
+   "path": "10.28 技术评审： › 2",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "WJhYdUogxoWcPvxX4mYcWmXTnFd",
+   "type": "heading",
+   "level": 1,
+   "text": "三、需求背景：",
+   "path": "三、需求背景："
   },
   {
    "id": "Yy7fdnMU3okMMdxqWPecCdd3nqh",
    "type": "paragraph",
    "text": "结合线下调研发现：教研会议中，教师手写记录容易遗漏会议要点和待办，管理者无法参与全部教研活动，难以把握教研活动情况。集备管理上，备课组长核查个备资源效率低，缺少管理与汇报依据，教研任务落地难以跟踪。针对上述痛点，新增AI会议纪要，减轻教师会议记录负担；AI纪要和教研报告帮助管理者实现教研过程可追溯、教研质量可量化，让教研管理真正有据可依。",
-   "path": "二、需求背景：",
+   "path": "三、需求背景：",
    "comments": null
   },
   {
@@ -149,7 +185,7 @@
     ""
    ],
    "rowLabel": "普通教师",
-   "path": "二、需求背景： › 普通教师",
+   "path": "三、需求背景： › 普通教师",
    "parent": null,
    "comments": null
   },
@@ -160,7 +196,7 @@
    "ordinal": "1",
    "depth": 1,
    "text": "参加集体备课、听评课、教研组会议，免手写记录，专注研讨",
-   "path": "二、需求背景： › 1",
+   "path": "三、需求背景： › 1",
    "parent": "x-0005",
    "comments": null,
    "cell": 1
@@ -172,7 +208,7 @@
    "ordinal": "2",
    "depth": 1,
    "text": "会后快速获取要点、任务分工，用于教研档案归档、写教学反思",
-   "path": "二、需求背景： › 2",
+   "path": "三、需求背景： › 2",
    "parent": "x-0005",
    "comments": null,
    "cell": 1
@@ -184,7 +220,7 @@
    "ordinal": "3",
    "depth": 1,
    "text": "缺席会议时，快速了解会议结论",
-   "path": "二、需求背景： › 3",
+   "path": "三、需求背景： › 3",
    "parent": "x-0005",
    "comments": null,
    "cell": 1
@@ -196,7 +232,7 @@
    "ordinal": "1",
    "depth": 1,
    "text": "边开会边记笔记，容易遗漏关键教研观点，会后整理纪要耗时间",
-   "path": "二、需求背景： › 1",
+   "path": "三、需求背景： › 1",
    "parent": "x-0005",
    "comments": null,
    "cell": 2
@@ -208,7 +244,7 @@
    "ordinal": "2",
    "depth": 1,
    "text": "会上商定任务容易遗忘；教研材料零散，不方便查找复用",
-   "path": "二、需求背景： › 2",
+   "path": "三、需求背景： › 2",
    "parent": "x-0005",
    "comments": null,
    "cell": 2
@@ -227,7 +263,7 @@
     ""
    ],
    "rowLabel": "管理者",
-   "path": "二、需求背景： › 管理者",
+   "path": "三、需求背景： › 管理者",
    "parent": null,
    "comments": null
   },
@@ -238,7 +274,7 @@
    "ordinal": "1",
    "depth": 1,
    "text": "查看各组教研质量",
-   "path": "二、需求背景： › 1",
+   "path": "三、需求背景： › 1",
    "parent": "x-0006",
    "comments": null,
    "cell": 1
@@ -250,7 +286,7 @@
    "ordinal": "2",
    "depth": 1,
    "text": "留存教研原始记录，收集台账，迎接督导检查",
-   "path": "二、需求背景： › 2",
+   "path": "三、需求背景： › 2",
    "parent": "x-0006",
    "comments": null,
    "cell": 1
@@ -262,7 +298,7 @@
    "ordinal": "3",
    "depth": 1,
    "text": "跟踪教研任务落地，沉淀校本教研知识库",
-   "path": "二、需求背景： › 3",
+   "path": "三、需求背景： › 3",
    "parent": "x-0006",
    "comments": null,
    "cell": 1
@@ -274,7 +310,7 @@
    "ordinal": "1",
    "depth": 1,
    "text": "教师手动提交纪要存在拖延、内容美化，无法反映真实教研情况",
-   "path": "二、需求背景： › 1",
+   "path": "三、需求背景： › 1",
    "parent": "x-0006",
    "comments": null,
    "cell": 2
@@ -286,7 +322,7 @@
    "ordinal": "2",
    "depth": 1,
    "text": "教研决议缺少跟踪闭环；优质教研经验难以沉淀传承",
-   "path": "二、需求背景： › 2",
+   "path": "三、需求背景： › 2",
    "parent": "x-0006",
    "comments": null,
    "cell": 2
@@ -636,6 +672,7 @@
    "type": "whiteboard",
    "token": "OcN2wryBghcbqwbhEETc0HdGn5b",
    "media": "m-d6d1a9bfaf3b",
+   "text": "",
    "path": "AI活动纪要"
   },
   {
@@ -2622,6 +2659,7 @@
    "type": "whiteboard",
    "token": "Mx2pw5yjkhnk0rbKz84c0aywnA9",
    "media": "m-d2a1a6f337cb",
+   "text": "",
    "path": "AI教研报告p1"
   },
   {
@@ -6222,6 +6260,6 @@
    "YD3sbiPNOo2yQWxWXpZc11d4nUe",
    "YEwNbYBs6oFY71xI7YQc2aNon9f"
   ],
-  "textSha": "0fbebfd12c816a1273d4995d356457ab267a7bdfabb1c2955b38d567b0ba4753"
+  "textSha": "0454d4a9936cbdb310863f29f7173f965aaca56c1516988d9d74708e87741dbf"
  }
 }

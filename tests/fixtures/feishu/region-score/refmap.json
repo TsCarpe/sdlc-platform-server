@@ -189,7 +189,7 @@
   "data": "<comment comment-id=\"7696463629419285772\" block-id=\"Ii0Fd4vRpoina8xJhzDcom5enUf\"><quote>对比考试选择弹窗</quote><msg user=\"董晓涵\">@卢凯玉 考试列表还是需要加上已保存高中统计设置这个筛选条件的，不然勾选上也没有办法比对</msg><msg user=\"董晓涵\">勾选了未保存统计设置的考试后，该场考试在对比中也出不了上线数据的，那勾选也没啥意义吧</msg><msg user=\"卢凯玉\">好的，那可勾选范围加上已生成报告状态这个条件吧，因为一般在生成报告时才会配置划线等操作<reaction key=\"OK\" users=\"董晓涵\"/></msg></comment>"
  },
  "c67": {
-  "data": "<comment comment-id=\"7701600189278063643\" block-id=\"RlTzdaiR3oqj3kx5v0IcMMFRntg\"><quote>可勾选考试</quote><msg user=\"董晓涵\">@卢凯玉 勾选的学校不需要记住吧？比如默认是5所，然后这次操作勾选了4所学校，下次进来还是默认5所？</msg><msg user=\"卢凯玉\">不需要勾选学校啊，没有勾选学校的操作的</msg><msg user=\"董晓涵\">说错了，是勾选考试，就是每次进入详情页都默认勾选前5场考试<img src=\"GRVMbRK13oZSs3xx1OgcQfE0nHf\"/></msg></comment>"
+  "data": "<comment comment-id=\"7701600189278063643\" block-id=\"RlTzdaiR3oqj3kx5v0IcMMFRntg\"><quote>可勾选考试</quote><msg user=\"董晓涵\">@卢凯玉 勾选的学校不需要记住吧？比如默认是5所，然后这次操作勾选了4所学校，下次进来还是默认5所？</msg><msg user=\"卢凯玉\">不需要勾选学校啊，没有勾选学校的操作的</msg><msg user=\"董晓涵\">说错了，是勾选考试，就是每次进入详情页都默认勾选前5场考试<img src=\"GRVMbRK13oZSs3xx1OgcQfE0nHf\"/></msg><msg user=\"卢凯玉\">勾选考试这不用记忆<reaction key=\"Get\" users=\"董晓涵\"/></msg><msg user=\"董晓涵\">编辑勾选了，保存之后也不记录吗</msg></comment>"
  },
  "c68": {
   "data": "<comment comment-id=\"7696431102763732204\" block-id=\"RlTzdaiR3oqj3kx5v0IcMMFRntg\"><quote>该学段最近5年的考试（剔除当前考试）</quote><msg user=\"董晓涵\">@卢凯玉 当前考试的报告状态对这个可选范围有影响么？<img src=\"YJCDb9hGboNh01xDFfycvl4enfd\"/></msg></comment>"

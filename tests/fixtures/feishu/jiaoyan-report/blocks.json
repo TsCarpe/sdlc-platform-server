@@ -1,6 +1,6 @@
 {
  "document_id": "PL5ndphOGoIoU5xQwwCcvcWWnIX",
- "document_revision_id": 9639,
+ "document_revision_id": 9674,
  "items": [
   {
    "block_id": "PL5ndphOGoIoU5xQwwCcvcWWnIX",
@@ -9,6 +9,10 @@
     "LwJudK6GyoaISOxqRhSc2qfZn2g",
     "ZO65dkKojolOznxidtUc22YWnWf",
     "WHMLdydk8oo4kTxpcoRcVC1pnHe",
+    "ZgoNdYT1gofOVVxnJHrcflRJnod",
+    "DmXtdqDkqoCtbfxNoT7cIA2znqg",
+    "OMiaduF7nogbMsxCfZvc2BKHn5g",
+    "WJhYdUogxoWcPvxX4mYcWmXTnFd",
     "Yy7fdnMU3okMMdxqWPecCdd3nqh",
     "CDJqdQFXAoaZxExCMShcbJdbnlb",
     "THncd8lMIoW1R5x233Tc2mTVnNd",
@@ -728,7 +732,121 @@
     "elements": [
      {
       "text_run": {
-       "content": "二、需求背景：",
+       "content": "二、相关结论",
+       "text_element_style": {
+        "bold": false,
+        "inline_code": false,
+        "italic": false,
+        "strikethrough": false,
+        "underline": false
+       }
+      }
+     }
+    ],
+    "style": {
+     "align": 1,
+     "folded": false
+    }
+   },
+   "parent_id": "PL5ndphOGoIoU5xQwwCcvcWWnIX"
+  },
+  {
+   "block_id": "ZgoNdYT1gofOVVxnJHrcflRJnod",
+   "block_type": 4,
+   "heading2": {
+    "elements": [
+     {
+      "text_run": {
+       "content": "10.28 技术评审：",
+       "text_element_style": {
+        "bold": false,
+        "inline_code": false,
+        "italic": false,
+        "strikethrough": false,
+        "underline": false
+       }
+      }
+     }
+    ],
+    "style": {
+     "align": 1,
+     "folded": false
+    }
+   },
+   "parent_id": "PL5ndphOGoIoU5xQwwCcvcWWnIX"
+  },
+  {
+   "block_id": "DmXtdqDkqoCtbfxNoT7cIA2znqg",
+   "block_type": 13,
+   "ordered": {
+    "elements": [
+     {
+      "text_run": {
+       "content": "老版已生成会议纪要的，还使用之前的页面，但是删除纪要后或者没有开始的会议都走全新的流程",
+       "text_element_style": {
+        "bold": false,
+        "inline_code": false,
+        "italic": false,
+        "strikethrough": false,
+        "underline": false
+       }
+      }
+     }
+    ],
+    "style": {
+     "align": 1,
+     "folded": false,
+     "sequence": "1"
+    }
+   },
+   "parent_id": "PL5ndphOGoIoU5xQwwCcvcWWnIX"
+  },
+  {
+   "block_id": "OMiaduF7nogbMsxCfZvc2BKHn5g",
+   "block_type": 13,
+   "ordered": {
+    "elements": [
+     {
+      "text_run": {
+       "content": "共思随记区要补充用户在共思随记区浏览上方内容的时候，有消息更新，补充交互",
+       "text_element_style": {
+        "bold": false,
+        "inline_code": false,
+        "italic": false,
+        "strikethrough": false,
+        "underline": false
+       }
+      }
+     },
+     {
+      "mention_user": {
+       "text_element_style": {
+        "bold": false,
+        "inline_code": false,
+        "italic": false,
+        "strikethrough": false,
+        "underline": false
+       },
+       "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+      }
+     }
+    ],
+    "style": {
+     "align": 1,
+     "folded": false,
+     "sequence": "auto"
+    }
+   },
+   "parent_id": "PL5ndphOGoIoU5xQwwCcvcWWnIX"
+  },
+  {
+   "block_id": "WJhYdUogxoWcPvxX4mYcWmXTnFd",
+   "block_type": 3,
+   "heading1": {
+    "elements": [
+     {
+      "text_run": {
+       "content": "三、需求背景：",
        "text_element_style": {
         "bold": false,
         "inline_code": false,
