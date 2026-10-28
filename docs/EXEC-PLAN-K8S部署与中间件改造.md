@@ -21,9 +21,11 @@
 **部署含义**：只用进程内通道 → 镜像/服务器完全不需要 claude CLI、skills 仓、lark-cli，部署大幅简化；
 代价是放弃 claude CLI 技能管线的能力（两通道 prompt 各自实现，能力不完全对等——见 §8 决策点 4）。
 
-> **✅ 已拍板（2026-10-28，同日修订）**：上服务器的是**完整能力**。初版拍板 = runner（claude CLI）
-> 通道部署；**后修订为**：完整能力由「进程内 agent + 飞书 Python 接入」承载，runner 进程准备下线——
-> 详见 `docs/DESIGN-飞书接入Python化.md`（其验收通过是 runner 下线前置）。过渡期 runner 通道保留兼容。
+> **✅ 已拍板（2026-10-28，同日修订；同日执行完毕）**：上服务器的是**完整能力**。初版拍板 = runner（claude CLI）
+> 通道部署；**后修订为**：完整能力由「进程内 agent + 飞书 Python 接入」承载——
+> 详见 `docs/DESIGN-飞书接入Python化.md`（其验收通过是 runner 下线前置）。
+> **runner 已于 2026-10-28 下线**（本体 + task-rules 端点拆除，A/B 级评审扇出由进程内
+> `spawn_reviewer` 工具承载）；上表外置 Runner 行与 §2.1 的 runner 依赖项均已消除。
 
 ---
 
@@ -57,8 +59,8 @@
 | Python ≥3.12 + uv | dev.sh `uv sync` | **仅需配置**（打进镜像） |
 | MySQL 8.x | 无（SQLite） | **必须改造**（§3.1） |
 | RocketMQ | 无（DB 轮询） | **必须改造**（§3.2） |
-| node ≥18 | runner/verify 脚本 | **仅需配置**（runner 镜像 / CI 镜像；若砍 runner 通道则仅验收集 CI 需要） |
-| claude CLI + 认证态 + skills 仓 + lark-cli | 仅 runner 通道 | **决策点**（§8-4；不用则全部省掉） |
+| node ≥18 | runner/verify 脚本 | **仅需配置**（CI 镜像；runner 已下线，仅 verify 脚本与 CI 需要） |
+| claude CLI + 认证态 + skills 仓 + lark-cli | 仅 runner 通道 | ~~决策点~~ 已消除（§8-4 拍板后 runner 于 2026-10-28 下线，全部不再需要） |
 | sqlite3 CLI | backup.sh | MySQL 化后移除 |
 | OpenAI 兼容端点 + 余额 | 进程内 agent / 助理 | **仅需配置**（Secret） |
 
@@ -262,9 +264,9 @@ Namespace: sdlc
    是否接受 §3.2「降级为可选优化」。
 3. **MySQL**：✅ 公司标准组件（账号/地址经 Apollo 注入）。仍待确认：建库申请流程、Python Pod 直连
    网络策略、备份是否走公司 DB 平台。
-4. **任务通道**：✅ **完整能力**（2026-10-28 修订）：飞书能力改由进程内 agent 的 Python 接入承载
-   （`DESIGN-飞书接入Python化.md`，凭据先共用 Askly 应用），runner 进程待其验收通过后下线；
-   过渡期容器化可先只部署 server（进程内通道）。
+4. **任务通道**：✅ **完整能力**（2026-10-28 修订，同日执行完毕）：飞书能力改由进程内 agent 的
+   Python 接入承载（`DESIGN-飞书接入Python化.md`，凭据先共用 Askly 应用）；runner 已于 2026-10-28
+   下线（A/B 级评审扇出由进程内 spawn_reviewer 工具承载），容器化只部署 server（进程内通道）。
 5. **数据起点**：✅ **全新起库**（§6）。
 6. **镜像与 CI**：✅ SWR（组织 `hlyz` + `swr-secret`）；CI **暂跳过**——镜像先本地构建推送
    （`deploy/build.sh`），流水线等运维确认后补。
