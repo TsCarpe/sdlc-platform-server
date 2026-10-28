@@ -284,8 +284,8 @@ class ChangeService:
             raise ApiException(409, f"变更单 #{c.id} 影响面为空，无增量质检面（走全量或放弃变更）")
 
     def validate_bundle(self, req_id: str, content_json: str) -> dict[str, Any]:
-        """incremental_bundle 的 selfCheck 机械校验（§6.1，put_draft 服务端单点——runner/进程内
-        两通道的草稿都经此处）：①章节区间 = heading 的 block_id，禁 seq 数值（纯数字/非 heading 集
+        """incremental_bundle 的 selfCheck 机械校验（§6.1，put_draft 服务端单点——各执行
+        通道的草稿都经此处）：①章节区间 = heading 的 block_id，禁 seq 数值（纯数字/非 heading 集
         即拒——整体重排会改写全表 seq，冻结数值即失真）；②新行 anchor 全部 ∈ 受影响块集 ∩ 存活块集
         （防 LLM 越界重写；已删块不是合法新锚点——落地即悬空僵尸行，v4.19）；③作废清单的行真实存在
         （digest 行按 anchor、audit 条目按 id）。"""

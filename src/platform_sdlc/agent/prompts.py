@@ -1,4 +1,5 @@
-"""任务 prompt 模板（自 AgentScopeAgentExecutor.java 逐字移植，与 runner.mjs promptFor 同源）。
+"""任务 prompt 模板（runner 下线后本模块为任务 prompt 唯一权威；历史自 AgentScopeAgentExecutor.java
+逐字移植、与 runner.mjs promptFor 同源演化）。
 
 改模板须同步 claude-sdlc-skills 的 digest-template/dimensions/report-template/payload-schema
 （速查卡同源约束见 Java 版 qualityQuickRef 注释）。
@@ -264,7 +265,7 @@ def _quality_check_steps(repo: str, card: Requirement) -> str:
             f"{repo}/skills/sdlc-intent/references/digest-template.md）。\n"
             "5. 第二段体检：按速查卡「七层/五章/三层」产出 intake/audit-<YYYYMMDD>.md 与 intake/pm-checklist-<YYYYMMDD>.md（细节才 read_file "
             f"{repo}/skills/sdlc-intent/references/dimensions.md、references/report-template.md）。"
-            "v1.6 产出纪律（与 runner/契约同源，逐项执行）：①每个澄清问题必须带 layer（命中层号 \"1\"-\"7\"，"
+            "v1.6 产出纪律（与契约同源，逐项执行）：①每个澄清问题必须带 layer（命中层号 \"1\"-\"7\"，"
             "维度外补充类才允许不携带）与 module（=fr_points[].module 同体系的归属功能模块）；②冲突类/取舍类问题"
             "尽量选项化——payload items[].options 数组 2-4 项 {key:A-Z 大写唯一, text:自包含选项全文, why:一句理由}、"
             "至多一项 recommended:true（纯缺失类/开放类不硬造）；③flows 断点行（gap:true）带 pids:[\"Pxx\"] 字符串数组"

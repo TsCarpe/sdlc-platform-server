@@ -40,7 +40,7 @@ class Services:
         media = MediaService(db, repos, media_dir, media_max_bytes)
         iterations = IterationService(db, repos)
         # v4.2/§3：workspace_root = 任务工作区统一根（source_import 完成回调按 tasks/<task_id>/out 定位，
-        # 与进程内 executor、runner meta 下发三处同源此值——分叉则落库找不到文件）
+        # 与进程内 executor 两处同源此值——分叉则落库找不到文件）
         blocks = BlockService(db, repos, workspace_root)
         comments = CommentService(db, repos)
         changes = ChangeService(db, repos, blocks)

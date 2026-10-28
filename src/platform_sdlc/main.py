@@ -66,7 +66,7 @@ def create_app(settings: Settings | None = None, cwd: Path | None = None) -> Fas
             from platform_sdlc.agent.loop import AgentLoop
 
             ctx.agent = AgentLoop(settings, repos, services)
-            ctx.agent.start()  # Phase ②：进程内任务 agent（openai-agents），外置 runner 通道不受影响
+            ctx.agent.start()  # Phase ②：进程内任务 agent（openai-agents），单执行通道
         sweeper = asyncio.create_task(_stale_sweeper(services, settings.agent_timeout_min))
         try:
             yield

@@ -1,6 +1,7 @@
 """任务队列与草稿端点（对应 TaskController）。
 
-写端点统一 /api 前缀（X-Token 写保护覆盖）；GET /api/tasks/next 与 done/failed 供 Runner 调用。
+写端点统一 /api 前缀（X-Token 写保护覆盖）；GET /api/tasks/next 与 done/failed 供外部执行器/
+回归脚本调用（进程内 loop 直调服务层，verify-*.mjs 走此 HTTP 面做原子领取）。
 """
 
 from __future__ import annotations
@@ -44,8 +45,8 @@ def router(ctx: AppContext) -> APIRouter:
     @r.post("/api/tasks/recover-stale")
     async def recover_stale(runner: str = "", all: bool = False) -> dict[str, Any]:
         """执行器启动恢复：超时 running 置 failed。默认必须带 runner（只清该执行器名下任务，
-        双通道各恢复自己，防跨通道互杀——AUDIT D1-3；超时阈值用服务端单一配置）；
-        全通道恢复须显式 all=true，避免裸调用误杀另一通道正在执行的任务（P1-5）。"""
+        各执行器恢复自己，防跨执行器误杀——AUDIT D1-3；超时阈值用服务端单一配置）；
+        全通道恢复须显式 all=true，避免裸调用误杀其他执行器正在执行的任务（P1-5）。"""
         if not runner and not all:
             raise ApiException(400, "缺少 runner：恢复默认按执行器归属过滤；全通道恢复须显式传 all=true")
         n = await asyncio.to_thread(svc.expire_stale, ctx.settings.agent_timeout_min, runner or None)

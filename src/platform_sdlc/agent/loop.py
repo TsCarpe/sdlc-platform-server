@@ -84,7 +84,7 @@ class AgentLoop:
             self._alive = False
 
     async def _loop_body(self) -> None:
-        # 归属过滤：只清本执行器名下任务（双通道恢复互不越界，AUDIT D1-3）
+        # 归属过滤：只清本执行器名下任务（各执行器恢复互不越界，AUDIT D1-3）
         recovered = await asyncio.to_thread(
             self.services.tasks.expire_stale, self.settings.agent_timeout_min, self.RUNNER_NAME)
         if recovered > 0:
@@ -146,7 +146,7 @@ class AgentLoop:
         except Exception as e:  # noqa: BLE001  # 回报终态失败仅记日志
             log.error("[agent] #%s 回报终态失败：%s", t.id, e)
 
-    # ---------- 机械自查（自 runner.mjs selfCheck / SdlcAgentService 逐条移植） ----------
+    # ---------- 机械自查（历史自 runner.mjs selfCheck / SdlcAgentService 逐条移植；runner 下线后本处为唯一实现） ----------
 
     def self_check(self, t: Task) -> str | None:
         """草稿真的回传了、结构合法，才允许记 done；返回 None = 通过。
@@ -198,7 +198,7 @@ class AgentLoop:
     def _draft_type_of(task_type: str) -> str:
         from platform_sdlc.task_rules import DRAFT_TYPES
 
-        return DRAFT_TYPES.get(task_type, "cases")  # 映射单一来源（AUDIT D1-5），与 runner 同源
+        return DRAFT_TYPES.get(task_type, "cases")  # 映射单一来源（AUDIT D1-5，task_rules.py）
 
     @staticmethod
     def _diag_text(res: Any) -> str:

@@ -242,7 +242,7 @@ class BlockService:
 
     def import_from_output(self, task: Task) -> dict[str, Any]:
         """任务完成回调直读输出文件落库——内容不经 LLM 上下文（「确定性」判据可验证：
-        落库内容 = 脚本输出文件字节），落库成功才置 done（挂点 = TaskService.finish，两通道汇合）。
+        落库内容 = 脚本输出文件字节），落库成功才置 done（挂点 = TaskService.finish，执行通道汇合）。
         幂等语义（§3）：重跑 = 全量替换该卡块 + origin=feishu 评论行，平台侧评论不动。
         守恒终检（v4 守恒门第二道）：结构校验后、落库前 verify_doc_guard(raw)——guard 缺失/对账
         不符/媒体 status 非 ok 一律 IntegrityException 拒落库；块引用媒体不在库（missingMedia）
@@ -250,7 +250,8 @@ class BlockService:
         out_path = self.workspace_root / "tasks" / str(task.id) / "out" / "doc.json"
         if not out_path.is_file():
             raise ApiException(409, f"导入输出文件不存在：{out_path}（服务端工作区根={self.workspace_root}；"
-                                    "两通道统一落 tasks/<任务ID>/out/doc.json，runner 侧确认 meta 下发的 workspaceRoot 生效）")
+                                    "导入产物统一落 tasks/<任务ID>/out/doc.json——检查 SDLC_AGENT_WORKSPACE 与"
+                                    "服务端工作区根是否指向同一根）")
         try:
             raw: Any = json.loads(out_path.read_text(encoding="utf-8"))
         except json.JSONDecodeError as e:

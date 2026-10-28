@@ -162,7 +162,7 @@ class TaskService:
         t = self.repos.task.claim(runner, Times.now())
         if t is not None and t.type == T_QUALITY and self.repos.req_block.empty(t.req_id):
             # v4-4（DESIGN-v4 §3 质检前置）：不做任务 DAG——启动守卫查块表非空，空则 failed 引导。
-            # 双通道（runner next 路由 / 进程内 loop）都汇合在 TaskService.claim，单点实现；
+            # 两个领取入口（next 路由的外部脚本 / 进程内 loop）都汇合在 TaskService.claim，单点实现；
             # 返回 None = 领取方本轮无任务，下一轮询自然前进（不自旋查库）。
             self.finish(t.id, False, {
                 "error": "原文未导入，先完成 source_import", "reason": "blocks-empty",
@@ -185,12 +185,12 @@ class TaskService:
             raise ApiException(409, "飞书源已导入且存在平台编辑痕迹/平台评论，全量重导已封存；原文变更走变更单")
 
     def finish(self, task_id: int, ok: bool, body: dict[str, Any] | None) -> Task:
-        """任务终态回报（双通道汇合点）。
+        """任务终态回报（执行通道汇合点）。
 
         P1-6 顺序修正：终态校验（状态 / 执行器 / attempt）与 source_import 落库、终态置位收进
         同一事务——校验不过在任何副作用之前 409；导入异常整体回滚（块表/评论保持原状）后另起
         事务记 failed。attempt 是 retry 递增的 fencing 代数，旧执行器迟到回报不得覆盖新 attempt。
-        body 的 runner/attempt 可选（旧脚本兼容，缺省不做对应校验）；runner/agent 两通道始终携带。
+        body 的 runner/attempt 可选（旧脚本兼容，缺省不做对应校验）；执行器回报始终携带。
         """
         body = body or {}  # done/failed 可无 body，全 null 字段即默认值语义
         runner = jtext(body, "runner", "")
@@ -215,7 +215,7 @@ class TaskService:
                 if attempt is not None and attempt != t.attempt:
                     raise ApiException(409, f"执行尝试已过期（当前 attempt={t.attempt}，回报 {attempt}）"
                                             "——结果已被 retry 取代，丢弃")
-                # 通道兜底（评测 P0-2b）：外置 runner 通道撞终态锁的失败回报，统一补作废语义
+                # 通道兜底（评测 P0-2b）：执行通道撞终态锁的失败回报，统一补作废语义
                 if not ok and self.superseded_by_publish(t):
                     if not jtext(body, "error", "").strip():
                         body["error"] = "需求已发布（终态锁定），任务作废"
@@ -223,7 +223,7 @@ class TaskService:
                     body["hint"] = "标准文档已由人工定稿；该任务不可重试"
                 # v4-3（DESIGN-v4 §3 落库机制细则）：source_import 完成回调——服务端直读输出文件落库
                 # （内容不经 LLM 上下文），落库成功才置 done；失败转 failed 可 retry。
-                # 两通道（runner POST done / 进程内 loop）在此汇合，落库只此一处。
+                # 两个回报入口（外部脚本 POST done / 进程内 loop）在此汇合，落库只此一处。
                 if ok and t.type == T_SOURCE_IMPORT:
                     r = self.repos.requirement.find(t.req_id)
                     if r is None:
@@ -322,7 +322,7 @@ class TaskService:
 
     def expire_stale(self, older_than_minutes: int, runner: str | None = None) -> int:
         """执行器启动恢复：超时 running 置 failed，返回处理条数。
-        runner 非空时按归属过滤（双通道各清自己名下任务）。"""
+        runner 非空时按归属过滤（各执行器清自己名下任务）。"""
         from datetime import datetime, timedelta
 
         cutoff = (datetime.now() - timedelta(minutes=older_than_minutes)).strftime("%Y-%m-%d %H:%M:%S")
