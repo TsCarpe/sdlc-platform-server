@@ -2018,8 +2018,63 @@
   {
    "id": "PceAdZsgBo2Ds7xtio5cK1Upnrb",
    "type": "paragraph",
-   "text": "教师上传活动纪要文件后，直接进入查看纪要（非AI生成页面），标记为“已上传”。展示：活动信息活动纪要：展示上传的文件，可直接预览共思随记相关资源：缩小放置在右上角活动目标or单元计划：缩小放置在右上角",
+   "text": "教师上传活动纪要文件后，直接进入查看纪要（非AI生成页面），标记为“已上传”。展示：",
    "path": "查看纪要（非AI生成）",
+   "comments": null
+  },
+  {
+   "id": "VIGxdLQYPosqflxxOYtcpG9cnzd",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "活动信息",
+   "path": "查看纪要（非AI生成） › 1",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "OoOLdAWSnoNNbixPQ8ncH6EsnEf",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "活动纪要：展示上传的文件，可直接预览",
+   "path": "查看纪要（非AI生成） › 2",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "NebrdNETEoYUdqxNbh1cNkexnRb",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "3",
+   "depth": 1,
+   "text": "共思随记",
+   "path": "查看纪要（非AI生成） › 3",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "RUZSdOzbxodM4JxW05lcsRzMnHe",
+   "type": "list-item",
+   "marker": "4.",
+   "ordinal": "4",
+   "depth": 1,
+   "text": "相关资源：缩小放置在右上角",
+   "path": "查看纪要（非AI生成） › 4",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "V0y7dcNgIo8qnIx3LNlcAmYunBg",
+   "type": "list-item",
+   "marker": "5.",
+   "ordinal": "5",
+   "depth": 1,
+   "text": "活动目标or单元计划：缩小放置在右上角",
+   "path": "查看纪要（非AI生成） › 5",
+   "parent": null,
    "comments": null
   },
   {
