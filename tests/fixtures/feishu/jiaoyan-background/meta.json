@@ -1,0 +1,30 @@
+{
+ "name": "jiaoyan-background",
+ "note": "鸿儒教研V3.0需求背景（主样本评论区发现）——扩样本，覆盖 divider(22)",
+ "url": "https://hailiang.feishu.cn/wiki/IlthwJWHjiXoxAkNIxScyFHvnxd",
+ "title": "鸿儒教研V3.0需求背景",
+ "document_id": "R10WdSPGOo7N8SxDZA5crKbVnjc",
+ "wiki_token": "IlthwJWHjiXoxAkNIxScyFHvnxd",
+ "revision_id": 3,
+ "frozen_at": "2026-10-28T07:35:56.589772+00:00",
+ "block_count": 609,
+ "block_types": {
+  "1:page": 1,
+  "2:text": 156,
+  "3:heading1": 6,
+  "4:heading2": 7,
+  "12:bullet": 44,
+  "13:ordered": 219,
+  "19:callout": 5,
+  "22:divider": 6,
+  "24:grid": 12,
+  "25:grid_column": 27,
+  "27:image": 45,
+  "31:table": 2,
+  "32:table_cell": 77,
+  "43:board": 2
+ },
+ "comment_count": 0,
+ "golden_chain": "lark-cli 1.x + claude-sdlc-skills parse_doc.py",
+ "parse_doc_baseline": "be66ca8"
+}

@@ -1,0 +1,269 @@
+{
+ "c1": {
+  "data": "<comment comment-id=\"7687792107699866864\" block-id=\"GkXkd32AVoYSi1x9tvzcOantnNc\"><quote>列表</quote><msg user=\"周苏霞\">列表排序补充一下</msg><msg user=\"卢凯玉\">@周苏霞 已补</msg></comment>"
+ },
+ "c10": {
+  "data": "<comment comment-id=\"7688990338895088834\" start-block-id=\"JOGJd8tLooNfHoxkYifcNVq7nxd\" end-block-id=\"D7Asd2XHtoDvdux8FDAcsgNxnag\"><quote>年级： 按学段展示（小学：四/五/六年级；初中：七/八/九年级；高中：高一/高二/高三）； 下拉选择默认“请选择”</quote><msg user=\"李泽\">@卢凯玉 年级也是来自 海思谷么 ?</msg><msg user=\"卢凯玉\">不是</msg></comment>"
+ },
+ "c11": {
+  "data": "<comment comment-id=\"7696774374128471339\" block-id=\"AHModTtDDo3UNKxLLiWcenaHnDg\"><quote>中考</quote><msg user=\"董晓涵\">@卢凯玉 高中也能选到中考类型么</msg><msg user=\"卢凯玉\">可以的</msg></comment>"
+ },
+ "c12": {
+  "data": "<comment comment-id=\"7688602598785453255\" block-id=\"DYMudhylnoLLT5xDEz2cdSeknyg\"><quote>考试科目：</quote><msg user=\"周苏霞\">成绩导入中的科目是否是要包含在这边设置的科目中</msg><msg user=\"卢凯玉\">是的，包含</msg></comment>"
+ },
+ "c13": {
+  "data": "<comment comment-id=\"7688194439407291578\" block-id=\"TXvddqyrio0HQhxAJNUcon15nRf\"><quote>也支持自定义</quote><msg user=\"沈超杰\">自定义科目, 如果以后要统计/ 聚合, 只能根据文本, 建议走选择</msg><msg user=\"卢凯玉\">合理，那就走选择。我晚点改下原型</msg><msg user=\"董晓涵\">@卢凯玉 这里是怎么调整的啊？还支持自定义么？预设科目支持修改文案么？</msg></comment>"
+ },
+ "c14": {
+  "data": "<comment comment-id=\"7694514340623403994\" block-id=\"TXvddqyrio0HQhxAJNUcon15nRf\"><quote>（注意预设科目不能编辑和删除，自定义添加的科目才支持编辑和删除）</quote><msg user=\"卢凯玉\">这个说明补充在这了，知悉@董晓涵 @周苏霞 @薛慧</msg></comment>"
+ },
+ "c15": {
+  "data": "<comment comment-id=\"7697193020294188335\" block-id=\"V04QduXGZoS1DSxAiDvcaJ5WnNf\"><quote>单文件</quote><msg user=\"薛慧\">这个有记录条数限制吗?</msg><msg user=\"卢凯玉\">没有</msg></comment>"
+ },
+ "c16": {
+  "data": "<comment comment-id=\"7688197165310545075\" block-id=\"JitGdDOqfonjqexwsm6cI4vSnEc\"><quote>新增修改考试第3步-解析校验</quote><msg user=\"沈超杰\">考试导入中填写的学段 和 学校的学段冲突怎么办</msg><msg user=\"卢凯玉\">这个不做校验</msg></comment>"
+ },
+ "c17": {
+  "data": "<comment comment-id=\"7690398362452905143\" block-id=\"RgUMd5nxromsXdxDwR4c0WBXnKh\"><quote>学校</quote><msg user=\"周苏霞\">学校名称导入的时候是a,之后修改为b，那么编辑的时候展示的是a还是b</msg><msg user=\"卢凯玉\">展示的时候用学校名称管理处的标准名称，成绩导入或者小学质量评价处的导入等地方导入的名称只不过是为了匹配学校标准名称或别名而已，原则上系统展示的地方就用标准名称了</msg><msg user=\"周苏霞\">@卢凯玉 那就是改了展示的就是最新的</msg></comment>"
+ },
+ "c18": {
+  "data": "<comment comment-id=\"7690856987529071826\" block-id=\"RgUMd5nxromsXdxDwR4c0WBXnKh\"><quote>总分</quote><msg user=\"周苏霞\">总分以导入的为准还是需要根据各学科的分数再去算一下加和？</msg></comment>"
+ },
+ "c19": {
+  "data": "<comment comment-id=\"7697196693296532774\" block-id=\"QOcKdFQg3o5Lpfx6fGhczYmWnOd\"><quote>校验异常情况</quote><msg user=\"薛慧\">如果建考试的时候学科选择了:语文,数学,英语.导入的表格里有:语文,数学,英语,地理.那么地理这一列会被判断为异常吗?</msg><msg user=\"卢凯玉\">看技术实现方案，可以判异常也可以不判异常，如果不判异常 地理这列要自动忽略，不能导入地理成绩。</msg></comment>"
+ },
+ "c2": {
+  "data": "<comment comment-id=\"7694501247662967996\" block-id=\"ZVYsdae07oTdZDxft5PcBo6GnTc\"><quote>新增考试</quote><msg user=\"董晓涵\">新增考试的时候，不能仅保存基本信息么？中途退出就是取消新增的意思么？<img src=\"TRfmbp1bhoQ8rZxwb6TcBMQsnmg\"/></msg><msg user=\"卢凯玉\">完成第一步进到第二步的时候就已经自动把第一步的基本信息保存了</msg><msg user=\"董晓涵\">如果她进入第二步，然后点击返回考试列表呢？就当没创建么，还是保留这条记录？用户在新增的时候，任意步骤点击返回考试列表都是取消新增的意思么？</msg><msg user=\"卢凯玉\">创建了，要保留这条记录的</msg><msg user=\"董晓涵\">咱们现在说的都是没创建之前的情况哈，如果在新增过程中任意步骤中，点击右上角的返回考试列表</msg></comment>"
+ },
+ "c20": {
+  "data": "<comment comment-id=\"7687793487961427130\" block-id=\"QKXQd7OcEoEO4lxl60acDw3TndO\"><quote>必填未填</quote><msg user=\"周苏霞\">哪些是必填</msg><msg user=\"卢凯玉\">学校、学生姓名、总分，已补</msg></comment>"
+ },
+ "c21": {
+  "data": "<comment comment-id=\"7688652636781989063\" block-id=\"EDQYdS2Cdobvumx4UDMcXeW6nvh\"><quote>重新导入会覆盖</quote><msg user=\"周苏霞\">重导覆盖后已生成的分析报告怎么办？作废吗</msg><msg user=\"卢凯玉\">作废，成绩分析状态退回到“未生成”就行，质量评价报告的话删除就行</msg></comment>"
+ },
+ "c22": {
+  "data": "<comment comment-id=\"7695588881055354056\" block-id=\"W1IUdZxqnoniPbxmHbDcSAbNnH8\"><quote>[图片]</quote><msg user=\"董晓涵\">@卢凯玉 这里点击关闭以后是什么状态，也是直接返回考试列表吗<img src=\"Ah5dbQuSsoszonxHlZ9cl7wun4g\"/></msg><msg user=\"董晓涵\">@卢凯玉 经过讨论，去掉这个关闭按钮</msg></comment>"
+ },
+ "c23": {
+  "data": "<comment comment-id=\"7688990978023230693\" start-block-id=\"Ooaod0Yz0osSiix1X5cc4p37nwb\" end-block-id=\"IWjJdEQYoocTBvxDpAVcN5HUn3b\"><quote>学校名称列表： 展示标准名称、学段、公民办、区县、别名，支持按学段/区县筛选，按标准名称、区县或别名搜索；</quote><msg user=\"李泽\">@卢凯玉 这里学校列表也是一样，和海思谷的关系要罗列下</msg></comment>"
+ },
+ "c24": {
+  "data": "<comment comment-id=\"7687810606723812325\" block-id=\"TQujdG04SoDnFYx6gEOcyTucnfh\"><quote>新增学校：</quote><msg user=\"王一\">为什么不跟saas的区域管理下的学校管理</msg><msg user=\"卢凯玉\">因为有别的区县，做到SaaS下维护起来有些麻烦。不过可以将SaaS内维护的临平区内的学校同步过来，这样临平区的学校就不用再维护一遍了</msg><msg user=\"周苏霞\">@卢凯玉 这样有两个入口要维护也很麻烦</msg><msg user=\"卢凯玉\">使用场景不一样，要不开会的时候细聊下</msg></comment>"
+ },
+ "c25": {
+  "data": "<comment comment-id=\"7694176664263068898\" block-id=\"BWoIdWoOSoyjhixvsfbc50Xyn4g\"><quote>标准名称</quote><msg user=\"董晓涵\">1.标准名称和别名字数有限制么？\n2.别名数量有限制么@卢凯玉</msg><msg user=\"卢凯玉\">业务上无限制，限制些极端值就可以，比如名称50个字符，别名数量50个<reaction key=\"OK\" users=\"董晓涵\"/></msg></comment>"
+ },
+ "c26": {
+  "data": "<comment comment-id=\"7697088904557497583\" block-id=\"BWoIdWoOSoyjhixvsfbc50Xyn4g\"><quote>标准名称</quote><msg user=\"薛慧\">标准名称可以重复吗?</msg><msg user=\"卢凯玉\">不可以重复</msg></comment>"
+ },
+ "c27": {
+  "data": "<comment comment-id=\"7698941321460911389\" block-id=\"YtwNd16PeoqiCAxH3iac3zZMnfb\"><quote>公民办、区县：按学校属性填写；</quote><msg user=\"薛慧\">这也是必填项吧</msg><msg user=\"卢凯玉\">对</msg></comment>"
+ },
+ "c28": {
+  "data": "<comment comment-id=\"7688549763150646481\" block-id=\"YtwNd16PeoqiCAxH3iac3zZMnfb\"><quote>区县</quote><msg user=\"周苏霞\">区县是配置项吗</msg><msg user=\"卢凯玉\">区县我本意是直接填写的，想着简单点。如果需要做成走选择也可以，产品都能接受</msg><msg user=\"周苏霞\">@卢凯玉 因为要做默认区县，直接选择的话默认区县怎么映射呢？通过名字感觉不大合理</msg><msg user=\"卢凯玉\">通过填写的各学校所属的区县名字做聚合，就知道总共哪些区县了</msg><msg user=\"周苏霞\">@卢凯玉 那默认区县就按照名字去做匹配吗？</msg><msg user=\"卢凯玉\">OK</msg><msg user=\"周苏霞\">@卢凯玉 那就走文本匹配了</msg></comment>"
+ },
+ "c29": {
+  "data": "<comment comment-id=\"7698959797114145797\" block-id=\"Pqjid00zCoiXgJxJ8ixc2lm5nvg\"><quote>别名最大50个字符，数量最多50，超过…，hover显示全部</quote><msg user=\"卢凯玉\">补了这个说明，知晓@董晓涵 @李泽 @薛慧</msg></comment>"
+ },
+ "c3": {
+  "data": "<comment comment-id=\"7688192217910971590\" block-id=\"ZVYsdae07oTdZDxft5PcBo6GnTc\"><quote>四步</quote><msg user=\"沈超杰\">三步哦</msg><msg user=\"卢凯玉\">对对对，三步</msg></comment>"
+ },
+ "c30": {
+  "data": "<comment comment-id=\"7697093496728997115\" block-id=\"C9LddFP2NozAYGxQcdfcxVm4n6g\"><quote>编辑学校</quote><msg user=\"薛慧\">原型里这个修改学校名称,如果没有勾选将原名称保留为别名的话,那是不是就不保留.如果不保留的话,如果用原来的学校创建的成绩怎么显示<img src=\"NGzLbylISoy5CGxixg2cYEXFnMb\"/></msg><msg user=\"卢凯玉\">这个和开发@周苏霞 沟通过，如果是已经生成了报告快照，按理来说快照里就不会名称变化。如果不是快照或者报告有更新之类的，就都按学校最新的标准名称显示的</msg><msg user=\"薛慧\">@卢凯玉 那就是勾选就存在别名里,没勾选就不保存是吧</msg><msg user=\"卢凯玉\">对</msg><msg user=\"周苏霞\">@卢凯玉 不是说没这个需求吗<img src=\"ZxnHbJ9C3o8xJKxVj6acQ77dnle\"/></msg><msg user=\"卢凯玉\">OK，去掉了，保留别名的那个不需要@周苏霞 @薛慧</msg></comment>"
+ },
+ "c31": {
+  "data": "<comment comment-id=\"7694175721048001739\" block-id=\"XpVKdP2L5otI3nxBttYcf4m7nbf\"><quote>可修改标准名称、公民办、区县、别名的增删改等</quote><msg user=\"董晓涵\">学段禁止修改么@卢凯玉</msg><msg user=\"卢凯玉\">可以修改，我补一下</msg></comment>"
+ },
+ "c32": {
+  "data": "<comment comment-id=\"7697097607952256278\" block-id=\"XpVKdP2L5otI3nxBttYcf4m7nbf\"><quote>别名</quote><msg user=\"薛慧\">编辑别名和其他学校的别名重复时,只是提醒但是可以已保存成功过对吗?那新建的时候是不是学校1的别名也可以和学校2的别名重复<img src=\"VtwVb10u8o39rPxjETBcoyxTnJc\"/></msg><msg user=\"卢凯玉\">不可以重复，会拦截的</msg><msg user=\"薛慧\">@卢凯玉 啥不可以重复?编辑和新建都不可以重复?</msg><msg user=\"卢凯玉\">对，别名、标准名称都不能出现重复。否则重复了就没法确保唯一性了，就会出现识别的问题</msg></comment>"
+ },
+ "c33": {
+  "data": "<comment comment-id=\"7688923001915476941\" block-id=\"TmbrdhpHbovLRzx8rERcmqzZnhQ\"><quote>删除学校</quote><msg user=\"周苏霞\">学校删除了学校下建的区县如果被设置为默认区县怎么办</msg><msg user=\"卢凯玉\">因为学校不只一个，只删掉一个如果没影响到默认区县就没啥影响。如果是唯一的一个，那删了这个默认区县就没了，相当于没有默认区县了。那受影响的只不过是高中的区县成绩分析，没有默认区县高亮、没有默认区县的统计卡片（尖子生那），那区内成绩分析这部分因为不知道分析哪个区县下的学校就可以缺省</msg><msg user=\"周苏霞\">@卢凯玉 那就相当于如果唯一一个区县的学校删了，那么默认取消也就没了是吧</msg><msg user=\"卢凯玉\">对</msg></comment>"
+ },
+ "c34": {
+  "data": "<comment comment-id=\"7687810485911079896\" block-id=\"QPkqdeFm0oYN8Zx4SWEcnX8UnXc\"><quote>默认区县管理：</quote><msg user=\"王一\">不是只有临平区吗</msg><msg user=\"卢凯玉\">有区县间的成绩对比分析</msg></comment>"
+ },
+ "c35": {
+  "data": "<comment comment-id=\"7688608990099410212\" block-id=\"LaRodNFV2opHrWxaDoPcBzhln5e\"><quote>小学、初中只限在默认区县内的学校进行分析 不会出现跨区县比较，只有高中才会存在不同区县之间的比较</quote><msg user=\"卢凯玉\">@周苏霞 @沈超杰 @王一 @薛慧 这一点很重要，大家注意下。之前文档中没专门提（但其实原型中能体现出来），感觉大家可能会理解错，所以专门提一下</msg><msg user=\"周苏霞\">@卢凯玉 那就是考试成绩导入的时候有一个学校是否属于这个区县的限制？</msg><msg user=\"薛慧\">如果小学和初中Excel文档里导入的数据有非默认区县的数据怎么处理?</msg><msg user=\"卢凯玉\">这个和后端商量过，小学、初中一律按照导入的成绩是哪些学校就分析哪些学校，不用默认区县的限制</msg></comment>"
+ },
+ "c36": {
+  "data": "<comment comment-id=\"7688607357323988167\" block-id=\"Z0bxdYA39o9mGFxm1W0cMumUnWf\"><quote>，X̄ 为全区平均水平</quote><msg user=\"周苏霞\">这边不是说是全区吗？下面又说是该区县</msg></comment>"
+ },
+ "c37": {
+  "data": "<comment comment-id=\"7688607140428221619\" block-id=\"D1zGdagLEoB1vBxo4p2c6GyCnkh\"><quote>默认区县</quote><msg user=\"周苏霞\">只统计默认区县的维度吗？别的区县的呢？</msg><msg user=\"卢凯玉\">小学和初中只在区县内统计，只有高中才会进行不同区县之间的对比</msg><msg user=\"卢凯玉\">所以小学和初中都是默认区县内的学校</msg><msg user=\"周苏霞\">那我理解就是只会有一个区县？但这也业务上这么说，系统没有限制，那么统计的口径是统计这个考试下的所有学生还是按照不用区县，统计的是不用区县下的所有学生</msg><msg user=\"卢凯玉\">最好还是要判断下学校是否和默认区县匹配，否则考试中万一有别的区县的学校，统计出来就不准了</msg><msg user=\"周苏霞\">@卢凯玉 所以既然初中小学是只在默认区县之间比较，那么考试的成绩导入的时候就限制只允许导入默认区县的学校</msg></comment>"
+ },
+ "c38": {
+  "data": "<comment comment-id=\"7688605371480657196\" block-id=\"FLYRdszLKoaQzQxT8RXciZK9nUg\"><quote>该区县所有学生</quote><msg user=\"周苏霞\">指该考试下的所有学生还是考试中不同区县下学校的总学生数</msg></comment>"
+ },
+ "c39": {
+  "data": "<comment comment-id=\"7688615395338489050\" block-id=\"S1sJdJkBNoWMg7xUDj1cIu0rn9f\"><quote>导出为Excel</quote><msg user=\"周苏霞\">导出的excel可以补充个demo示例</msg></comment>"
+ },
+ "c4": {
+  "data": "<comment comment-id=\"7694512157148318651\" block-id=\"HiIjdKepDoZAjZxCgCBcWVUbneH\"><quote>未完成考试提供\"继续完成\"：点击回到对应的第二步或第三步继续（回到哪一步取决于之前在哪一步）</quote><msg user=\"卢凯玉\">这个说明补充在这里了，知悉@董晓涵 @周苏霞 @薛慧<reaction key=\"Get\" users=\"董晓涵\"/></msg></comment>"
+ },
+ "c40": {
+  "data": "<comment comment-id=\"7698580897901055269\" block-id=\"WN8Udmt13oadoPxu6WmcpxFWn0f\"><quote>各sheet名采用页面中的各表格名称</quote><msg user=\"周苏霞\">这个是不是就没了？</msg><msg user=\"卢凯玉\">对，我删掉这个</msg></comment>"
+ },
+ "c41": {
+  "data": "<comment comment-id=\"7696043670243446056\" block-id=\"PSM1dRM9zomKY4xatf3cRivjnJd\"><quote>[图片]</quote><msg user=\"董晓涵\">@卢凯玉 需要所有都填好才能提交报告么？默认是0分么，还是空</msg><msg user=\"卢凯玉\">只有填好才能生成，默认空<reaction key=\"Get\" users=\"董晓涵\"/></msg><msg user=\"董晓涵\">分数支持输入小数么？</msg><msg user=\"卢凯玉\">支持，一位小数就好<reaction key=\"OK\" users=\"董晓涵\"/></msg></comment>"
+ },
+ "c42": {
+  "data": "<comment comment-id=\"7696055187542150363\" block-id=\"AHoOdZ327orqjKx71yqcBoBznid\"><quote>[图片]</quote><msg user=\"董晓涵\">@卢凯玉 1.真实数据一个等第可能有几十所学校，卡片会撑很高，要全部展示么？还是设置最大高度+滚动展示？2.查看计算说明是什么功能？</msg><msg user=\"董晓涵\">@董晓涵 经过讨论，结论如下：1.撑开高度展示。2.没有这个需求</msg></comment>"
+ },
+ "c43": {
+  "data": "<comment comment-id=\"7688254954963733744\" block-id=\"YWSPdZQOJo1kQyxy6m4cqwYjnkR\"><quote>初中成绩分析</quote><msg user=\"沈超杰\">均分/ 尖优段/ 低分率的需求补下</msg></comment>"
+ },
+ "c44": {
+  "data": "<comment comment-id=\"7688246667182689458\" block-id=\"LUIfd6j68oLhSLx7GjpcbP3fnQh\"><quote>均分统计设置是否剔除后3%的选项，选项枚举：</quote><msg user=\"沈超杰\">剔除的操作单位是学校还是全区啊</msg><msg user=\"沈超杰\">全区参照值（区均分/区方差）基于各校剔除后的成绩汇总重算？</msg><msg user=\"卢凯玉\">@沈超杰 剔除是按学校哈</msg><msg user=\"卢凯玉\">对的，按剔除后的统计人数去算</msg><msg user=\"卢凯玉\">注意一下：初中区分民办和公办的。也就是在统计范围上是分隔开的，公办统计公办的、民办统计民办的</msg><msg user=\"沈超杰\">剔除后 3% 确认按总分排序剔除吧</msg><msg user=\"卢凯玉\">是的，按总分排序的后3%</msg><msg user=\"周苏霞\">@卢凯玉 后百分之3超过就取整？比如4.1取5个</msg><msg user=\"卢凯玉\">向下取吧<reaction key=\"OK\" users=\"周苏霞\"/></msg><msg user=\"薛慧\">剔除的倒数名次正好是同排名的,怎么剔除?</msg><msg user=\"卢凯玉\">没要求，怎么方便都行</msg><msg user=\"周苏霞\">@卢凯玉 那给个规则呗</msg><msg user=\"卢凯玉\">如果总分同名次情况下非得有个排名先后顺序的话，那就优先级依次看语文、数学、英语的成绩呢？@周苏霞</msg><msg user=\"周苏霞\">@卢凯玉 那单科如果同排名就一起剔除？比如后3%只剔除3个人，但倒4和倒3分数一样，那倒4一起剔除？</msg></comment>"
+ },
+ "c45": {
+  "data": "<comment comment-id=\"7688619227120405686\" block-id=\"JCuNdH9qdoTgCfxZqWmc3b7VnGc\"><quote>剔除成绩后3%的学生</quote><msg user=\"周苏霞\">那缺考就当0分处理一起剔除？</msg><msg user=\"卢凯玉\">算是的</msg></comment>"
+ },
+ "c46": {
+  "data": "<comment comment-id=\"7697154388304891156\" block-id=\"T58Cd19bzoLY6NxzmRTcuXuinhd\"><quote>以往参照考试</quote><msg user=\"董晓涵\">@卢凯玉 那这也按照考试时间倒序咯</msg><msg user=\"卢凯玉\">是的</msg></comment>"
+ },
+ "c47": {
+  "data": "<comment comment-id=\"7688619527000706235\" block-id=\"PZ9kd3VmaosTDix0GEyciLIJnSh\"><quote>该学段近5年的考试</quote><msg user=\"周苏霞\">会不会存在很多数据？</msg></comment>"
+ },
+ "c48": {
+  "data": "<comment comment-id=\"7698281553037626546\" block-id=\"YDdddvuPLo1JrixGgofc5FXynkg\"><quote>优秀划线设置</quote><msg user=\"薛慧\">这个的设置后作用在哪个分析报告里</msg><msg user=\"卢凯玉\">初中成绩分析报告里，有正负三分析，涉及优秀率</msg></comment>"
+ },
+ "c49": {
+  "data": "<comment comment-id=\"7688623700102352053\" block-id=\"UdwQdnuUDoNgGUxfyL3cvVqaniH\"><quote>加权平均</quote><msg user=\"周苏霞\">是根据转换后的正负3做加权平均？</msg><msg user=\"卢凯玉\">对</msg></comment>"
+ },
+ "c5": {
+  "data": "<comment comment-id=\"7688189795507375344\" block-id=\"S6lgddbquoDbPQx7TvYcOKJgnsb\"><quote>删除：弹窗二次确认并校验引用，提示\"考试及其已导入成绩将从当前列表中移除；若该考试已生成分析报告或已被教学质量评价引用，将一并强制删除对应的报告与评价，删除后不可恢复\"；</quote><msg user=\"沈超杰\">考试删除后  如果有分析或质量评价引用了这场比赛, 那是删分析或质量评价? 还是分析或质量评价关联不到这场比赛<img src=\"JMI5bR4f3oCCIdxBa8YcDf1TnE4\"/></msg><msg user=\"卢凯玉\">啥比赛，你是说考试吧？考试没了，基于考试的分析和评价删掉就行</msg><msg user=\"沈超杰\">考试,  比如上图的质量评价已经产生, 然后其中一场考试删除, 那整个质量评价都删? 还是只删质量评价中这个考试的数据</msg><msg user=\"卢凯玉\">整个质量评价都删，因为依赖已经没了算出的评价结果就没意义了，除非你做了整体的快照</msg></comment>"
+ },
+ "c50": {
+  "data": "<comment comment-id=\"7698340769874119926\" block-id=\"EwB5dNtA5o5ZksxwYO8cPQz6nXg\"><quote>[图片]</quote><msg user=\"薛慧\">1. 统计设置页面必输项有哪些? 2. 尖优段设置的节点个数有限制吗? 3. 低分线和高分线的栏位输入有可以输入小数点吗?最高可以输入多少分</msg><msg user=\"卢凯玉\">1. 除了对比考试勾选时选填，其他都是必填必选；2. 尖优段节点个数业务上没最大要求，弄个极限值就好，比如15或20个；3. 可以输入小数，两位小数即可；3. 最高分数业务上没限，也是弄个极限值就好，比如150 @薛慧 @董晓涵 @周苏霞</msg><msg user=\"周苏霞\">@卢凯玉 那2就设置20个，4设置150分<reaction key=\"OK\" users=\"卢凯玉\"/></msg></comment>"
+ },
+ "c51": {
+  "data": "<comment comment-id=\"7698565761366756597\" block-id=\"K1UMdxSwFotBGhx0cdUc07Jnnwh\"><quote>划线名称</quote><msg user=\"薛慧\">这个的长度也是50字符么?</msg><msg user=\"卢凯玉\">@薛慧 可以，我补一下</msg></comment>"
+ },
+ "c52": {
+  "data": "<comment comment-id=\"7697166135782935795\" block-id=\"K1UMdxSwFotBGhx0cdUc07Jnnwh\"><quote>数量</quote><msg user=\"董晓涵\">@卢凯玉 分数线设置和分数线档位数量最多限制10个，可以么？</msg><msg user=\"董晓涵\">经过和产品讨论，都限制10个</msg></comment>"
+ },
+ "c53": {
+  "data": "<comment comment-id=\"7701538603003989017\" block-id=\"L0IudqWaUoct7wxoSqQcwPhTnwb\"><quote>总分统计分数节点设置</quote><msg user=\"董晓涵\">@卢凯玉 这里有要求总分统计分数节点设置的分数不可以与分数线设置的分数相同么？<img src=\"XKs8bjUhjoEIcdx7OEncHNnQn8c\"/></msg><msg user=\"卢凯玉\">没有要求，不过如果做了这个限制也是OK的</msg><msg user=\"董晓涵\">OK 那保留了哈</msg></comment>"
+ },
+ "c54": {
+  "data": "<comment comment-id=\"7696362658030734528\" block-id=\"Dk7kdr1FyoWvIzxTwlIcTB4jnfd\"><quote>输入要求：分数从高到低且之间用逗号分隔</quote><msg user=\"董晓涵\">@卢凯玉 分数节点数量有什么录入规则么？数量有限制么？</msg><msg user=\"卢凯玉\">限制下数量极端值就好，比如最多30</msg></comment>"
+ },
+ "c55": {
+  "data": "<comment comment-id=\"7698571832776985838\" block-id=\"Dk7kdr1FyoWvIzxTwlIcTB4jnfd\"><quote>输入要求</quote><msg user=\"薛慧\">这里的某个数值如果和上边的分数线设置的分数一致了,是阻止保存吗?</msg></comment>"
+ },
+ "c56": {
+  "data": "<comment comment-id=\"7698570990795705592\" block-id=\"Jf9ddrvhloU3h0x3s71c4g7XnTh\"><quote>选科科目划线设置</quote><msg user=\"薛慧\">1. 选考科目可以都不勾选吗?如果都不勾选那对应下面的档位分数线还需要有值么? 2. 选考科目如果把主科也勾选了,那上边的主科目划线设置就没有科目只有总分设置了?</msg></comment>"
+ },
+ "c57": {
+  "data": "<comment comment-id=\"7696363137385237798\" block-id=\"PCICdhFhvofEy9x2IgwcpjjtnJh\"><quote>选考科目勾选：支持从本次考试科目中勾选哪些是选考科目（这里也决定了未勾选的属于主科，默认不勾选语数英）</quote><msg user=\"董晓涵\">@卢凯玉 这里操作勾选，上面分数线设置的主科目要跟着动态增减么？<reaction key=\"Yes\" users=\"董晓涵\"/></msg></comment>"
+ },
+ "c58": {
+  "data": "<comment comment-id=\"7698571233461308678\" block-id=\"UO3wdCRDxoceK0xwrZDcpnt6nBh\"><quote>选科科目划线</quote><msg user=\"薛慧\">划线是都可以删没了吗?还是要默认保留几个?</msg><msg user=\"薛慧\">划线名称可修改,那格式字数限制是什么?</msg><msg user=\"薛慧\">划线设置的数量有上限吗?</msg></comment>"
+ },
+ "c59": {
+  "data": "<comment comment-id=\"7696363439630912813\" block-id=\"QrMcd7bvAob6ELxIxMicxZp5nEt\"><quote>支持增删改</quote><msg user=\"董晓涵\">@卢凯玉 这个增删改效果是啥样的？现在看着只有勾选功能</msg></comment>"
+ },
+ "c6": {
+  "data": "<comment comment-id=\"7688196277539966211\" block-id=\"OPiydy3qvoHcfRxYJgYcXANnnAe\"><quote>总体说明：</quote><msg user=\"沈超杰\">创建考试填写的基本信息, 和导入考试之间有什么约束, 比如考试信息只写了语文这个学科, 然后导入成绩只包含数学的成绩, 这种怎么处理. 基本信息和考试excel的导入约束都需要明确下</msg><msg user=\"卢凯玉\">OK，整体原则是基本信息填了啥学科、Excel里就有啥学科</msg></comment>"
+ },
+ "c60": {
+  "data": "<comment comment-id=\"7697080022007352607\" block-id=\"QrMcd7bvAob6ELxIxMicxZp5nEt\"><quote>默认数值如原型所示</quote><msg user=\"董晓涵\">@卢凯玉 这个默认值不要了 是不是默认分数不展示了，那几行标题还是要的啊<img src=\"JDeMbFmIwo8v3VxVNB2cUtQFngb\"/></msg><msg user=\"卢凯玉\">这个默认值要的</msg></comment>"
+ },
+ "c61": {
+  "data": "<comment comment-id=\"7698697742033374447\" block-id=\"SSHjdvewKo02xQxogzIcf4DUnle\"><quote>总分与学科均分</quote><msg user=\"薛慧\">表格里的数据,排序是什么?总分正序排列?</msg><msg user=\"卢凯玉\">总分倒序</msg><msg user=\"薛慧\">正序吧,不是第一名在最上边吗</msg><msg user=\"卢凯玉\">分数的倒序，也就是总分排名的正序</msg></comment>"
+ },
+ "c62": {
+  "data": "<comment comment-id=\"7698700300013587708\" block-id=\"JI2LdfGZ1oge9cxZX7Yc6h6xngc\"><quote>总分相同名次相同</quote><msg user=\"薛慧\">学生A和学生B总分相同,第3名,那同学C是第4名还是第5名?</msg><msg user=\"卢凯玉\">这种情况按C是第4名</msg></comment>"
+ },
+ "c63": {
+  "data": "<comment comment-id=\"7688276653356666156\" block-id=\"OLK9dfdgxoR99lxXglvccbkYnfe\"><quote>多次考试成绩对比：</quote><msg user=\"沈超杰\">如果两个考试, 考试所属区县不同, 还能对比么, 是不是就没啥意义了, 要不要约束下</msg><msg user=\"卢凯玉\">不用约束，联考，各区县都参加的考试</msg></comment>"
+ },
+ "c64": {
+  "data": "<comment comment-id=\"7698927795728026901\" block-id=\"IBWSdi0DEoZG9QxrZE8c6orynMc\"><quote>首末增减</quote><msg user=\"薛慧\">0的时候显示颜色和符号是什么?趋势是:持平吗?</msg><msg user=\"卢凯玉\">普通黑色，持平吧，我待会补一下</msg></comment>"
+ },
+ "c65": {
+  "data": "<comment comment-id=\"7698927885016370426\" block-id=\"IBWSdi0DEoZG9QxrZE8c6orynMc\"><quote>变化率</quote><msg user=\"薛慧\">变化率计算公式是:(当前 − 最早) ÷ 最早 × 100%</msg><msg user=\"卢凯玉\">对</msg></comment>"
+ },
+ "c66": {
+  "data": "<comment comment-id=\"7696463629419285772\" block-id=\"Ii0Fd4vRpoina8xJhzDcom5enUf\"><quote>对比考试选择弹窗</quote><msg user=\"董晓涵\">@卢凯玉 考试列表还是需要加上已保存高中统计设置这个筛选条件的，不然勾选上也没有办法比对</msg><msg user=\"董晓涵\">勾选了未保存统计设置的考试后，该场考试在对比中也出不了上线数据的，那勾选也没啥意义吧</msg><msg user=\"卢凯玉\">好的，那可勾选范围加上已生成报告状态这个条件吧，因为一般在生成报告时才会配置划线等操作<reaction key=\"OK\" users=\"董晓涵\"/></msg></comment>"
+ },
+ "c67": {
+  "data": "<comment comment-id=\"7701600189278063643\" block-id=\"RlTzdaiR3oqj3kx5v0IcMMFRntg\"><quote>可勾选考试</quote><msg user=\"董晓涵\">@卢凯玉 勾选的学校不需要记住吧？比如默认是5所，然后这次操作勾选了4所学校，下次进来还是默认5所？</msg><msg user=\"卢凯玉\">不需要勾选学校啊，没有勾选学校的操作的</msg><msg user=\"董晓涵\">说错了，是勾选考试，就是每次进入详情页都默认勾选前5场考试<img src=\"GRVMbRK13oZSs3xx1OgcQfE0nHf\"/></msg></comment>"
+ },
+ "c68": {
+  "data": "<comment comment-id=\"7696431102763732204\" block-id=\"RlTzdaiR3oqj3kx5v0IcMMFRntg\"><quote>该学段最近5年的考试（剔除当前考试）</quote><msg user=\"董晓涵\">@卢凯玉 当前考试的报告状态对这个可选范围有影响么？<img src=\"YJCDb9hGboNh01xDFfycvl4enfd\"/></msg></comment>"
+ },
+ "c69": {
+  "data": "<comment comment-id=\"7697142664248003887\" block-id=\"RlTzdaiR3oqj3kx5v0IcMMFRntg\"><quote>考试日期</quote><msg user=\"董晓涵\">@卢凯玉 是考试创建日期还是考试更新日期啊？</msg><msg user=\"卢凯玉\">就是考试基本信息中那的考试日期<reaction key=\"OK\" users=\"董晓涵\"/></msg></comment>"
+ },
+ "c7": {
+  "data": "<comment comment-id=\"7694607282952309718\" start-block-id=\"AiFAddNd3oUeQOxEvcFclquXnhe\" end-block-id=\"SVQudynY2oL087xGeEFc8HsKnxh\"><quote>在成绩状态“已完成”情况下，点击修改只展示两步：基本信息、查看成绩，如原型所示 基本信息：除考试名称外，其他字段均不支持修改 查看成绩：只支持已导入成绩的展示，不支持修改</quote><msg user=\"卢凯玉\">修改场景下精简下展示和逻辑，补充到这里了，右侧原型截图也有同步补充，知悉@许晗艺 @董晓涵 @周苏霞 @薛慧<reaction key=\"OK\" users=\"许晗艺\"/></msg></comment>"
+ },
+ "c70": {
+  "data": "<comment comment-id=\"7688277812691602647\" block-id=\"ND56dIagUol9tLxK4PtcqWlNnKW\"><quote>分数段及上线情况：</quote><msg user=\"沈超杰\">区内成绩分析是不是少切换的逻辑\n比对逻辑同区县, 如果两场考试下参赛校不同, 怎么处理</msg><msg user=\"卢凯玉\">没太理解这个问题</msg></comment>"
+ },
+ "c71": {
+  "data": "<comment comment-id=\"7696828048720530736\" block-id=\"GHOEdzBzooB4yWxV1Kkc9dAGnXc\"><quote>取“学校名称管理_默认区县管理”设置区县</quote><msg user=\"董晓涵\">@卢凯玉 没有设置默认区县的话这里数据没办法比对了，但是这概率应该比较小吧</msg><msg user=\"董晓涵\">是不是能在生成报告设置弹窗的时候就拦截一下，提醒用户先设置默认区县，再来生成报告啊</msg><msg user=\"卢凯玉\">对的，这是可接受的正常现象</msg><msg user=\"卢凯玉\">可以的，可以按你的说法拦截一下，提示一下去设置默认区县<reaction key=\"OK\" users=\"董晓涵\"/></msg></comment>"
+ },
+ "c72": {
+  "data": "<comment comment-id=\"7688282679862643892\" block-id=\"L9vtdgwQxoRq8WxB1QLcunyOnff\"><quote>[图片]</quote><msg user=\"沈超杰\">1.比如你展示的这个图片, 是不是只有临平区的. 那萧山区的怎么展示\n2.比如考试1只有有临平一中这个学校, 对比考试2只有临平二中这个学校, 怎么处理</msg><msg user=\"卢凯玉\">1. 区内成绩分析只分析默认区县的这些学校，其他区县不管\n2. 实际业务不会出现这种情况，即使出现，就以当前考试中的学校为主键，对比考试中多的学校不用展示出来，少的学校缺失对比数据，该列数据空着就可以</msg></comment>"
+ },
+ "c73": {
+  "data": "<comment comment-id=\"7698722614985919727\" block-id=\"JhqbdZ6D5oZCgNx0iWocbQvhnTg\"><quote>各校对标分析</quote><msg user=\"薛慧\">这个数据范围是本次考试里,不区分区县的,还是默认区县的?</msg><msg user=\"卢凯玉\">可以跨区县的<reaction key=\"OK\" users=\"薛慧\"/></msg></comment>"
+ },
+ "c74": {
+  "data": "<comment comment-id=\"7688283367929875696\" block-id=\"SiQJd3f9To8e2vx3d0dcLCeCnpe\"><quote>前N、后N、及三个组名，支持记忆，即下次考试分析报告默认按上次的设置</quote><msg user=\"沈超杰\">这个记忆, 要区分纬度么, 比如根据年级/ 考试类型/ 或者区域区分. 还是整个系统, 公用一份</msg><msg user=\"卢凯玉\">应该是根据租户区分</msg><msg user=\"沈超杰\">学校有个租户. 区域的话租户id就是区域id.  你要的是区域的吧</msg><msg user=\"卢凯玉\">对</msg></comment>"
+ },
+ "c75": {
+  "data": "<comment comment-id=\"7699443248175009046\" block-id=\"PU2BdbbL1oMVjNx1ORncIFpmnhb\"><quote>新建评价</quote><msg user=\"薛慧\">同一学年可以重复创建评价吗？</msg></comment>"
+ },
+ "c76": {
+  "data": "<comment comment-id=\"7688292666416631013\" block-id=\"CkxfdVyhcodAuPxF2YacKlrJnfp\"><quote>小学质量评价</quote><msg user=\"沈超杰\">这个对应的需求需要补下<img src=\"Q9CUbmS6qosmTdx2qlqczQzZnBS\"/></msg><msg user=\"沈超杰\">还有这个<img src=\"VlQ2bR0SkoLyKbxW7yOcHbMunme\"/></msg><msg user=\"卢凯玉\">OK</msg><msg user=\"卢凯玉\">已补</msg></comment>"
+ },
+ "c77": {
+  "data": "<comment comment-id=\"7688288289119341763\" block-id=\"OFMQdjldAoVsU8xxPYdcKuRtnQO\"><quote>非毕业班统测结果：支持考试选择，一般四五年级各取一场考试</quote><msg user=\"沈超杰\">四年考试级 五年级考试 必须都选中一个是吧. 如果允许只选一个, 福分后各科加和除2的逻辑是不是就可以去掉</msg><msg user=\"卢凯玉\">不做这个必须要选两个的限制，加和除以2的逻辑不用去</msg><msg user=\"沈超杰\">@卢凯玉 一场考试也要除以2?</msg></comment>"
+ },
+ "c78": {
+  "data": "<comment comment-id=\"7688288566597651659\" block-id=\"OFMQdjldAoVsU8xxPYdcKuRtnQO\"><quote>非毕业班统测结果：支持考试选择，一般四五年级各取一场考试</quote><msg user=\"沈超杰\">如果四年级/ 五年级两场考试, 学科不一致怎么办, 比如四年级有语文, 五年级有语文数学.</msg><msg user=\"卢凯玉\">理论上实际业务不会出现，即使出现你就按实际的学科按规则算就可以</msg><msg user=\"沈超杰\">就是虽然数学只有一个 但是也要除2对吧</msg><msg user=\"卢凯玉\">对</msg></comment>"
+ },
+ "c79": {
+  "data": "<comment comment-id=\"7699326519927262241\" block-id=\"OFMQdjldAoVsU8xxPYdcKuRtnQO\"><quote>一般四五年级各取一场考试</quote><msg user=\"董晓涵\">@卢凯玉 支持选超过两场考试@薛慧</msg></comment>"
+ },
+ "c8": {
+  "data": "<comment comment-id=\"7687792478547610836\" block-id=\"Gvtod4x4wo01vdxRtBzcl41Anol\"><quote>下拉选项为近5个学年</quote><msg user=\"周苏霞\">学年数据来源海思谷？</msg><msg user=\"卢凯玉\">不用，固定一个规则即可。可以按09.01到次年的08.31</msg><msg user=\"周苏霞\">展示为2024-2025学年、2025-2026学年、2026-2027学年？</msg><msg user=\"卢凯玉\">2026学年、2025学年、2024学年……这种的</msg><msg user=\"周苏霞\">@卢凯玉 现在应该是属于27学年？</msg><msg user=\"卢凯玉\">2026学年，每个学年的开始时间是从0901开始</msg><msg user=\"周苏霞\">@卢凯玉 现在应该是27学年的上学期呀</msg><msg user=\"卢凯玉\">一般是2026学年或者2026-2027学年两种称呼，不能单纯的叫2027学年 否则意思就不一样了</msg><msg user=\"周苏霞\">那到了27.1.1之后也还是叫26学年？26.9.1-27.8.31这个学年怎么叫</msg><msg user=\"卢凯玉\">对，学年是跨自然年的。当年的0901开始，次自然年的0831结束</msg><msg user=\"卢凯玉\">26.9.1-27.8.31这个就是2026学年</msg></comment>"
+ },
+ "c80": {
+  "data": "<comment comment-id=\"7699456487847890169\" block-id=\"BHfcd5JWmocVcKx5UsUccaxvnpd\"><quote>四五年级各取一场考试，看各科等级</quote><msg user=\"薛慧\">选超过2场考试的计算逻辑还是一样的吗？</msg><msg user=\"卢凯玉\">计算逻辑不变，就是按照文档中的逻辑来</msg></comment>"
+ },
+ "c81": {
+  "data": "<comment comment-id=\"7698670056334445568\" block-id=\"Q3yQd1tboorc5KxW0XechkVsnrf\"><quote>导入上传需做基础校验：</quote><msg user=\"卢凯玉\">导入后的在线表格展示与校验页面补到右侧原型了，知晓@董晓涵 @周苏霞 @薛慧</msg></comment>"
+ },
+ "c82": {
+  "data": "<comment comment-id=\"7688290949453073620\" start-block-id=\"K6ErdozsZouE6CxPYGDc8Xwjn0K\" end-block-id=\"KKqGdDVSBoYwURxM88ZczrOknPf\"><quote>过程性评价为0～8的数值 满意度评价为0～5的数值</quote><msg user=\"沈超杰\">这俩有权重么</msg><msg user=\"卢凯玉\">没，因为本身这俩的分数已经是业务方考虑权重后的了</msg></comment>"
+ },
+ "c83": {
+  "data": "<comment comment-id=\"7699451808359419174\" block-id=\"G1E7d3K0ooR7fzxO9lLc4dE6nNb\"><quote>最高评价分</quote><msg user=\"薛慧\">是指：「总计」分值最高的学校？</msg><msg user=\"卢凯玉\">是的</msg></comment>"
+ },
+ "c84": {
+  "data": "<comment comment-id=\"7699453418510781678\" block-id=\"KmrHdKVCtoIVntxriZEcK2Zlnrg\"><quote>按排名排序</quote><msg user=\"薛慧\">相同排名怎么处理？</msg><msg user=\"卢凯玉\">这个业务不做要求，看开发实际实现就行</msg></comment>"
+ },
+ "c85": {
+  "data": "<comment comment-id=\"7699453732001418533\" block-id=\"FSsjd05d9odKR2xiOADcImWxnUg\"><quote>列字段</quote><msg user=\"薛慧\">外部评价未导入时，过程评价和满意度评价未空吗？</msg><msg user=\"卢凯玉\">是的</msg></comment>"
+ },
+ "c86": {
+  "data": "<comment comment-id=\"7688307821691014347\" block-id=\"TuPbdoUJxoeOEbx38D0cEa9wn6d\"><quote>初中质量评价</quote><msg user=\"沈超杰\">这个需求也需要补下<img src=\"Z1K5bb1iFoY0skxls6Qc4st5nKh\"/></msg><msg user=\"卢凯玉\">已补</msg></comment>"
+ },
+ "c87": {
+  "data": "<comment comment-id=\"7698960251973848303\" block-id=\"YJ8Idz966opz0Rx7HZ4cZuQ5n6d\"><quote>平均分</quote><msg user=\"周苏霞\">四舍五入保留2位小数？</msg><msg user=\"卢凯玉\">OK</msg></comment>"
+ },
+ "c88": {
+  "data": "<comment comment-id=\"7698961966345293063\" block-id=\"M9EgdPbbsokARNxw5BNcOjPcnGc\"><quote>本学年八九两个年级各取一场考试（同平均分检验、优秀率检验所用考试），上学年八九两个年级各取一场考试</quote><msg user=\"周苏霞\">学校增量可以取&lt;=2场，允许不选，2场的话必须是8年级9年级各一场@薛慧</msg></comment>"
+ },
+ "c89": {
+  "data": "<comment comment-id=\"7700057783973973171\" block-id=\"DtJwdK9kfolqkpxY45vcNwPfnOK\"><quote>评价考试配置</quote><msg user=\"薛慧\">这些配置都可以不勾选的吧</msg><msg user=\"卢凯玉\">那不能的，除了学校增量基准 每个得至少勾一场</msg></comment>"
+ },
+ "c9": {
+  "data": "<comment comment-id=\"7688990221077056705\" start-block-id=\"VUdMdacMUo4aCXxDDY7cw74Qnnf\" end-block-id=\"HuHodD4tVo2lsmxspJqckqY1n5z\"><quote>学期： 枚举：第一学期 / 第二学期 下拉选择默认“请选择” 学段： 枚举：小学/初中/高中，选择后联动年级、考试类型选项； 下拉选择默认“请选择”</quote><msg user=\"李泽\">@卢凯玉 学期 和学段 是来自 海思谷的么</msg></comment>"
+ }
+}
