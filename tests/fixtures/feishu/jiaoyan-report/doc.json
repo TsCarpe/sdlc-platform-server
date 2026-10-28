@@ -1,0 +1,6227 @@
+{
+ "generator": "sdlc-intent/parse_doc.py 0.5",
+ "source": {
+  "url": "https://hailiang.feishu.cn/wiki/O86FwWwQViyikfkaz9jc7zUunBc",
+  "documentId": "PL5ndphOGoIoU5xQwwCcvcWWnIX",
+  "revisionId": "9639"
+ },
+ "blocks": [
+  {
+   "id": "PL5ndphOGoIoU5xQwwCcvcWWnIX",
+   "type": "title",
+   "text": "鸿儒教研AI纪要&教研报告",
+   "path": "鸿儒教研AI纪要&教研报告"
+  },
+  {
+   "id": "LwJudK6GyoaISOxqRhSc2qfZn2g",
+   "type": "heading",
+   "level": 1,
+   "text": "一、修订记录",
+   "path": "一、修订记录"
+  },
+  {
+   "id": "x-0002",
+   "type": "table-row",
+   "head": [
+    "修订时间",
+    "修订内容",
+    "修订人"
+   ],
+   "cells": [
+    "2026.10.26",
+    "",
+    "刘雨晨"
+   ],
+   "rowLabel": "2026.10.26",
+   "path": "一、修订记录 › 2026.10.26",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "LeBjd4Ieko7wmgx7qGBczLwPn0c",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "集备活动“开始活动”页面中，集备资源上传及展示",
+   "path": "一、修订记录 › 1",
+   "parent": "x-0002",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "LWJwdQNGPoEHu6xHGcpctDyunih",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "更新历史活动纪要的展示",
+   "path": "一、修订记录 › 2",
+   "parent": "x-0002",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "JshGdkAC1ofWcIxx7WAcvAKLn8g",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "3",
+   "depth": 1,
+   "text": "录制人暂停录制后，会议中的所有人均可点击开始录制，此时点击开始录制的用户即为新的录制人",
+   "path": "一、修订记录 › 3",
+   "parent": "x-0002",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "SQR4dpOoRoH0Wwx3aN2c0OWVnKh",
+   "type": "list-item",
+   "marker": "4.",
+   "ordinal": "4",
+   "depth": 1,
+   "text": "单元计划仅允许输入文本，最多100字",
+   "path": "一、修订记录 › 4",
+   "parent": "x-0002",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "x-0003",
+   "type": "table-row",
+   "head": [
+    "修订时间",
+    "修订内容",
+    "修订人"
+   ],
+   "cells": [
+    "",
+    "",
+    ""
+   ],
+   "rowLabel": "#2",
+   "path": "一、修订记录 › #2",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0004",
+   "type": "table-row",
+   "head": [
+    "修订时间",
+    "修订内容",
+    "修订人"
+   ],
+   "cells": [
+    "",
+    "",
+    ""
+   ],
+   "rowLabel": "#3",
+   "path": "一、修订记录 › #3",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "WHMLdydk8oo4kTxpcoRcVC1pnHe",
+   "type": "heading",
+   "level": 1,
+   "text": "二、需求背景：",
+   "path": "二、需求背景："
+  },
+  {
+   "id": "Yy7fdnMU3okMMdxqWPecCdd3nqh",
+   "type": "paragraph",
+   "text": "结合线下调研发现：教研会议中，教师手写记录容易遗漏会议要点和待办，管理者无法参与全部教研活动，难以把握教研活动情况。集备管理上，备课组长核查个备资源效率低，缺少管理与汇报依据，教研任务落地难以跟踪。针对上述痛点，新增AI会议纪要，减轻教师会议记录负担；AI纪要和教研报告帮助管理者实现教研过程可追溯、教研质量可量化，让教研管理真正有据可依。",
+   "path": "二、需求背景：",
+   "comments": null
+  },
+  {
+   "id": "x-0005",
+   "type": "table-row",
+   "head": [
+    "使用者",
+    "使用场景",
+    "核心痛点"
+   ],
+   "cells": [
+    "普通教师",
+    "",
+    ""
+   ],
+   "rowLabel": "普通教师",
+   "path": "二、需求背景： › 普通教师",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "Ix2VdTT0yoXh7hxrUsRcRhaGn0f",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "参加集体备课、听评课、教研组会议，免手写记录，专注研讨",
+   "path": "二、需求背景： › 1",
+   "parent": "x-0005",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "JUmrdrH6ioDggrxDfCgcVHaFnkd",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "会后快速获取要点、任务分工，用于教研档案归档、写教学反思",
+   "path": "二、需求背景： › 2",
+   "parent": "x-0005",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "CmNPdbdyco4uCdxwilacpyJ8nef",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "3",
+   "depth": 1,
+   "text": "缺席会议时，快速了解会议结论",
+   "path": "二、需求背景： › 3",
+   "parent": "x-0005",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "Trz2dEiEVosRWixKX8lcfBRMnib",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "边开会边记笔记，容易遗漏关键教研观点，会后整理纪要耗时间",
+   "path": "二、需求背景： › 1",
+   "parent": "x-0005",
+   "comments": null,
+   "cell": 2
+  },
+  {
+   "id": "QBeMdyv2EoGvUsx1tQ5cxH04nMg",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "会上商定任务容易遗忘；教研材料零散，不方便查找复用",
+   "path": "二、需求背景： › 2",
+   "parent": "x-0005",
+   "comments": null,
+   "cell": 2
+  },
+  {
+   "id": "x-0006",
+   "type": "table-row",
+   "head": [
+    "使用者",
+    "使用场景",
+    "核心痛点"
+   ],
+   "cells": [
+    "管理者",
+    "",
+    ""
+   ],
+   "rowLabel": "管理者",
+   "path": "二、需求背景： › 管理者",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "WbPLd6t6WoO9m3xV4lHczukSnxf",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "查看各组教研质量",
+   "path": "二、需求背景： › 1",
+   "parent": "x-0006",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "GYH2d2GXwoJKcax1wmsc1kG0n5d",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "留存教研原始记录，收集台账，迎接督导检查",
+   "path": "二、需求背景： › 2",
+   "parent": "x-0006",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "JkUodcqvToCl4cxWvqYcjGwKnjd",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "3",
+   "depth": 1,
+   "text": "跟踪教研任务落地，沉淀校本教研知识库",
+   "path": "二、需求背景： › 3",
+   "parent": "x-0006",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "RUXud4CqhowVRVxi1xycx6N9n1e",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "教师手动提交纪要存在拖延、内容美化，无法反映真实教研情况",
+   "path": "二、需求背景： › 1",
+   "parent": "x-0006",
+   "comments": null,
+   "cell": 2
+  },
+  {
+   "id": "EAPfdXh4ToiTihxEzJVcI9zsnIh",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "教研决议缺少跟踪闭环；优质教研经验难以沉淀传承",
+   "path": "二、需求背景： › 2",
+   "parent": "x-0006",
+   "comments": null,
+   "cell": 2
+  },
+  {
+   "id": "THncd8lMIoW1R5x233Tc2mTVnNd",
+   "type": "heading",
+   "level": 1,
+   "text": "三、需求说明",
+   "path": "三、需求说明"
+  },
+  {
+   "id": "HlLNdUwXyoEqXtxm83PcZUxunyg",
+   "type": "attachment",
+   "media": "m-e1bb37d62968",
+   "name": "鸿儒教研-AI会议纪要-可交互原型.zip",
+   "mime": "application/zip",
+   "bytes": 243588,
+   "path": "三、需求说明",
+   "parent": null
+  },
+  {
+   "id": "IgOkdyDPaoS3cxxeYGycvymRnme",
+   "type": "heading",
+   "level": 2,
+   "text": "活动检查列表优化",
+   "path": "三、需求说明 › 活动检查列表优化"
+  },
+  {
+   "id": "MZzCd1LVIoSalbxPYEGcEZtKnYq",
+   "type": "image",
+   "media": "m-24e7883740f0",
+   "name": "image.png",
+   "alt": "图片展示的是鸿儒教研平台的活动检查页面。页面上方显示“产品演示学校（演示校区）2025学年第二学期教研计划”，并有“进行中”标识。左侧有导航栏，可选择“教研活动记录”“集备活动记录”等。右侧是活动列表，包含活动名称、活动时间、所属教研组、负责人、出勤率、活动时长、活动附件、操作等信息，如“中期复习策略研讨”活动，时间为2026 - 10 - 20 15:00 - 16:30，负责人是张伟，出勤率10/10，活动时长1小时，可点击“开始活动”按钮。",
+   "caption": "",
+   "width": "1910",
+   "height": "915",
+   "path": "活动检查列表优化",
+   "parent": null
+  },
+  {
+   "id": "KQzkdn6VWo7hayxxCiic5lbenoX",
+   "type": "image",
+   "media": "m-e991554ade4b",
+   "name": "image.png",
+   "alt": "图片展示的是鸿儒教研平台的集备活动记录页面。页面上方有“活动检查”标题，下方有“教研活动记录”和“集备活动记录”两个选项卡，当前选中“集备活动记录”。页面显示了多条集备活动记录，包括活动名称、活动时间、集备范围、集备组长、出勤率、活动议程、活动时长等信息。每条记录右侧有“开始活动”“查看教研报告”“查看纪要”“导出数据”等操作按钮。该图片与文档中“活动检查列表优化”部分内容相关，直观呈现了集备活动记录的展示样式。",
+   "caption": "",
+   "width": "1910",
+   "height": "915",
+   "path": "活动检查列表优化",
+   "parent": null
+  },
+  {
+   "id": "Lxz2dQ36NokXFqxUEE9cLjt5n4d",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "**教研活动记录**",
+   "path": "活动检查列表优化 › 1",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "QSJzdyRHqoJdvQxuSm4c5Vfhnfb",
+   "type": "list-item",
+   "marker": "a.",
+   "ordinal": "1.a",
+   "depth": 2,
+   "text": "操作（以活动结束时间展示不同按钮文案）",
+   "path": "活动检查列表优化 › 1.a",
+   "parent": "Lxz2dQ36NokXFqxUEE9cLjt5n4d",
+   "comments": null
+  },
+  {
+   "id": "V0hydIfNvoqHPcx4pkScq1NjnQh",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.a.1",
+   "depth": 3,
+   "text": "活动未结束 →【开始活动】",
+   "path": "活动检查列表优化 › 1.a.1",
+   "parent": "QSJzdyRHqoJdvQxuSm4c5Vfhnfb",
+   "comments": null
+  },
+  {
+   "id": "LL7edZqhhoWMzkxOfKUcmQtLnHb",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "1.a.2",
+   "depth": 3,
+   "text": "活动已结束 + 无纪要 →【生成纪要】",
+   "path": "活动检查列表优化 › 1.a.2",
+   "parent": "QSJzdyRHqoJdvQxuSm4c5Vfhnfb",
+   "comments": null
+  },
+  {
+   "id": "NoizdAzYboBauHxHLyycTPPXnPc",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "1.a.3",
+   "depth": 3,
+   "text": "活动已结束 + 纪要生成中 →【生成纪要】+ “生成中”标识",
+   "path": "活动检查列表优化 › 1.a.3",
+   "parent": "QSJzdyRHqoJdvQxuSm4c5Vfhnfb",
+   "comments": null
+  },
+  {
+   "id": "Xm1Gd4cIVonqQvxfsy5cZBLfnyb",
+   "type": "list-item",
+   "marker": "4.",
+   "ordinal": "1.a.4",
+   "depth": 3,
+   "text": "活动已结束 + 已有纪要 →【查看纪要】+AI标识（老师自主上传的纪要无需展示AI标识）",
+   "path": "活动检查列表优化 › 1.a.4",
+   "parent": "QSJzdyRHqoJdvQxuSm4c5Vfhnfb",
+   "comments": null
+  },
+  {
+   "id": "JELGdz33Eo03sZx2RFOcS5DnnZg",
+   "type": "list-item",
+   "marker": "b.",
+   "ordinal": "1.b",
+   "depth": 2,
+   "text": "~~纪要生成中状态变化后，列表需刷新或轮询更新为【查看纪要】~~",
+   "path": "活动检查列表优化 › 1.b",
+   "parent": "Lxz2dQ36NokXFqxUEE9cLjt5n4d",
+   "comments": null
+  },
+  {
+   "id": "x-0007",
+   "type": "table-row",
+   "head": [
+    "活动/纪要状态",
+    "按钮文案",
+    "点击后跳转至"
+   ],
+   "cells": [
+    "活动未结束",
+    "开始活动",
+    "进入开始活动页面"
+   ],
+   "rowLabel": "活动未结束",
+   "path": "活动检查列表优化 › 活动未结束",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0008",
+   "type": "table-row",
+   "head": [
+    "活动/纪要状态",
+    "按钮文案",
+    "点击后跳转至"
+   ],
+   "cells": [
+    "活动已结束、无纪要",
+    "生成纪要",
+    "进入开始活动页面"
+   ],
+   "rowLabel": "活动已结束、无纪要",
+   "path": "活动检查列表优化 › 活动已结束、无纪要",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0009",
+   "type": "table-row",
+   "head": [
+    "活动/纪要状态",
+    "按钮文案",
+    "点击后跳转至"
+   ],
+   "cells": [
+    "活动已结束、纪要生成中",
+    "生成纪要（生成中）",
+    "进入活动纪要的流式页面"
+   ],
+   "rowLabel": "活动已结束、纪要生成中",
+   "path": "活动检查列表优化 › 活动已结束、纪要生成中",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0010",
+   "type": "table-row",
+   "head": [
+    "活动/纪要状态",
+    "按钮文案",
+    "点击后跳转至"
+   ],
+   "cells": [
+    "活动已结束、已有AI纪要",
+    "",
+    "进入AI活动纪要页面"
+   ],
+   "rowLabel": "活动已结束、已有AI纪要",
+   "path": "活动检查列表优化 › 活动已结束、已有AI纪要",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "LXkKdPFFtouG4LxB2Ahco2S6neg",
+   "type": "paragraph",
+   "text": "查看纪要",
+   "path": "活动检查列表优化",
+   "parent": "x-0010",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "QP7SdmFi9oQMs6xfXREcHNRSn3e",
+   "type": "paragraph",
+   "text": "（AI）",
+   "path": "活动检查列表优化",
+   "parent": "x-0010",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "x-0011",
+   "type": "table-row",
+   "head": [
+    "活动/纪要状态",
+    "按钮文案",
+    "点击后跳转至"
+   ],
+   "cells": [
+    "活动已结束、用户自行上传纪要",
+    "查看纪要",
+    "进入教师上传的纪要文件页面"
+   ],
+   "rowLabel": "活动已结束、用户自行上传纪要",
+   "path": "活动检查列表优化 › 活动已结束、用户自行上传纪要",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "THZVdQzSkoWf3Dx8c4bc9TL1nah",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "**集备活动记录**",
+   "path": "活动检查列表优化 › 1",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "VdiUdEnoYotCC3xOJPbcZCSkngD",
+   "type": "list-item",
+   "marker": "a.",
+   "ordinal": "1.a",
+   "depth": 2,
+   "text": "新增【集备范围】",
+   "path": "活动检查列表优化 › 1.a",
+   "parent": "THZVdQzSkoWf3Dx8c4bc9TL1nah",
+   "comments": null
+  },
+  {
+   "id": "CxWIdHrrho274yx6SCEc1SCUnRe",
+   "type": "list-item",
+   "marker": "i.",
+   "ordinal": "1.a.i",
+   "depth": 3,
+   "text": "已设置：展示所选的教学进度叶子节点名称，如：3 小青蛙。支持点击编辑按钮进行修改（同日历中添加集备内容的功能）",
+   "path": "活动检查列表优化 › 1.a.i",
+   "parent": "VdiUdEnoYotCC3xOJPbcZCSkngD",
+   "comments": null
+  },
+  {
+   "id": "WZaGdjbZCoC7dIxxa5lcKzXwneg",
+   "type": "image",
+   "media": "m-bff75355948b",
+   "name": "image.png",
+   "alt": "图片展示的是集备活动记录中“集备范围”设置界面。左侧为周次和单元选择区域，有“第一周”“第一单元:识字”等选项，其中“第一单元:识字”被紫色框选。右侧是教学内容列表，包含“1春喜秋冬”“2姓氏歌”等，部分内容后有“@刘雨晨”标识，部分内容后有“刘雨晨”标识，还设有“编辑教学进度”按钮。底部有“取消”和“确定”按钮。该图片与上下文关系为，直观呈现了集备活动记录中“集备范围”设置时的界面样式及内容选项。",
+   "caption": "",
+   "width": "1074",
+   "height": "1128",
+   "path": "活动检查列表优化",
+   "parent": "VdiUdEnoYotCC3xOJPbcZCSkngD"
+  },
+  {
+   "id": "B95HdDLbWoD99Pxo0Y0cYwfznJh",
+   "type": "list-item",
+   "marker": "i.",
+   "ordinal": "1.a.i",
+   "depth": 3,
+   "text": "未设置：可点击直接未设置字样直接设置",
+   "path": "活动检查列表优化 › 1.a.i",
+   "parent": "VdiUdEnoYotCC3xOJPbcZCSkngD",
+   "comments": null
+  },
+  {
+   "id": "RpKgdYw6qokdIpxfNgNcBOXdnpb",
+   "type": "list-item",
+   "marker": "b.",
+   "ordinal": "1.b",
+   "depth": 2,
+   "text": "删除活动纪要一列",
+   "path": "活动检查列表优化 › 1.b",
+   "parent": "THZVdQzSkoWf3Dx8c4bc9TL1nah",
+   "comments": null
+  },
+  {
+   "id": "BgeXdiaSdoiZbIxJOPfc29yUnGe",
+   "type": "list-item",
+   "marker": "c.",
+   "ordinal": "1.c",
+   "depth": 2,
+   "text": "操作（两个操作按钮）",
+   "path": "活动检查列表优化 › 1.c",
+   "parent": "THZVdQzSkoWf3Dx8c4bc9TL1nah",
+   "comments": null
+  },
+  {
+   "id": "A641dntN4obm21xHk1Hcl5Gznad",
+   "type": "list-item",
+   "marker": "i.",
+   "ordinal": "1.c.i",
+   "depth": 3,
+   "text": "活动纪要（展示的文案规则和教研活动一致）",
+   "path": "活动检查列表优化 › 1.c.i",
+   "parent": "BgeXdiaSdoiZbIxJOPfc29yUnGe",
+   "comments": null
+  },
+  {
+   "id": "YHMldPa7boXyfRxC6FQcVyvln5b",
+   "type": "list-item",
+   "marker": "ii.",
+   "ordinal": "1.c.ii",
+   "depth": 3,
+   "text": "教研报告",
+   "path": "活动检查列表优化 › 1.c.ii",
+   "parent": "BgeXdiaSdoiZbIxJOPfc29yUnGe",
+   "comments": null
+  },
+  {
+   "id": "Jv7pdVQGaoighrxPGnFcrpq7nkc",
+   "type": "heading",
+   "level": 2,
+   "text": "AI活动纪要",
+   "path": "三、需求说明 › AI活动纪要"
+  },
+  {
+   "id": "IVLKdaaUJoND16xmCRscwxRrny2",
+   "type": "whiteboard",
+   "token": "OcN2wryBghcbqwbhEETc0HdGn5b",
+   "media": "m-d6d1a9bfaf3b",
+   "path": "AI活动纪要"
+  },
+  {
+   "id": "EAuhdE72soJetsx72OfcT3NfnnX",
+   "type": "heading",
+   "level": 3,
+   "text": "开始活动",
+   "path": "三、需求说明 › AI活动纪要 › 开始活动"
+  },
+  {
+   "id": "I9DLdvjJwoJnGCxj2rwcdpVSnEe",
+   "type": "heading",
+   "level": 4,
+   "text": "PC端",
+   "path": "三、需求说明 › AI活动纪要 › 开始活动 › PC端"
+  },
+  {
+   "id": "GPDsd6TBwo3p2bx4zzLcDQkSnhf",
+   "type": "paragraph",
+   "text": "教研活动",
+   "path": "PC端",
+   "comments": null
+  },
+  {
+   "id": "RoSEd3uaHoalexx2iXncaswfnoh",
+   "type": "image",
+   "media": "m-5b52e09f6ad6",
+   "name": "image.png",
+   "alt": "这是一年级语文《小青蛙》集体备课的教研AI会议纪要界面，顶部标注了活动为2026年10月12日的14:00-16:00，处于进行中状态。界面核心的AI会议纪要模块，设有“开始录音”按钮，下方还有“上传音视频生成”“导入已有活动总结”两个功能选项。左侧的附件资源区存放了《小青蛙·教学设计.docx》和板书设计.png两份资料。右侧的共思随记区显示参与人数为4人，记录了刘新强、程伟、李娟、孙永水四位参会人员的发言内容，底部还设有用于输入文字的聊天框，配有“附件”按钮和“发送”功能键，界面整体用于记录和沉淀本次集备活动的研讨内容。",
+   "caption": "",
+   "width": "1910",
+   "height": "915",
+   "path": "PC端",
+   "parent": null
+  },
+  {
+   "id": "M0vUdeYFno4e97xztoOceVksn2e",
+   "type": "paragraph",
+   "text": "集备活动",
+   "path": "PC端",
+   "comments": null
+  },
+  {
+   "id": "Wag5djdmJojfw5xgHC5catVZnCc",
+   "type": "image",
+   "media": "m-c1095786d772",
+   "name": "image.png",
+   "alt": "这是一张“一年级语文[3 小青蛙]集体备课”的PC端教研活动页面截图，对应文档中的AI活动纪要部分的开始活动环节。页面左侧为AI会议纪要功能区，设有“开始录音”“上传音频视频生成”“导入已有活动总结”等操作按钮，还有集备资源区，展示了《3 小青蛙》教学设计、板书设计、音视频素材等备课相关文件。页面右侧为“共题笔记”区，显示有3名参与人员的相关发言内容，当前在线参与人员共4人。",
+   "caption": "",
+   "width": "1910",
+   "height": "915",
+   "path": "PC端",
+   "parent": null
+  },
+  {
+   "id": "MSHJdVMLroLY8Dxbp2PchtLfn5d",
+   "type": "paragraph",
+   "text": "点击【开始活动】or【生成纪要】进入开始活动页面",
+   "path": "PC端",
+   "comments": null
+  },
+  {
+   "id": "NRhsdbqszonIZoxPa9Ock9Qgnud",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "**教研活动**",
+   "path": "PC端 › 1",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "BTyrdeGLKogUkCxxbCzcZoQMnEJ",
+   "type": "list-item",
+   "marker": "a.",
+   "ordinal": "1.a",
+   "depth": 2,
+   "text": "**页面基础功能**",
+   "path": "PC端 › 1.a",
+   "parent": "NRhsdbqszonIZoxPa9Ock9Qgnud",
+   "comments": null
+  },
+  {
+   "id": "PPeOdaS6boLkzFxuwnGcV0z5n7e",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.1",
+   "depth": 2,
+   "text": "设置活动目标（非必填）：支持文本输入，最多输入100字",
+   "path": "PC端 › 1.1",
+   "parent": "NRhsdbqszonIZoxPa9Ock9Qgnud",
+   "comments": null
+  },
+  {
+   "id": "NjtidNDFpoe7tlxRrkMcrAFznfe",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "1.2",
+   "depth": 2,
+   "text": "设置AI会议纪要模板（非必填：详见2.教研设置）：支持切换和点击查看模板；仅影响本活动AI纪要生成，历史纪要不受影响。",
+   "path": "PC端 › 1.2",
+   "parent": "NRhsdbqszonIZoxPa9Ock9Qgnud",
+   "comments": null
+  },
+  {
+   "id": "T3EYdL5fHoN90CxhrBLczIGfnOf",
+   "type": "list-item",
+   "marker": "a.",
+   "ordinal": "1.a",
+   "depth": 2,
+   "text": "**活动记录模式（三种模式互斥）**",
+   "path": "PC端 › 1.a",
+   "parent": "NRhsdbqszonIZoxPa9Ock9Qgnud",
+   "comments": null
+  },
+  {
+   "id": "JTucdXoT5oHRQAxe8hWcNoFDneg",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.a.1",
+   "depth": 3,
+   "text": "**实时录音**：",
+   "path": "PC端 › 1.a.1",
+   "parent": "T3EYdL5fHoN90CxhrBLczIGfnOf",
+   "comments": null
+  },
+  {
+   "id": "OioYdUumqo5CxNxtIc5cg3ZQnIb",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.a.1.1",
+   "depth": 4,
+   "text": "点击后进入实时录制状态；",
+   "path": "PC端 › 1.a.1.1",
+   "parent": "JTucdXoT5oHRQAxe8hWcNoFDneg",
+   "comments": null
+  },
+  {
+   "id": "AxcSdnaGioyjkuxP54tciWfUniA",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "1.a.1.2",
+   "depth": 4,
+   "text": "支持暂停&继续（当前录制人可操作）",
+   "path": "PC端 › 1.a.1.2",
+   "parent": "JTucdXoT5oHRQAxe8hWcNoFDneg",
+   "comments": null
+  },
+  {
+   "id": "JUGwd5ADdofqDjxylpuc9Nd6nsg",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "1.a.1.3",
+   "depth": 4,
+   "text": "点击结束录制后自动生成AI活动纪要。",
+   "path": "PC端 › 1.a.1.3",
+   "parent": "JTucdXoT5oHRQAxe8hWcNoFDneg",
+   "comments": null
+  },
+  {
+   "id": "W07ZdCtIqoiIH3xMy0gcm0hNnrc",
+   "type": "list-item",
+   "marker": "4.",
+   "ordinal": "1.a.1.4",
+   "depth": 4,
+   "text": "权限拦截：若麦克风被占用或无权限，弹窗强提示并引导开启；未开启前不得进入录制",
+   "path": "PC端 › 1.a.1.4",
+   "parent": "JTucdXoT5oHRQAxe8hWcNoFDneg",
+   "comments": null
+  },
+  {
+   "id": "BSYldiA3SogLIFxikqJcgW5mntd",
+   "type": "list-item",
+   "marker": "5.",
+   "ordinal": "1.a.1.5",
+   "depth": 4,
+   "text": "录制中的提示和退出弹窗：录制页顶部常驻：“会议录音中，请勿退出页面（请勿关闭小程序），否则录音将中断。”",
+   "path": "PC端 › 1.a.1.5",
+   "parent": "JTucdXoT5oHRQAxe8hWcNoFDneg",
+   "comments": null
+  },
+  {
+   "id": "J796dCDPvoSDhjxuKkKch8XLnYL",
+   "type": "list-item",
+   "marker": "6.",
+   "ordinal": "1.a.1.6",
+   "depth": 4,
+   "text": "退出页面弹窗：录音尚未结束，退出当前页面将中断本次录音。是否继续退出？",
+   "path": "PC端 › 1.a.1.6",
+   "parent": "JTucdXoT5oHRQAxe8hWcNoFDneg",
+   "comments": null
+  },
+  {
+   "id": "A79RdPXkko1We4x82a0cWnjsnj8",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "1.a.2",
+   "depth": 3,
+   "text": "：**上传音视频文件**",
+   "path": "PC端 › 1.a.2",
+   "parent": "T3EYdL5fHoN90CxhrBLczIGfnOf",
+   "comments": null
+  },
+  {
+   "id": "Yk99dzXUMoquUwxtTJOcweWqnvv",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.a.2.1",
+   "depth": 4,
+   "text": "支持上传音频/视频文件，系统转写并提取AI纪要内容。",
+   "path": "PC端 › 1.a.2.1",
+   "parent": "A79RdPXkko1We4x82a0cWnjsnj8",
+   "comments": null
+  },
+  {
+   "id": "B1psd5Wx0oy5bIxmgyjcwUUpnOe",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "1.a.2.2",
+   "depth": 4,
+   "text": "支持.mp3、.mp4、.wav、.m4a、.ogg格式，文件小于1GB",
+   "path": "PC端 › 1.a.2.2",
+   "parent": "A79RdPXkko1We4x82a0cWnjsnj8",
+   "comments": null
+  },
+  {
+   "id": "T6mjdIzuDoVNEMxvkBgc9hWqnP9",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "1.a.2.3",
+   "depth": 4,
+   "text": "异常兜底：支持大文件断点续传；解析失败支持重新上传。",
+   "path": "PC端 › 1.a.2.3",
+   "parent": "A79RdPXkko1We4x82a0cWnjsnj8",
+   "comments": null
+  },
+  {
+   "id": "N6Djd9Wg5oMZQqxGUcCcLBUznGb",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "1.a.3",
+   "depth": 3,
+   "text": "**已有活动纪要文件**",
+   "path": "PC端 › 1.a.3",
+   "parent": "T3EYdL5fHoN90CxhrBLczIGfnOf",
+   "comments": null
+  },
+  {
+   "id": "OLn4dYduDo856fxt5rGc2JuJnae",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.a.3.1",
+   "depth": 4,
+   "text": "支持上传文本文件。支持上传一份纪要文件，支持PDF、doc、docx格式等，文件大小500MB以内",
+   "path": "PC端 › 1.a.3.1",
+   "parent": "N6Djd9Wg5oMZQqxGUcCcLBUznGb",
+   "comments": null
+  },
+  {
+   "id": "JOAQd8NN5oeiSaxizndczyklnOc",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "1.a.3.2",
+   "depth": 4,
+   "text": "一旦选择此模式并上传成功，系统自动关闭实时录音与 AI 生成功能；该文件作为最终纪要，不消耗AI算力。",
+   "path": "PC端 › 1.a.3.2",
+   "parent": "N6Djd9Wg5oMZQqxGUcCcLBUznGb",
+   "comments": null
+  },
+  {
+   "id": "FLbUdRJVho9gTkx485lcVCEinMf",
+   "type": "list-item",
+   "marker": "b.",
+   "ordinal": "1.b",
+   "depth": 2,
+   "text": "**资源附件区**",
+   "path": "PC端 › 1.b",
+   "parent": "NRhsdbqszonIZoxPa9Ock9Qgnud",
+   "comments": null
+  },
+  {
+   "id": "KZEndMCEfo2Hobxgkp9cBsZXn5d",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.b.1",
+   "depth": 3,
+   "text": "展示教师在日程卡片中上传的&共思随记中上传的附件",
+   "path": "PC端 › 1.b.1",
+   "parent": "FLbUdRJVho9gTkx485lcVCEinMf",
+   "comments": null
+  },
+  {
+   "id": "SlFLdQinBoHsCuxTdBhcMxPNn5e",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "1.b.2",
+   "depth": 3,
+   "text": "）附件展示：上传人、上传时间、来源（“第几周-第几单元-课时名称” 或者 “共思随记”",
+   "path": "PC端 › 1.b.2",
+   "parent": "FLbUdRJVho9gTkx485lcVCEinMf",
+   "comments": null
+  },
+  {
+   "id": "K4vDd7WUNoVaq9xf1KCc7Ldonlg",
+   "type": "list-item",
+   "marker": "c.",
+   "ordinal": "1.c",
+   "depth": 2,
+   "text": "**共思随记**",
+   "path": "PC端 › 1.c",
+   "parent": "NRhsdbqszonIZoxPa9Ock9Qgnud",
+   "comments": null
+  },
+  {
+   "id": "Qlx8du3NloLA5axBo0Dc5mOOnVf",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.c.1",
+   "depth": 3,
+   "text": "会议过程中，参会成员均可在此发送文字或上传附件。互动内容将自动沉淀，作为AI生成会议纪要的素材。",
+   "path": "PC端 › 1.c.1",
+   "parent": "K4vDd7WUNoVaq9xf1KCc7Ldonlg",
+   "comments": null
+  },
+  {
+   "id": "EWuldJsTUonHQKxbVQIcs33jnyf",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "1.c.2",
+   "depth": 3,
+   "text": "右键点击发送的信息，活动纪要开始生成前均支持撤回",
+   "path": "PC端 › 1.c.2",
+   "parent": "K4vDd7WUNoVaq9xf1KCc7Ldonlg",
+   "comments": null
+  },
+  {
+   "id": "OjfXdNtjmo9q6Cxrr10cMyB6nyd",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "**集备活动**",
+   "path": "PC端 › 2",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "NRTVdTBMwoxMOwxnfv1cbP9tnQc",
+   "type": "list-item",
+   "marker": "a.",
+   "ordinal": "2.a",
+   "depth": 2,
+   "text": "页面基础功能",
+   "path": "PC端 › 2.a",
+   "parent": "OjfXdNtjmo9q6Cxrr10cMyB6nyd",
+   "comments": null
+  },
+  {
+   "id": "URCBd3ekFogloAxLqoKc13EEnFf",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "2.a.1",
+   "depth": 3,
+   "text": "**设置单元设计****（原有功能迁移）：**主备人可编辑，非主备人仅可查看。仅支持文本输入，最多每框输入100字",
+   "path": "PC端 › 2.a.1",
+   "parent": "NRTVdTBMwoxMOwxnfv1cbP9tnQc",
+   "comments": null
+  },
+  {
+   "id": "FLQsdTXggo95YOx3iOdc2AiZnNf",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2.a.2",
+   "depth": 3,
+   "text": "设置AI会议纪要模板",
+   "path": "PC端 › 2.a.2",
+   "parent": "NRTVdTBMwoxMOwxnfv1cbP9tnQc",
+   "comments": null
+  },
+  {
+   "id": "Bo5MdXFgzoQxwAxE1Brc6701nUe",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "2.1",
+   "depth": 2,
+   "text": "活动记录模式（和教研活动一致）",
+   "path": "PC端 › 2.1",
+   "parent": "OjfXdNtjmo9q6Cxrr10cMyB6nyd",
+   "comments": null
+  },
+  {
+   "id": "Qq41dYPrJo6qwPx6wPhcWponn8b",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2.2",
+   "depth": 2,
+   "text": "**集备资源区：**",
+   "path": "PC端 › 2.2",
+   "parent": "OjfXdNtjmo9q6Cxrr10cMyB6nyd",
+   "comments": null
+  },
+  {
+   "id": "W1oDdjdD0oeAx8xRI9ecxZoancd",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "2.2.1",
+   "depth": 3,
+   "text": "展示主备人上传的集备资源，此处支持主备人直接上传集备资源，所上传的资源同步至我的备课",
+   "path": "PC端 › 2.2.1",
+   "parent": "Qq41dYPrJo6qwPx6wPhcWponn8b",
+   "comments": null
+  },
+  {
+   "id": "ZjeJdKUZLoo979x9aFacxWN1n8e",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "2.2.1.1",
+   "depth": 4,
+   "text": "）附件展示：上传人、上传时间、来源（“第几周-第几单元-课时名称” 或者 “共思随记”",
+   "path": "PC端 › 2.2.1.1",
+   "parent": "W1oDdjdD0oeAx8xRI9ecxZoancd",
+   "comments": null
+  },
+  {
+   "id": "BrCid0nPho2hyRxRmorcbaF3n6f",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2.2.1.2",
+   "depth": 4,
+   "text": "下拉框展示第几周-第几单元-课时名称",
+   "path": "PC端 › 2.2.1.2",
+   "parent": "W1oDdjdD0oeAx8xRI9ecxZoancd",
+   "comments": null
+  },
+  {
+   "id": "BB5pdYddLoe1IexKgDBcKcuXnDd",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "2.2.1.3",
+   "depth": 4,
+   "text": "仅选中课时后，该课时的主备人界面出现上传按钮",
+   "path": "PC端 › 2.2.1.3",
+   "parent": "W1oDdjdD0oeAx8xRI9ecxZoancd",
+   "comments": null
+  },
+  {
+   "id": "KTx3dmSaHoHXlrxUxyGcP7Imn9c",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2.2.2",
+   "depth": 3,
+   "text": "共思随记区上传的附件",
+   "path": "PC端 › 2.2.2",
+   "parent": "Qq41dYPrJo6qwPx6wPhcWponn8b",
+   "comments": null
+  },
+  {
+   "id": "TVKsdtdsdoYWlXxkRhLcUdRhn4t",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "2.2.3",
+   "depth": 3,
+   "text": "排序规则：按照课时顺序排序共思随记的附件在最后（同一课时内按照上传时间倒序排序）",
+   "path": "PC端 › 2.2.3",
+   "parent": "Qq41dYPrJo6qwPx6wPhcWponn8b",
+   "comments": null
+  },
+  {
+   "id": "YAc8diQIioT0ikxwygKc6ECHnDb",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "2.3",
+   "depth": 2,
+   "text": "共思随记（和教研活动一致）",
+   "path": "PC端 › 2.3",
+   "parent": "OjfXdNtjmo9q6Cxrr10cMyB6nyd",
+   "comments": null
+  },
+  {
+   "id": "D301dvAiyobkO5xmMLlcFTn5nbb",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "3",
+   "depth": 1,
+   "text": "：**其他场景**",
+   "path": "PC端 › 3",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "JcHidmp5joVZJWxHJ5kcctqvndd",
+   "type": "list-item",
+   "marker": "a.",
+   "ordinal": "3.a",
+   "depth": 2,
+   "text": "非录制人：",
+   "path": "PC端 › 3.a",
+   "parent": "D301dvAiyobkO5xmMLlcFTn5nbb",
+   "comments": null
+  },
+  {
+   "id": "IwxkdZrHUoJ09sxp0HGc6dLunoh",
+   "type": "list-item",
+   "marker": "i.",
+   "ordinal": "3.a.i",
+   "depth": 3,
+   "text": "右上角模块显示会议正在录制中，录制暂停、生成会议纪要、上传音视频、导入已有活动总结等按钮置灰",
+   "path": "PC端 › 3.a.i",
+   "parent": "JcHidmp5joVZJWxHJ5kcctqvndd",
+   "comments": null
+  },
+  {
+   "id": "AmEddZeOzo0b7RxsM03ce2aOnGd",
+   "type": "list-item",
+   "marker": "b.",
+   "ordinal": "3.b",
+   "depth": 2,
+   "text": "录制人暂停录制后，会议中的所有人均可点击开始录制，此时点击开始录制的用户即为新的录制人",
+   "path": "PC端 › 3.b",
+   "parent": "D301dvAiyobkO5xmMLlcFTn5nbb",
+   "comments": null
+  },
+  {
+   "id": "EI0adkbKfooI79xKfnFcG5C2n0d",
+   "type": "list-item",
+   "marker": "c.",
+   "ordinal": "3.c",
+   "depth": 2,
+   "text": "：**录制结束后是否立刻生成纪要（评估成本），若非立即录制**",
+   "path": "PC端 › 3.c",
+   "parent": "D301dvAiyobkO5xmMLlcFTn5nbb",
+   "comments": null
+  },
+  {
+   "id": "RdyBdKyp8o4y7DxmorUcGTDlnZd",
+   "type": "list-item",
+   "marker": "i.",
+   "ordinal": "3.c.i",
+   "depth": 3,
+   "text": "结束活动录制后，页面立即展示【生成会议纪要】按钮。用户点击后，才真实触发 AI 纪要生成，进入纪要生成中页面。",
+   "path": "PC端 › 3.c.i",
+   "parent": "EI0adkbKfooI79xKfnFcG5C2n0d",
+   "comments": null
+  },
+  {
+   "id": "PSuvdwVApofKMCxfDy2cYBNcneP",
+   "type": "list-item",
+   "marker": "ii.",
+   "ordinal": "3.c.ii",
+   "depth": 3,
+   "text": "若用户未点击：",
+   "path": "PC端 › 3.c.ii",
+   "parent": "EI0adkbKfooI79xKfnFcG5C2n0d",
+   "comments": null
+  },
+  {
+   "id": "NcUqdQLZgoS9yrxsEL1cHyiHn0f",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "3.c.ii.1",
+   "depth": 4,
+   "text": "5 分钟后发送消息通知，文案：“课堂要点已可提取，点击查看纪要”。",
+   "path": "PC端 › 3.c.ii.1",
+   "parent": "PSuvdwVApofKMCxfDy2cYBNcneP",
+   "comments": null
+  },
+  {
+   "id": "U8pFdOju5owxqpxxkGJcqi0gnOg",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "3.c.ii.2",
+   "depth": 4,
+   "text": "用户点击通知后，才真实触发生成纪要。",
+   "path": "PC端 › 3.c.ii.2",
+   "parent": "PSuvdwVApofKMCxfDy2cYBNcneP",
+   "comments": null
+  },
+  {
+   "id": "C7PRdDhjboLvOWxzjx7crg3onhc",
+   "type": "heading",
+   "level": 4,
+   "text": "移动端",
+   "path": "三、需求说明 › AI活动纪要 › 开始活动 › 移动端"
+  },
+  {
+   "id": "x-0012",
+   "type": "table-row",
+   "head": [
+    "活动类型",
+    "开始活动页",
+    "设置教研活动目标or单元计划",
+    "开始录制",
+    "选择会议分析模版"
+   ],
+   "cells": [
+    "教研活动",
+    "",
+    "",
+    "",
+    ""
+   ],
+   "rowLabel": "教研活动",
+   "path": "移动端 › 教研活动",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "KYxQdCJS1omUTOxb75jcrAzAnXn",
+   "type": "image",
+   "media": "m-84b87ba5ad3b",
+   "name": "image.png",
+   "alt": "图片展示的是鸿儒教研AI纪要&教研报告中移动端“开始活动”界面。界面顶部显示时间为13:48，有返回、开始活动等图标。中间部分有“AI会议纪要”选项，可现场录音或上传音视频一键生成纪要，下方有“开始录音”按钮及申请麦克风权限提示。下方还有“上传音视频生成”“导入已有活动总结”选项。底部是“附件资源区”，有2个文件。下方是“共思随记”，显示刘雨晨、程祎、李娟、孙永青等人的发言内容，如刘雨晨提出识字目标等。",
+   "caption": "",
+   "width": "595",
+   "height": "1286",
+   "path": "移动端",
+   "parent": "x-0012",
+   "cell": 1
+  },
+  {
+   "id": "DZ4Sdd3zooNCzexhmurciJlynYc",
+   "type": "image",
+   "media": "m-180e15f220eb",
+   "name": "image.png",
+   "alt": "图片展示的是移动端“开始活动”界面。上方显示“开始活动”，左侧有返回箭头，右侧有三个点和一个圆圈。中间部分有“2026学秋数学活动纪要框架”和“设置活动目标”选项。下方是“AI会议纪要”区域，介绍现场录音或上传音视频一键生成会议纪要，有“开始录音”按钮，点击后申请麦克风权限。还有“上传音视频生成”“导入已有活动总结”选项。底部是“设置活动目标”区域，可输入活动目标，示例为围绕“3小青蛙”明确随文识字路径等，下方有“保存”按钮。",
+   "caption": "",
+   "width": "590",
+   "height": "1279",
+   "path": "移动端",
+   "parent": "x-0012",
+   "cell": 2
+  },
+  {
+   "id": "J4i7dxrBOoPBVhxiLYdcN0L3nyb",
+   "type": "image",
+   "media": "m-b3dcacf37a77",
+   "name": "image.png",
+   "alt": "图片展示的是鸿儒教研AI纪要&教研报告中移动端“开始活动”界面。界面显示时间为13:48，有“开始活动”标题，下方有“暂停录音”“取消录音”“结束并生成纪要”等操作按钮。下方“生成设置”处显示“2026学秋教学活动...”，“设置活动目标”处有数字序号标识。界面中部有“附件资源区”，显示有2个文件。下方是“共思随记”，有刘雨晨、程炜、李娟、孙永青等教师的发言记录，如刘雨晨提出识字目标，程炜建议字理识字等。",
+   "caption": "",
+   "width": "590",
+   "height": "1279",
+   "path": "移动端",
+   "parent": "x-0012",
+   "cell": 3
+  },
+  {
+   "id": "TmYedmZTCoVWH5xlBIuclNbcnKh",
+   "type": "image",
+   "media": "m-b092f19cd450",
+   "name": "image.png",
+   "alt": "这张图是移动端集备活动的相关界面，正显示选择报告模板的弹窗内容，界面中高亮标注的“2026学秋教学活动会议纪要框架”被标记为当前选用状态。界面上方是第二单元集备活动的页面，提供了开始录音、上传音视频生成、导入已有活动总结等功能选项，下方还展示了“集备资源”板块，包含《春夏秋冬-共案.docx》《姓氏歌-共案.docx》两个资源文件。此界面属于教研活动中集备活动的移动端操作页面，与前文提到的移动端集备活动需求内容对应，可完成报告模板的选择操作。",
+   "caption": "",
+   "width": "590",
+   "height": "1279",
+   "path": "移动端",
+   "parent": "x-0012",
+   "cell": 4
+  },
+  {
+   "id": "x-0013",
+   "type": "table-row",
+   "head": [
+    "活动类型",
+    "开始活动页",
+    "设置教研活动目标or单元计划",
+    "开始录制",
+    "选择会议分析模版"
+   ],
+   "cells": [
+    "集备活动",
+    "",
+    ""
+   ],
+   "rowLabel": "集备活动",
+   "path": "移动端 › 集备活动",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "XVEidJXVZoVl5ExyCEGcTBKbnVd",
+   "type": "image",
+   "media": "m-552747b1e7d6",
+   "name": "image.png",
+   "alt": "图片展示的是鸿儒教研平台移动端“第二单元集备活动”界面。上方有“2020学秋数学活动会议纪要框架”和“设置单元计划”选项。中间有“开始录音”按钮，下方有“上传音视频生成”和“导入已有活动总结”选项。下方“集备资源”区域显示“1春夏秋冬 - 共案.docx”文件，上传人为刘雨晨，来源为第一周第一单元。底部“共思随记”区域有刘雨晨、程玮、李娟等人的发言，如刘雨晨提出识字目标，程玮建议讲易错字等。该图与文档中移动端开始集备活动的操作步骤相关。",
+   "caption": "",
+   "width": "590",
+   "height": "1279",
+   "path": "移动端",
+   "parent": "x-0013",
+   "cell": 1
+  },
+  {
+   "id": "BOmddo7ZhoWP9Hx286Fc2l78nmc",
+   "type": "image",
+   "media": "m-2294fb2fda87",
+   "name": "image.png",
+   "alt": "图片展示的是移动端“第二单元集备活动”界面。上方显示“2020学秋数学活动会议纪要框架”和“设置单元计划”选项。下方有“开始录音”按钮，以及“设置单元计划”板块，包含单元主题、课时安排、单元目标、单元素养、学情分析等输入框，如单元主题为“第三单元 · 小青蛙”，课时安排共6课时（含1课时机动），单元目标为认识12个生字、会写7个字等。底部有“保存”按钮。该图片与文档中移动端“设置教研活动目标or单元计划”步骤相关，用于设置单元计划。",
+   "caption": "",
+   "width": "590",
+   "height": "1279",
+   "path": "移动端",
+   "parent": "x-0013",
+   "cell": 2
+  },
+  {
+   "id": "S1k6dasn2o7HVAxFhuQcxSDPnDi",
+   "type": "heading",
+   "level": 3,
+   "text": "查看纪要（AI生成）",
+   "path": "三、需求说明 › AI活动纪要 › 查看纪要（AI生成）"
+  },
+  {
+   "id": "YFpedKLjBokHNjx3509c4hQInjh",
+   "type": "heading",
+   "level": 4,
+   "text": "PC端",
+   "path": "三、需求说明 › AI活动纪要 › 查看纪要（AI生成） › PC端"
+  },
+  {
+   "id": "HKtWdRcADogAhOxtrHdc3b8QnRd",
+   "type": "paragraph",
+   "text": "教研活动",
+   "path": "PC端",
+   "comments": null
+  },
+  {
+   "id": "Acg8doXQhoThQsxbTOtcqgHrnYd",
+   "type": "image",
+   "media": "m-d08be4e827ad",
+   "name": "image.png",
+   "alt": "图片展示的是鸿儒教研AI纪要中“查看纪要（AI生成）”部分的PC端界面。上方显示活动名称、时间、地点等信息，下方有“活动纪要”“会议纪要”“会议录音”等板块。其中“活动纪要”板块突出显示了“会议纪要”，内容涵盖会议时间、地点、参会人员、会议主题、会议议程、会议总结等，还展示了会议录音。该图片与文档中介绍AI纪要查看功能的内容相关，直观呈现了AI生成的活动纪要界面。",
+   "caption": "",
+   "width": "3828",
+   "height": "1643",
+   "path": "PC端",
+   "parent": null
+  },
+  {
+   "id": "UVqsdqWddoqBpBx7OLRcH2Xen6f",
+   "type": "paragraph",
+   "text": "集备活动",
+   "path": "PC端",
+   "comments": null
+  },
+  {
+   "id": "DX5adkZsYoXEOFxa91Mc410qnNd",
+   "type": "image",
+   "media": "m-f368f24d9b6a",
+   "name": "image.png",
+   "alt": "这张图片展示的是PC端的AI生成教研活动纪要界面，属于鸿儒教研平台的功能页面。界面左侧有音频播放区域，配有播放控件，下方显示了多个参与人的相关条形进度数据；右侧是生成的AI教研纪要内容，按“参会纪要”“核心人物”“讨论话题”“待办提醒”“工作动态”等板块清晰呈现，部分内容旁带有红色标注符号，整体为教研活动相关的记录页面，对应文档中提到的“查看纪要（AI生成）”的PC端内容。",
+   "caption": "",
+   "width": "3828",
+   "height": "1685",
+   "path": "PC端",
+   "parent": null
+  },
+  {
+   "id": "PkqWd1FCIoAQBgx2TBVcnoGCnef",
+   "type": "paragraph",
+   "text": "点击【生成纪要】（生成中）or【查看纪要】进入AI活动纪要页",
+   "path": "PC端",
+   "comments": null
+  },
+  {
+   "id": "V8iEd1WFyoJ6rKx6r5CcC1qFnvb",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "：流式展示AI思考内容**生成中**",
+   "path": "PC端 › 1",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "Q4zUd6Kjrouf4FxingxcFxyVntd",
+   "type": "image",
+   "media": "m-6f0ed872039b",
+   "name": "image.png",
+   "alt": "这张图片展示的是PC端鸿儒教研AI的“活动纪要”页面，当前状态标注为“生成中”，用于呈现AI生成教研活动纪要的过程内容。页面顶部是活动的基础信息，包括活动名称、时间、负责人、参与人、教研组、参与方式及活动主题；输入资源区域列有三个已勾选的内容，分别为读取现场录音并转写、结合会议计划、生成会议纪要，代表AI纪要生成的前置操作已经完成。“思考过程”区域则流式展示着AI的工作进展，显示AI正在读取转写的现场录音，处于准备撰写内容的阶段，后续还梳理了参会人员信息、明确会议主题并规划了纪要的结构内容，整体对应文档中“生成中”状态下流式展示AI思考内容的说明。",
+   "caption": "",
+   "width": "1910",
+   "height": "915",
+   "path": "PC端",
+   "parent": null
+  },
+  {
+   "id": "JpJYdiT2ZoveLvxTJQOczk6Knbf",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "**已生成：**",
+   "path": "PC端 › 1",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "XyJjd0XOioXUfrxppCZc31IlnMf",
+   "type": "list-item",
+   "marker": "a.",
+   "ordinal": "1.a",
+   "depth": 2,
+   "text": "：**活动纪要**",
+   "path": "PC端 › 1.a",
+   "parent": "JpJYdiT2ZoveLvxTJQOczk6Knbf",
+   "comments": null
+  },
+  {
+   "id": "NRu1dIwDFoVF4jx3iqpcvScRnEe",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.a.1",
+   "depth": 3,
+   "text": "：按照预设场景模版生成，关键结论支持点击定位至证据**纪要内容**",
+   "path": "PC端 › 1.a.1",
+   "parent": "XyJjd0XOioXUfrxppCZc31IlnMf",
+   "comments": null
+  },
+  {
+   "id": "Jf0sdS0HooIsKkxfYx1cPWc9n9f",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.a.1.1",
+   "depth": 4,
+   "text": "音频证据：点击后播放器定位至证据开始时间；",
+   "path": "PC端 › 1.a.1.1",
+   "parent": "NRu1dIwDFoVF4jx3iqpcvScRnEe",
+   "comments": null
+  },
+  {
+   "id": "DqJLdo9aaonokOxPNyqcNyiRnWf",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "1.a.1.2",
+   "depth": 4,
+   "text": "文本证据：浮层展示，不强制跳转播放器",
+   "path": "PC端 › 1.a.1.2",
+   "parent": "NRu1dIwDFoVF4jx3iqpcvScRnEe",
+   "comments": null
+  },
+  {
+   "id": "G3Yvd1rTnoajLKx6yxDcXp8BnRb",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "1.a.1.3",
+   "depth": 4,
+   "text": "资源证据：点击后跳转至指定文件",
+   "path": "PC端 › 1.a.1.3",
+   "parent": "NRu1dIwDFoVF4jx3iqpcvScRnEe",
+   "comments": null
+  },
+  {
+   "id": "E3QDdaGhjoQH8YxVw5Rc4fnbnBf",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.a.1.3.1",
+   "depth": 5,
+   "text": "教研活动：共思随记区上传的附件或日程卡片中上传的附件",
+   "path": "PC端 › 1.a.1.3.1",
+   "parent": "G3Yvd1rTnoajLKx6yxDcXp8BnRb",
+   "comments": null
+  },
+  {
+   "id": "OG5AdS4cKoTByGxk0m4c3709neh",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "1.a.1.3.2",
+   "depth": 5,
+   "text": "集备活动：共思随记区上传的附件或集备资源",
+   "path": "PC端 › 1.a.1.3.2",
+   "parent": "G3Yvd1rTnoajLKx6yxDcXp8BnRb",
+   "comments": null
+  },
+  {
+   "id": "SqvvdeWyXoktSYx5eJzcEO8bnpe",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "1.a.2",
+   "depth": 3,
+   "text": "：仅供展示不可编辑**待办**",
+   "path": "PC端 › 1.a.2",
+   "parent": "XyJjd0XOioXUfrxppCZc31IlnMf",
+   "comments": null
+  },
+  {
+   "id": "OB3LdfDx8oFYujxrDvIc6DA5ndb",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.1",
+   "depth": 2,
+   "text": "：展示转写文字记录，包含发言人、时间、文本**文字记录**",
+   "path": "PC端 › 1.1",
+   "parent": "JpJYdiT2ZoveLvxTJQOczk6Knbf",
+   "comments": null
+  },
+  {
+   "id": "Jj4edvHmWotHtexS1b5ceAxtnDb",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.1.1",
+   "depth": 3,
+   "text": "支持点击定位：点击某条文字记录，音频播放器定位至对应时间点，并高亮该条记录",
+   "path": "PC端 › 1.1.1",
+   "parent": "OB3LdfDx8oFYujxrDvIc6DA5ndb",
+   "comments": null
+  },
+  {
+   "id": "ClY6dOMzso91mMx4SPyc3FRen3c",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "1.1.2",
+   "depth": 3,
+   "text": "支持搜索：支持关键词搜索，命中结果高亮；",
+   "path": "PC端 › 1.1.2",
+   "parent": "OB3LdfDx8oFYujxrDvIc6DA5ndb",
+   "comments": null
+  },
+  {
+   "id": "SUoUdSXLLorVqNxMoGZcX5GBnRd",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "1.1.3",
+   "depth": 3,
+   "text": "支持筛选发言人",
+   "path": "PC端 › 1.1.3",
+   "parent": "OB3LdfDx8oFYujxrDvIc6DA5ndb",
+   "comments": null
+  },
+  {
+   "id": "Vub2dr4fXoKiSexks5YcSOP6nHd",
+   "type": "list-item",
+   "marker": "4.",
+   "ordinal": "1.1.4",
+   "depth": 3,
+   "text": "支持切换发言人：对某条记录的发言人点击修改，下拉框展示所有参会人员名单，支持修改单条和全局替换",
+   "path": "PC端 › 1.1.4",
+   "parent": "OB3LdfDx8oFYujxrDvIc6DA5ndb",
+   "comments": null
+  },
+  {
+   "id": "NelodHG6Eoqtk0x9QRVcHokCnCA",
+   "type": "image",
+   "media": "m-7bbc9b81d00f",
+   "name": "image.png",
+   "alt": "图片展示的是2024学年第二学期期初教研计划的AI活动纪要PC端界面。上方有“2024学年第二学期期初教研计划”标题及“生成中”状态。中间是音频播放区域，下方有发言人、相关资源、活动目标等板块，还显示了各发言人参会百分比。右侧是会议纪要区域，包含文字记录和共同随记，文字记录支持搜索、筛选发言人、切换发言人等操作，共同随记可添加内容。该图直观呈现了AI活动纪要PC端的界面布局及功能。",
+   "caption": "",
+   "width": "1910",
+   "height": "915",
+   "path": "PC端",
+   "parent": "OB3LdfDx8oFYujxrDvIc6DA5ndb"
+  },
+  {
+   "id": "YvIId4jBsoQxjvxT34tcb3eVnk0",
+   "type": "image",
+   "media": "m-9c5a89d7b528",
+   "name": "image.png",
+   "alt": "图片展示的是2024学年第二学期期初研讨活动的AI生成纪要页面。页面上方显示活动名称、时间、负责人等信息。下方有活动音频播放区域，可进行播放、暂停、后退10秒、前进10秒、倍速（0.5x/1.0x/1.5x/2.0x）操作，还能拖拽音频。文字记录部分呈现发言人发言内容，支持搜索、筛选发言人、切换发言人等操作。发言人部分显示各发言人参会百分比，分母为所有发言人的有效发言时长之和。",
+   "caption": "",
+   "width": "1910",
+   "height": "915",
+   "path": "PC端",
+   "parent": "OB3LdfDx8oFYujxrDvIc6DA5ndb"
+  },
+  {
+   "id": "Bu8odiJGSoV4c7x5WJxcbP3jnmb",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "1.2",
+   "depth": 2,
+   "text": "**活动音频播放**",
+   "path": "PC端 › 1.2",
+   "parent": "JpJYdiT2ZoveLvxTJQOczk6Knbf",
+   "comments": null
+  },
+  {
+   "id": "EwebdB9MWoMIeRxQkzBc1WVanne",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.2.1",
+   "depth": 3,
+   "text": "播放、暂停、后退&前进10秒、倍速（0.5x/1.0x/1.5x/2.0x）",
+   "path": "PC端 › 1.2.1",
+   "parent": "Bu8odiJGSoV4c7x5WJxcbP3jnmb",
+   "comments": null
+  },
+  {
+   "id": "A6DIdusBRo2fWWxFXzXcmfifnBg",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "1.2.2",
+   "depth": 3,
+   "text": "支持拖拽音频",
+   "path": "PC端 › 1.2.2",
+   "parent": "Bu8odiJGSoV4c7x5WJxcbP3jnmb",
+   "comments": null
+  },
+  {
+   "id": "IKipdcD9Sox3wkxXtlFcRlNGngh",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "1.3",
+   "depth": 2,
+   "text": "**发言人**",
+   "path": "PC端 › 1.3",
+   "parent": "JpJYdiT2ZoveLvxTJQOczk6Knbf",
+   "comments": null
+  },
+  {
+   "id": "QTIldZFDyo5arVxOXNSc04SxnAd",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.3.1",
+   "depth": 3,
+   "text": "展示每个发言人参会百分比：该发言人有效发言总时长÷所有发言人有效发言总时长×100%",
+   "path": "PC端 › 1.3.1",
+   "parent": "IKipdcD9Sox3wkxXtlFcRlNGngh",
+   "comments": null
+  },
+  {
+   "id": "Sah3dKEJWokYupxzvfsccfs7nNd",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.3.1.1",
+   "depth": 4,
+   "text": "分母：分母为所有发言人的有效发言时长之和，不包含静音、纯环境噪音及无有效语音的等待区间；正常情况下各发言人百分比之和为 100%。",
+   "path": "PC端 › 1.3.1.1",
+   "parent": "QTIldZFDyo5arVxOXNSc04SxnAd",
+   "comments": null
+  },
+  {
+   "id": "BcPPdv0XtoJtLsxeOjzcHuE7nRd",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "1.3.1.2",
+   "depth": 4,
+   "text": "重叠发言： 多人同时说话的区间不计入任何一方的有效发言时长，避免百分比之和超过 100%。",
+   "path": "PC端 › 1.3.1.2",
+   "parent": "QTIldZFDyo5arVxOXNSc04SxnAd",
+   "comments": null
+  },
+  {
+   "id": "DsBpdZyZbojHkSxlmACc8vP5nib",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "1.3.1.3",
+   "depth": 4,
+   "text": "认领聚合： 同一参会人员认领多个声纹时，先合并其所有已认领声纹的有效发言时长作为分子，再除以全体有效发言总时长",
+   "path": "PC端 › 1.3.1.3",
+   "parent": "QTIldZFDyo5arVxOXNSc04SxnAd",
+   "comments": null
+  },
+  {
+   "id": "Xiugdbw5Not4ebx95PYcfbfTnFh",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "1.3.2",
+   "depth": 3,
+   "text": "以“发言人1”“发言人2”等声纹标识展示",
+   "path": "PC端 › 1.3.2",
+   "parent": "IKipdcD9Sox3wkxXtlFcRlNGngh",
+   "comments": null
+  },
+  {
+   "id": "TfK7dXArMoiDv6xVJoAcjGL7noc",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "1.3.3",
+   "depth": 3,
+   "text": "认领发言人：点击后支持对每个声纹进行试听，选择对应的参会人员。认领后，前端将该声纹对应的发言人标识局部替换为所选参会人员姓名",
+   "path": "PC端 › 1.3.3",
+   "parent": "IKipdcD9Sox3wkxXtlFcRlNGngh",
+   "comments": null
+  },
+  {
+   "id": "FYMudu0pvosxXlxtcGhcAYpqnte",
+   "type": "list-item",
+   "marker": "a.",
+   "ordinal": "1.a",
+   "depth": 2,
+   "text": "：点击支持预览**相关资源**",
+   "path": "PC端 › 1.a",
+   "parent": "JpJYdiT2ZoveLvxTJQOczk6Knbf",
+   "comments": null
+  },
+  {
+   "id": "FXmXdU4rEoGOJExEZgycYsD7nda",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.a.1",
+   "depth": 3,
+   "text": "教研活动：附件",
+   "path": "PC端 › 1.a.1",
+   "parent": "FYMudu0pvosxXlxtcGhcAYpqnte",
+   "comments": null
+  },
+  {
+   "id": "HWvpdREPookCSXxrbA8cAiisnIc",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "1.a.2",
+   "depth": 3,
+   "text": "集备活动：集备资源、附件",
+   "path": "PC端 › 1.a.2",
+   "parent": "FYMudu0pvosxXlxtcGhcAYpqnte",
+   "comments": null
+  },
+  {
+   "id": "UVwidK16IofnYZxar6jcFWdmntg",
+   "type": "list-item",
+   "marker": "b.",
+   "ordinal": "1.b",
+   "depth": 2,
+   "text": "：点击可查看到活动开始前设置的活动目标或单元计划，不可编辑**查看活动目标or单元计划**",
+   "path": "PC端 › 1.b",
+   "parent": "JpJYdiT2ZoveLvxTJQOczk6Knbf",
+   "comments": null
+  },
+  {
+   "id": "KVvRdr4ZnocPKAxvZQecNze4nEA",
+   "type": "list-item",
+   "marker": "c.",
+   "ordinal": "1.c",
+   "depth": 2,
+   "text": "：**操作**",
+   "path": "PC端 › 1.c",
+   "parent": "JpJYdiT2ZoveLvxTJQOczk6Knbf",
+   "comments": null
+  },
+  {
+   "id": "WMtGdLE3zoX55GxguBdc1jbBn17",
+   "type": "list-item",
+   "marker": "i.",
+   "ordinal": "1.c.i",
+   "depth": 3,
+   "text": "导出活动纪要：下载活动纪要为word文档",
+   "path": "PC端 › 1.c.i",
+   "parent": "KVvRdr4ZnocPKAxvZQecNze4nEA",
+   "comments": null
+  },
+  {
+   "id": "Mwljdz4tIoAF4HxOCe8cHyPZnUb",
+   "type": "list-item",
+   "marker": "ii.",
+   "ordinal": "1.c.ii",
+   "depth": 3,
+   "text": "下载活动音频",
+   "path": "PC端 › 1.c.ii",
+   "parent": "KVvRdr4ZnocPKAxvZQecNze4nEA",
+   "comments": null
+  },
+  {
+   "id": "Th4Rd5KLqo3tyCxgwSYcfT92nie",
+   "type": "list-item",
+   "marker": "iii.",
+   "ordinal": "1.c.iii",
+   "depth": 3,
+   "text": "更多：删除本次纪要（仅备课组长及以上的角色有权限重新生成）",
+   "path": "PC端 › 1.c.iii",
+   "parent": "KVvRdr4ZnocPKAxvZQecNze4nEA",
+   "comments": null
+  },
+  {
+   "id": "UEBUd97R1oHXJsx0iTrcTGgjnOh",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.c.iii.1",
+   "depth": 4,
+   "text": "点击后二次弹窗提醒“删除本次纪要后，与之相关的音视频及纪要文件也将一并删除。是否继续？”【取消】【确认重新生成】",
+   "path": "PC端 › 1.c.iii.1",
+   "parent": "Th4Rd5KLqo3tyCxgwSYcfT92nie",
+   "comments": null
+  },
+  {
+   "id": "IE3VdU67doZRZUxPugZcyiPTnIz",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "1.c.iii.2",
+   "depth": 4,
+   "text": "点击确认重新生成后进入活动开始页面",
+   "path": "PC端 › 1.c.iii.2",
+   "parent": "Th4Rd5KLqo3tyCxgwSYcfT92nie",
+   "comments": null
+  },
+  {
+   "id": "YVNNdOiR7oD07UxVTUHcAkTRnLd",
+   "type": "heading",
+   "level": 4,
+   "text": "移动端",
+   "path": "三、需求说明 › AI活动纪要 › 查看纪要（AI生成） › 移动端"
+  },
+  {
+   "id": "x-0014",
+   "type": "table-row",
+   "head": [
+    "活动类型",
+    "",
+    "",
+    ""
+   ],
+   "cells": [
+    "教研活动",
+    "",
+    "",
+    ""
+   ],
+   "rowLabel": "教研活动",
+   "path": "移动端 › 教研活动",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "Of3rdkRoqo46e0xHqH6cj4kznJe",
+   "type": "image",
+   "media": "m-6ac4063a7095",
+   "name": "image.png",
+   "alt": "这是移动端显示的五年级语文第一单元集备活动的AI生成活动纪要内容，页面顶部标注有“AI 已生成”标识。核心板块包含“核心结论”“工作步骤”“纪要摘要”三个部分，其中“核心结论”被选中显示，内容涵盖定稿采用“情境导入—描点作图—归纳性质—变式练习—小结”的五环节，导入素材统一使用“校园快递柜计费”且控制在3分钟内，还明确了个性化调整、作业分层的相关安排；工作步骤列出了10月25日和11月3日两个环节的安排及对应时长；纪要摘要说明本次集备围绕一次函数图象单元展开，共51分钟、4人发言18轮，组内审定了教学流程。",
+   "caption": "",
+   "width": "590",
+   "height": "1279",
+   "path": "移动端",
+   "parent": "x-0014",
+   "cell": 1
+  },
+  {
+   "id": "C2FGd4gfdoFufix0s2Qc0o3rneg",
+   "type": "image",
+   "media": "m-b173616b4ba3",
+   "name": "image.png",
+   "alt": "图片展示的是移动端查看活动纪要界面。上方显示活动名称为“五年级语文第一单元集备”，并有“AI已生成”标识。下方是会议纪要内容，包括核心结论和工作步骤，如教学流程、导入素材、个性化调整等。底部弹出设置菜单，有导出活动纪要、下载活动音频、删除本次纪要选项。该图片与文档中移动端查看活动纪要的内容相关，直观呈现了移动端查看活动纪要的界面及设置功能。",
+   "caption": "",
+   "width": "590",
+   "height": "1279",
+   "path": "移动端",
+   "parent": "x-0014",
+   "cell": 3
+  },
+  {
+   "id": "x-0015",
+   "type": "table-row",
+   "head": [
+    "活动类型",
+    "",
+    "",
+    ""
+   ],
+   "cells": [
+    "集备活动",
+    "",
+    ""
+   ],
+   "rowLabel": "集备活动",
+   "path": "移动端 › 集备活动",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0016",
+   "type": "table-row",
+   "head": [
+    "活动类型",
+    "",
+    "",
+    ""
+   ],
+   "cells": [
+    "说明",
+    "",
+    "",
+    ""
+   ],
+   "rowLabel": "说明",
+   "path": "移动端 › 说明",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0017",
+   "type": "table-row",
+   "head": [
+    "活动类型",
+    "",
+    "",
+    ""
+   ],
+   "cells": [
+    "",
+    "",
+    "",
+    ""
+   ],
+   "rowLabel": "#4",
+   "path": "移动端 › #4",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "ZULQdAtyKoYUkoxdObIcCHmInif",
+   "type": "heading",
+   "level": 3,
+   "text": "查看纪要（非AI生成）",
+   "path": "三、需求说明 › AI活动纪要 › 查看纪要（非AI生成）"
+  },
+  {
+   "id": "E3hJd74Luojgcdx8bEccXEd7nde",
+   "type": "paragraph",
+   "text": "教研活动",
+   "path": "查看纪要（非AI生成）",
+   "comments": null
+  },
+  {
+   "id": "ZNUqdbVRAondvAxdo2ec282Wnfh",
+   "type": "image",
+   "media": "m-9c13770dd066",
+   "name": "image.png",
+   "alt": "图片展示的是教师上传活动纪要文件后的查看页面。页面上方显示活动信息，包括活动名称、时间、负责人、参与人、活动类型等。下方是活动纪要，以文字形式呈现，内容为单元整体教学设计研讨会议纪要，包含活动信息、研讨内容等。右上角有“相关资源”“活动目标”“导入活动配套”“更多”按钮。该图片与文档中“教师上传活动纪要文件后，直接进入查看纪要（非AI生成页面）”的内容对应，直观呈现了查看页面的样式和信息展示情况。",
+   "caption": "",
+   "width": "1910",
+   "height": "915",
+   "path": "查看纪要（非AI生成）",
+   "parent": null
+  },
+  {
+   "id": "WDNCdvaDaoT0QDxROfGc7BbrnNS",
+   "type": "paragraph",
+   "text": "集备活动",
+   "path": "查看纪要（非AI生成）",
+   "comments": null
+  },
+  {
+   "id": "GXXYdFncnoIM0WxRy54cCCwqnKh",
+   "type": "image",
+   "media": "m-57f5be6ef37a",
+   "name": "image.png",
+   "alt": "图片展示的是2026学年第二学期教研的活动纪要页面。页面上方显示活动名称及生成中状态。左侧有活动信息、会议纪要、共思随记等板块，当前选中“会议纪要”。右侧是会议纪要内容，包含活动信息、发言人总结等。右侧还显示了相关资源，有4个文件，如“1 青春秋实 - 其他.docx”等，可点击“查看”。该图片与文档中“教师上传活动纪要文件后，直接进入查看纪要（非AI生成页面）”的内容相关，直观呈现了活动纪要页面的样式及部分功能。",
+   "caption": "",
+   "width": "1910",
+   "height": "915",
+   "path": "查看纪要（非AI生成）",
+   "parent": null
+  },
+  {
+   "id": "PceAdZsgBo2Ds7xtio5cK1Upnrb",
+   "type": "paragraph",
+   "text": "教师上传活动纪要文件后，直接进入查看纪要（非AI生成页面），标记为“已上传”。展示：活动信息活动纪要：展示上传的文件，可直接预览共思随记相关资源：缩小放置在右上角活动目标or单元计划：缩小放置在右上角",
+   "path": "查看纪要（非AI生成）",
+   "comments": null
+  },
+  {
+   "id": "CC98dvypioWxptxytJOcznFanhd",
+   "type": "heading",
+   "level": 3,
+   "text": "历史活动的处理",
+   "path": "三、需求说明 › AI活动纪要 › 历史活动的处理"
+  },
+  {
+   "id": "GlJ6dVsO0oPIPvxWMrkcWObAnKB",
+   "type": "image",
+   "media": "m-9bf008c3b4b1",
+   "name": "image.png",
+   "alt": "这张图片展示的是鸿儒教研平台里未进行状态的历史活动页面，页面左上角显示“活动纪要”相关区域，有音频播放控件，底部还有不同颜色的状态标识和对应进度的条形图；右侧是纪要展示区域，呈现了活动目标、教学过程相关的详细内容条目，页面清晰呈现了该类型活动的信息布局，对应文档中说明的“活动未进行时按钮更新为【生成纪要】，点击进入开始活动页面”的状态。",
+   "caption": "",
+   "width": "3828",
+   "height": "1962",
+   "path": "历史活动的处理",
+   "parent": "CC98dvypioWxptxytJOcznFanhd"
+  },
+  {
+   "id": "OPlsdm2Yhoow4mxLQBEcEAbln6d",
+   "type": "image",
+   "media": "m-eea3b2e01cb6",
+   "name": "image.png",
+   "alt": "图片展示的是2024学年第二学期的单元整体教学设计研讨活动纪要页面。页面上方显示活动信息，包括活动名称、时间、地点、负责人及参与人等。下方是会议纪要，标题为“单元整体教学设计研讨会纪要”，内容涵盖活动信息及研讨内容，如确定本单元整体教学顺序、先图象后性质等。页面右上角有“相关资源”“活动目标”“导入活动配置量”“更多”等选项。该图片与文档中“历史活动的处理”部分相关，用于说明活动已完成且有转文本活动纪要时的页面呈现。",
+   "caption": "",
+   "width": "1910",
+   "height": "915",
+   "path": "历史活动的处理",
+   "parent": "CC98dvypioWxptxytJOcznFanhd"
+  },
+  {
+   "id": "KDZpdcEAYogQH5xCNRBcUIJDn1e",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "活动未进行（如下图）——按钮更新为【生成纪要】点击进入开始活动页面",
+   "path": "历史活动的处理 › 1",
+   "parent": "CC98dvypioWxptxytJOcznFanhd",
+   "comments": null
+  },
+  {
+   "id": "H4pDdUaPKomQ7cxIZETcTJ8nnuS",
+   "type": "image",
+   "media": "m-de01d1e530ff",
+   "name": "image.png",
+   "alt": "图片展示的是“活动纪要功能全新上线”界面，有三个功能板块。左侧板块介绍“活动纪要”功能，可一键生成纪要，支持多轮次纪要生成，可自定义纪要内容，还能生成会议纪要。中间板块是“转文本”功能，可将会议纪要转为文本，支持多轮次转文本，可自定义转文本内容。右侧板块是“上传纪要文件”功能，可上传纪要文件，支持多轮次上传，可自定义上传文件内容。该图片与文档中“历史活动的处理”部分上下文对应，直观呈现了新上线的活动纪要功能。",
+   "caption": "",
+   "width": "3828",
+   "height": "1962",
+   "path": "历史活动的处理",
+   "parent": "CC98dvypioWxptxytJOcznFanhd"
+  },
+  {
+   "id": "KdsedG6ZmoIos1xsbMXcwFKBnRd",
+   "type": "image",
+   "media": "m-b7a4b79f092e",
+   "name": "image.png",
+   "alt": "该图片展示了鸿儒教研相关系统里的会议纪要页面，属于一年级语文《3 小青蛙》集体备课的在线场景。页面左侧上方显示“AI 会议纪要”模块，含“开始录音”“上传音视频生成”“导入已有活动总结”等功能按钮，下方是附件资源区，列出了关联的教学设计文档与图片文件；页面右侧为共思随记区域，呈现参会人员的发言内容、在线状态等信息，底部设输入发送栏，整体对应文档中“活动未进行”时点击生成纪要进入的开始活动页面，符合历史活动里活动未进行时的相关界面展示内容。",
+   "caption": "",
+   "width": "1910",
+   "height": "915",
+   "path": "历史活动的处理",
+   "parent": "CC98dvypioWxptxytJOcznFanhd"
+  },
+  {
+   "id": "IWxwdUqUBounS8x9mNrczwBznUe",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "活动已完成",
+   "path": "历史活动的处理 › 1",
+   "parent": "CC98dvypioWxptxytJOcznFanhd",
+   "comments": null
+  },
+  {
+   "id": "L2PVdxW1PoMI9yxJHdYcml8Bn9d",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.1",
+   "depth": 2,
+   "text": "有转文本的活动纪要",
+   "path": "历史活动的处理 › 1.1",
+   "parent": "IWxwdUqUBounS8x9mNrczwBznUe",
+   "comments": null
+  },
+  {
+   "id": "TNqudy1LYoNXZSxjN8UctvjqnVc",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.1.1",
+   "depth": 3,
+   "text": "原活动关键词、活动总结、章节速览、发言人总结放置在会议纪要处",
+   "path": "历史活动的处理 › 1.1.1",
+   "parent": "L2PVdxW1PoMI9yxJHdYcml8Bn9d",
+   "comments": null
+  },
+  {
+   "id": "Bu9Ydc4aZoEgv9xiHjvc0gRKnIe",
+   "type": "image",
+   "media": "m-9aea0d02a986",
+   "name": "image.png",
+   "alt": "图片展示的是鸿儒教研AI纪要&教研报告中“历史活动的处理”部分的活动记录界面。界面顶部有“活动记录”标题，下方列出多条活动记录，每条记录包含活动名称、活动时间、活动类型、活动总结、章节速览、发言人总结等内容。其中，活动名称为“2024年10月18日教研活动”，活动时间为2024年10月18日14:00 - 15:00，活动类型为“教研活动”，活动总结、章节速览、发言人总结等信息也一并呈现。该图片与上下文介绍的历史活动处理相关，直观呈现了活动记录的展示形式。",
+   "caption": "",
+   "width": "3828",
+   "height": "1962",
+   "path": "历史活动的处理",
+   "parent": "L2PVdxW1PoMI9yxJHdYcml8Bn9d"
+  },
+  {
+   "id": "AOKwdnZToor46lxzmhCcGlBlnqb",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.1.1",
+   "depth": 3,
+   "text": "原活动内容放置在文字记录",
+   "path": "历史活动的处理 › 1.1.1",
+   "parent": "L2PVdxW1PoMI9yxJHdYcml8Bn9d",
+   "comments": null
+  },
+  {
+   "id": "HTSvdAyNwoALLYxpniBcSQiSnxd",
+   "type": "image",
+   "media": "m-bb44b4742e7f",
+   "name": "image.png",
+   "alt": "这张图片对应的是教研活动的文字记录界面，属于历史活动中“有转文本的活动纪要”对应的展示内容。界面顶部显示该活动为集体备课活动的已结束场次，左侧是按时间顺序排列的多段发言内容，每段内容标注有对应的发言人，右侧设有编辑按钮，底部具备播放、进度调节等音频控制功能，显示该活动的完整语音时长为57分02秒。",
+   "caption": "",
+   "width": "1910",
+   "height": "915",
+   "path": "历史活动的处理",
+   "parent": "AOKwdnZToor46lxzmhCcGlBlnqb"
+  },
+  {
+   "id": "IJ35dp6SHotNn8xhEPEcpfGKnfe",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "1.2",
+   "depth": 2,
+   "text": "历史活动已上传活动纪要文件——进入非AI纪要页面。",
+   "path": "历史活动的处理 › 1.2",
+   "parent": "IWxwdUqUBounS8x9mNrczwBznUe",
+   "comments": null
+  },
+  {
+   "id": "JrncdIjPsoouwDxoWMAcBV8inOg",
+   "type": "image",
+   "media": "m-eae51abfe54d",
+   "name": "image.png",
+   "alt": "这张图展示的是鸿儒教研平台的历史活动详情页面，具体为未进行生成纪要操作的“2024学年第二学期教研活动”的活动纪要页面。页面右上角有“相关资源”“活动目标”“导出活动纪要”等功能按钮，左侧标注了该活动的基本信息，包括活动名称、时间、负责人、参与人员、活动类型等。页面左侧的“会议纪要”板块显示了已上传的“单元整体教学设计研讨会纪要.docx”文件，以及活动信息、研讨内容等相关内容，页面的文字记录区域还呈现了该单元整体教学研讨的相关安排。",
+   "caption": "",
+   "width": "1910",
+   "height": "915",
+   "path": "历史活动的处理",
+   "parent": "IWxwdUqUBounS8x9mNrczwBznUe"
+  },
+  {
+   "id": "PgcQdr9EDojVl7xRcSlc4aGAnHd",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "相应的附件和资源放置在相关资源",
+   "path": "历史活动的处理 › 2",
+   "parent": "CC98dvypioWxptxytJOcznFanhd",
+   "comments": null
+  },
+  {
+   "id": "KzVrdSjghobezuxiH5vc5c9snpb",
+   "type": "heading",
+   "level": 3,
+   "text": "构建声纹库",
+   "path": "三、需求说明 › AI活动纪要 › 构建声纹库"
+  },
+  {
+   "id": "ZZEPd3TzYogDrXxWobOciTQZnZb",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "在嗨夫子中新增【声纹管理】模块，支持教师添加自己的声纹",
+   "path": "构建声纹库 › 1",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "OxBSd825PoiO2TxyhpNcEFP9nFg",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "AI课堂顾问中老师已有录制，自动提取声纹，并关联",
+   "path": "构建声纹库 › 2",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "SMgfdszg3oipYxxXdFMca5d8njb",
+   "type": "attachment",
+   "media": "m-6d917929921d",
+   "name": "voiceprint-management.html",
+   "mime": "text/html",
+   "bytes": 36169,
+   "path": "构建声纹库",
+   "parent": null
+  },
+  {
+   "id": "Q0pJd4RieoqClpxiCRucxgZAnqb",
+   "type": "image",
+   "media": "m-bb8c1e249b75",
+   "name": "image.png",
+   "alt": "图片展示的是“声纹管理”界面。界面上方显示时间为14:57，有“5G”标识和电池图标。中间部分有“我的声纹”字样，下方提示“录制声纹后，活动纪要可自动识别您的发言”，并有一个紫色的“去录制”按钮。该界面与文档中“构建声纹库”内容相关，是AI活动纪要中声纹管理的操作界面，用于用户录制声纹以便活动纪要自动识别发言。",
+   "caption": "",
+   "width": "661",
+   "height": "1435",
+   "path": "构建声纹库",
+   "parent": null
+  },
+  {
+   "id": "XKZedQ2jAou0grxtLYmcnWIDn2g",
+   "type": "image",
+   "media": "m-53250a54fb69",
+   "name": "image.png",
+   "alt": "图片展示的是“声纹录制”界面。界面上方显示当前第1/3条，下方有朗读文本，内容为“教育是一棵树摇动另一棵树，一朵云推动另一朵云，一个灵魂唤醒另一个灵魂。我们始终相信，每一位教师的用心耕耘，都会在课堂上留下温暖的回响。”下方有一个蓝色的音频波形图，显示00:00，表明尚未录制。底部有一个紫色的“完成”按钮。该界面与文档中构建声纹库的需求说明相关，用于声纹录制操作。",
+   "caption": "",
+   "width": "661",
+   "height": "1435",
+   "path": "构建声纹库",
+   "parent": null
+  },
+  {
+   "id": "IDjddKxJRoAgv4xL0YKcV9VGnsh",
+   "type": "image",
+   "media": "m-1f157546e72a",
+   "name": "image.png",
+   "alt": "这是鸿儒教研AI相关的声纹录制界面，处于“当前第1/3条”的录制进度中。界面展示了需要朗读的第1条文本内容：“教育是一棵树摇动另一棵树，一朵云推动另一朵云，一个灵魂唤醒另一个灵魂。我们始终相信，每一位教师的用心耕耘，都会在课堂上留下温暖的回响。”界面中间的绿色声波与“00:05”计时显示当前正在进行录音操作，底部设有重录、试听和下一条功能按钮，整体为教研场景下的朗读声纹采集界面。",
+   "caption": "",
+   "width": "661",
+   "height": "1435",
+   "path": "构建声纹库",
+   "parent": null
+  },
+  {
+   "id": "JE0Sdih0qow2IxxkA9PcGdhVnmb",
+   "type": "image",
+   "media": "m-bf4efc4d1e49",
+   "name": "image.png",
+   "alt": "图片展示的是“声纹管理”界面。界面顶部显示时间为14:57，有“5G”标识和电池图标。中间部分有“我的声纹”标识，下方显示“上次更新”为2025 - 10 - 20 16:13，且“活动纪要发言人识别”已关联。界面底部有“更新声纹”和“删除声纹”两个按钮，其中“删除声纹”按钮为红色。该界面与文档中构建声纹库的需求说明相关，直观呈现了声纹管理的相关信息及操作选项。",
+   "caption": "",
+   "width": "661",
+   "height": "1435",
+   "path": "构建声纹库",
+   "parent": null
+  },
+  {
+   "id": "KBC1dsJTjoQHmNxKBhhcJ9rNnvg",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "**前置权限与准备**",
+   "path": "构建声纹库 › 1",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "R0W4dg2ofoqiDjxHN1Fc36qBnsb",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.1",
+   "depth": 2,
+   "text": "隐私授权：首次进入需强制展示。《声纹采集与使用授权协议》",
+   "path": "构建声纹库 › 1.1",
+   "parent": "KBC1dsJTjoQHmNxKBhhcJ9rNnvg",
+   "comments": null
+  },
+  {
+   "id": "JF7LdUJdRorWuuxuWixc1xHFnce",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "1.2",
+   "depth": 2,
+   "text": "麦克风权限检测：检测小程序麦克风授权状态。若未开启，展示引导气泡或弹窗，引导至系统设置开启。",
+   "path": "构建声纹库 › 1.2",
+   "parent": "KBC1dsJTjoQHmNxKBhhcJ9rNnvg",
+   "comments": null
+  },
+  {
+   "id": "UUOFdX5aNog1hgxvgitcFdYzn5c",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "**录制交互**",
+   "path": "构建声纹库 › 2",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "Rlchdvl6WomwFYxdz1PcVP5bntb",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "2.1",
+   "depth": 2,
+   "text": "阅读内容：分配3条录制任务，每条展示一段长文本（约5-8秒）",
+   "path": "构建声纹库 › 2.1",
+   "parent": "UUOFdX5aNog1hgxvgitcFdYzn5c",
+   "comments": null
+  },
+  {
+   "id": "YtNzd38WFoaogOxxnX6c5WxDnTh",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2.2",
+   "depth": 2,
+   "text": "进度提示：顶部展示“当前第 X/3 条”进度。",
+   "path": "构建声纹库 › 2.2",
+   "parent": "UUOFdX5aNog1hgxvgitcFdYzn5c",
+   "comments": null
+  },
+  {
+   "id": "CqPxdYzdboMlp5xVrHqcbGppnRf",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "2.3",
+   "depth": 2,
+   "text": "录制操作：",
+   "path": "构建声纹库 › 2.3",
+   "parent": "UUOFdX5aNog1hgxvgitcFdYzn5c",
+   "comments": null
+  },
+  {
+   "id": "ACGRdBNhyoQ0uYxTbjycGODYnDd",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "2.3.1",
+   "depth": 3,
+   "text": "点击「开始录制」按钮，屏幕上展示动态声波纹",
+   "path": "构建声纹库 › 2.3.1",
+   "parent": "CqPxdYzdboMlp5xVrHqcbGppnRf",
+   "comments": null
+  },
+  {
+   "id": "VDzudhQ2rodxVtxLyQZcc1m6nAg",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2.3.2",
+   "depth": 3,
+   "text": "读完后点击「完成」。",
+   "path": "构建声纹库 › 2.3.2",
+   "parent": "CqPxdYzdboMlp5xVrHqcbGppnRf",
+   "comments": null
+  },
+  {
+   "id": "Fn0FdQmjcoSOV9xnEi4cvLa3nIh",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "2.3.3",
+   "depth": 3,
+   "text": "异常场景：单条最大时长为60s，超过则自动停止并toast提示“单条录音不能超过60秒，请重新录制”",
+   "path": "构建声纹库 › 2.3.3",
+   "parent": "CqPxdYzdboMlp5xVrHqcbGppnRf",
+   "comments": null
+  },
+  {
+   "id": "DXKedpYwOodwmLxdXZdcoVRGndb",
+   "type": "list-item",
+   "marker": "4.",
+   "ordinal": "2.4",
+   "depth": 2,
+   "text": "试听与重录：录制完成后，支持点击播放试听。若读错，可点击「重录」按钮，仅覆盖当前条目的音频。全部 3 条完成后，点击「提交」。",
+   "path": "构建声纹库 › 2.4",
+   "parent": "UUOFdX5aNog1hgxvgitcFdYzn5c",
+   "comments": null
+  },
+  {
+   "id": "TvNWdeNuUoCPDGxu7oycuCPKnQe",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "3",
+   "depth": 1,
+   "text": "**声纹管理页**",
+   "path": "构建声纹库 › 3",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "RUBxdgnpuomVbJxVbCDc5tUUnad",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "3.1",
+   "depth": 2,
+   "text": "声纹状态展示：",
+   "path": "构建声纹库 › 3.1",
+   "parent": "TvNWdeNuUoCPDGxu7oycuCPKnQe",
+   "comments": null
+  },
+  {
+   "id": "Wnf6dP3RPoICrsxY7yIcVLvpnnb",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "3.1.1",
+   "depth": 3,
+   "text": "未录制：展示“去录制”按钮。",
+   "path": "构建声纹库 › 3.1.1",
+   "parent": "RUBxdgnpuomVbJxVbCDc5tUUnad",
+   "comments": null
+  },
+  {
+   "id": "SK3BdHAzLo1nJoxGzTicglE1nyg",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "3.1.2",
+   "depth": 3,
+   "text": "已生效：展示绿色生效状态及上次更新时间。同时展示【更新声纹】和【删除声纹】按钮。",
+   "path": "构建声纹库 › 3.1.2",
+   "parent": "RUBxdgnpuomVbJxVbCDc5tUUnad",
+   "comments": null
+  },
+  {
+   "id": "R3yQd2ACZov0NKxjIuUceIE0noh",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "3.2",
+   "depth": 2,
+   "text": "更新（重新录制）：",
+   "path": "构建声纹库 › 3.2",
+   "parent": "TvNWdeNuUoCPDGxu7oycuCPKnQe",
+   "comments": null
+  },
+  {
+   "id": "IotydkrM3oMvJjxH8I7cr0rHnxf",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "3.2.1",
+   "depth": 3,
+   "text": "点击【更新声纹】，进入录制流程。",
+   "path": "构建声纹库 › 3.2.1",
+   "parent": "R3yQd2ACZov0NKxjIuUceIE0noh",
+   "comments": null
+  },
+  {
+   "id": "ZKwkdAPiAoTUVdxXeCucXtcYnDc",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "3.2.2",
+   "depth": 3,
+   "text": "逻辑要求：必须新声纹录制并提取成功后，才覆盖旧声纹。如果新声纹提取失败中途退出，原有的旧声纹必须保持“已生效”状态，不能丢失。",
+   "path": "构建声纹库 › 3.2.2",
+   "parent": "R3yQd2ACZov0NKxjIuUceIE0noh",
+   "comments": null
+  },
+  {
+   "id": "CRTMdvc3Zoue5AxmdzbcFAqsndA",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "3.3",
+   "depth": 2,
+   "text": "删除",
+   "path": "构建声纹库 › 3.3",
+   "parent": "TvNWdeNuUoCPDGxu7oycuCPKnQe",
+   "comments": null
+  },
+  {
+   "id": "WnbZd07lmoUDBcxWnWlcIHqGn3f",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "3.3.1",
+   "depth": 3,
+   "text": "点击【删除声纹】，触发二次确认弹窗。“确认删除声纹数据吗？删除后，您在活动纪要中将无法被识别发言人，且原数据无法恢复。如需使用，请重新录制。”“取消|确认删除”",
+   "path": "构建声纹库 › 3.3.1",
+   "parent": "CRTMdvc3Zoue5AxmdzbcFAqsndA",
+   "comments": null
+  },
+  {
+   "id": "Zq4vdPXkZoYSW5xT4cucKkiQnEP",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "3.3.2",
+   "depth": 3,
+   "text": "删除成功后，状态立即变更为“未录制”，并同步通知海思谷解除绑定关系",
+   "path": "构建声纹库 › 3.3.2",
+   "parent": "CRTMdvc3Zoue5AxmdzbcFAqsndA",
+   "comments": null
+  },
+  {
+   "id": "KWXWd3SGPonymgx174TcAmvqnZe",
+   "type": "list-item",
+   "marker": "4.",
+   "ordinal": "4",
+   "depth": 1,
+   "text": "**质量校验与提取**",
+   "path": "构建声纹库 › 4",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "JeYydHJXWoEwhZx1n5qcnWeinte",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "4.1",
+   "depth": 2,
+   "text": "基础校验：",
+   "path": "构建声纹库 › 4.1",
+   "parent": "KWXWd3SGPonymgx174TcAmvqnZe",
+   "comments": null
+  },
+  {
+   "id": "JJpRd5vKwopkEkxLxqAclM1gnCe",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "4.1.1",
+   "depth": 3,
+   "text": "时长校验：单条有效录音小于3秒，提示“声音太短”。",
+   "path": "构建声纹库 › 4.1.1",
+   "parent": "JeYydHJXWoEwhZx1n5qcnWeinte",
+   "comments": null
+  },
+  {
+   "id": "XFNKd1aUtodthcxRa1gcVUupnAb",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "4.1.2",
+   "depth": 3,
+   "text": "音量校验：全程无声或音量过小，提示“未检测到声音，请重录”。",
+   "path": "构建声纹库 › 4.1.2",
+   "parent": "JeYydHJXWoEwhZx1n5qcnWeinte",
+   "comments": null
+  },
+  {
+   "id": "QlEvdiUuDo41RgxP6RucG18anTb",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "4.1.3",
+   "depth": 3,
+   "text": "网络异常：上传失败时，提示“网络不佳”，保留本地录音，提供“重试”按钮。",
+   "path": "构建声纹库 › 4.1.3",
+   "parent": "JeYydHJXWoEwhZx1n5qcnWeinte",
+   "comments": null
+  },
+  {
+   "id": "BGyDdnlBRokrdzxTh7Qc7b2Anbf",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "4.2",
+   "depth": 2,
+   "text": "算法校验（声纹提取）：",
+   "path": "构建声纹库 › 4.2",
+   "parent": "KWXWd3SGPonymgx174TcAmvqnZe",
+   "comments": null
+  },
+  {
+   "id": "NIH3d6rGMoBowZxIjcAcKWCJnWf",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "4.2.1",
+   "depth": 3,
+   "text": "提取成功：页面展示“声纹录制成功”。",
+   "path": "构建声纹库 › 4.2.1",
+   "parent": "BGyDdnlBRokrdzxTh7Qc7b2Anbf",
+   "comments": null
+  },
+  {
+   "id": "B9EBdan7To7kxtxsvP0cDAQ6nvd",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "4.2.2",
+   "depth": 3,
+   "text": "提取失败：返回AI判断的具体失败原因，如“有效人声不足”、“音质不佳”，引导用户重新录制。",
+   "path": "构建声纹库 › 4.2.2",
+   "parent": "BGyDdnlBRokrdzxTh7Qc7b2Anbf",
+   "comments": null
+  },
+  {
+   "id": "CDHQdWyf2ozXRoxRVZncOmCJnTc",
+   "type": "list-item",
+   "marker": "5.",
+   "ordinal": "5",
+   "depth": 1,
+   "text": "**后台同步与业务生效**",
+   "path": "构建声纹库 › 5",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "M0WtdAOjuoWhLtxd5Z3ctPAfnSg",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "5.1",
+   "depth": 2,
+   "text": "数据同步：声纹提取成功后，【用户ID + 声纹特征文件】同步至海思谷的声纹管理，并为“已关联”状态。",
+   "path": "构建声纹库 › 5.1",
+   "parent": "CDHQdWyf2ozXRoxRVZncOmCJnTc",
+   "comments": null
+  },
+  {
+   "id": "JxE5de6V2oA9vbx9waRcnBamnEb",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "5.2",
+   "depth": 2,
+   "text": "~~Saas已有“已关联”状态的声纹：嗨夫子中为已生效~~",
+   "path": "构建声纹库 › 5.2",
+   "parent": "CDHQdWyf2ozXRoxRVZncOmCJnTc",
+   "comments": null
+  },
+  {
+   "id": "QBbddyjcUo3I4Zx3uyrc29LSnO7",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "5.3",
+   "depth": 2,
+   "text": "业务关联：海思谷同步成功后，自动将该声纹与该教师账号的【活动纪要】权限绑定（默认为关联状态）。后续该教师参与活动发言，系统即可自动匹配声纹并在纪要中标注发言人。",
+   "path": "构建声纹库 › 5.3",
+   "parent": "CDHQdWyf2ozXRoxRVZncOmCJnTc",
+   "comments": null
+  },
+  {
+   "id": "QBaGdpvBuo5Y14xwzVrczeVdnfd",
+   "type": "heading",
+   "level": 2,
+   "text": "AI教研报告p1",
+   "path": "三、需求说明 › AI教研报告p1"
+  },
+  {
+   "id": "UNUfdvKqdo5KuNxUn5scbsoGnhV",
+   "type": "paragraph",
+   "text": "基于单次集备活动生成一份循证AI教研报告",
+   "path": "AI教研报告p1",
+   "comments": null
+  },
+  {
+   "id": "FN4bdT6oyorpVsxmdHBcADJNnJb",
+   "type": "whiteboard",
+   "token": "Mx2pw5yjkhnk0rbKz84c0aywnA9",
+   "media": "m-d2a1a6f337cb",
+   "path": "AI教研报告p1"
+  },
+  {
+   "id": "U2Z0do37WoHaTtxngopclFhnn0e",
+   "type": "heading",
+   "level": 3,
+   "text": "管理者查看教研分析报告",
+   "path": "三、需求说明 › AI教研报告p1 › 管理者查看教研分析报告"
+  },
+  {
+   "id": "RC33d7eQtoRPlGxrPhXcGVBmnlf",
+   "type": "image",
+   "media": "m-f1784979041f",
+   "name": "image.png",
+   "alt": "图片展示的是鸿儒教研AI纪要&教研报告中管理者查看教研分析报告的界面。左侧为报告标题及内容，显示“第一单元集体研讨 - AI教研报告”，并有“生成学习进度条”“生成学习报告”等选项。右侧是“整体学习进展”板块，显示整体完成度为86%，并有各学习任务的完成度、数量、平均分、平均时长等信息。下方是“整体学习情况”板块，显示整体学习人数为29人，有“生成学习报告”“生成学习报告（含AI数据）”等选项。该图与上下文介绍的管理者查看AI教研报告的内容相契合。",
+   "caption": "",
+   "width": "3803",
+   "height": "1220",
+   "path": "管理者查看教研分析报告",
+   "parent": null
+  },
+  {
+   "id": "Pd9NdtuBPoywU8xKklTceL4dnEd",
+   "type": "image",
+   "media": "m-01befedd224e",
+   "name": "image.png",
+   "alt": "这张图片是鸿儒教研AI相关的教研报告页面，对应文档中管理者查看教研分析报告的内容板块。页面上方设置有“数据类型”“数据”“问题”等分类栏目，下方排列着多个不同颜色标识的板块，分别对应不同的教研相关项目，每个项目旁配有操作按钮，用于开展对应操作，整体呈现出与教研分析、数据处理相关的界面内容，是管理者查看教研分析报告的具体页面呈现。",
+   "caption": "",
+   "width": "3668",
+   "height": "1799",
+   "path": "管理者查看教研分析报告",
+   "parent": null
+  },
+  {
+   "id": "KxijdZCscodpavxx5WKcGsJwnCf",
+   "type": "image",
+   "media": "m-cb72aec6f2b3",
+   "name": "image.png",
+   "alt": "图片展示的是鸿儒教研AI的“1对1教研详情”界面。界面顶部显示“1对1教研详情”及“1对1”标识，下方有“1对1教研详情”“1对1教研详情”“1对1教研详情”等重复内容。中间部分为“1对1教研详情”内容，包含“1对1教研详情”“1对1教研详情”“1对1教研详情”等重复信息，以及“1对1教研详情”“1对1教研详情”“1对1教研详情”等重复内容。底部有“1对1教研详情”“1对1教研详情”“1对1教研详情”等重复内容。该图片与文档中管理者查看教研分析报告的内容相关，展示了AI教研报告中1对1教研详情的界面样式。",
+   "caption": "",
+   "width": "3636",
+   "height": "1607",
+   "path": "管理者查看教研分析报告",
+   "parent": null
+  },
+  {
+   "id": "O3GZdfIw1or2Wzx15NqclqyynTd",
+   "type": "paragraph",
+   "text": "结合集备活动会议纪要、所关联教学进度中教师上传的个备资源和教学反思以及AI课堂顾问总结，生成AI教研报告",
+   "path": "管理者查看教研分析报告",
+   "comments": null
+  },
+  {
+   "id": "JHkkdtCtOorJ7OxpRAuc8EVrnpf",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "**展示数据概览（该部分无需AI生成，常驻展示）**",
+   "path": "管理者查看教研分析报告 › 1",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "NwVqdxtAtojrKSxb3R9cAP3onqd",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.1",
+   "depth": 2,
+   "text": "教研活动基本信息：活动名、时间、地点、集备范围、主备教师、备课组、研讨清单、出勤情况",
+   "path": "管理者查看教研分析报告 › 1.1",
+   "parent": "JHkkdtCtOorJ7OxpRAuc8EVrnpf",
+   "comments": null
+  },
+  {
+   "id": "XOHed9djmodhhRxBWv4cbUDbn7d",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "1.2",
+   "depth": 2,
+   "text": "备课完成情况：",
+   "path": "管理者查看教研分析报告 › 1.2",
+   "parent": "JHkkdtCtOorJ7OxpRAuc8EVrnpf",
+   "comments": null
+  },
+  {
+   "id": "XhPndfqMFoCXjRxGF12c68iSnUc",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.2.1",
+   "depth": 3,
+   "text": "备课任务完成率：已完成任务数/应完成的任务总数（应完成的任务总数 = 所有教师 × 所有课时 × 任务类型×100%）",
+   "path": "管理者查看教研分析报告 › 1.2.1",
+   "parent": "XOHed9djmodhhRxBWv4cbUDbn7d",
+   "comments": null
+  },
+  {
+   "id": "E78QdJdeGoIbztx5DjOcGNPYnTe",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "1.2.2",
+   "depth": 3,
+   "text": "全部完成教师占比：已全部提交的老师数/总参与老师数",
+   "path": "管理者查看教研分析报告 › 1.2.2",
+   "parent": "XOHed9djmodhhRxBWv4cbUDbn7d",
+   "comments": null
+  },
+  {
+   "id": "Zxrmdrb4Pox3BBxJ658clV18n0g",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "1.2.3",
+   "depth": 3,
+   "text": "链接：",
+   "path": "管理者查看教研分析报告 › 1.2.3",
+   "parent": "XOHed9djmodhhRxBWv4cbUDbn7d",
+   "comments": null
+  },
+  {
+   "id": "ULiTdA3WEohgGVxQi6ScduWonud",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.2.3.1",
+   "depth": 4,
+   "text": "按教学进度查看：点击跳转教学进度页面",
+   "path": "管理者查看教研分析报告 › 1.2.3.1",
+   "parent": "Zxrmdrb4Pox3BBxJ658clV18n0g",
+   "comments": null
+  },
+  {
+   "id": "JPs6dpxtSohrChxmiA8cl19onbh",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "1.2.3.2",
+   "depth": 4,
+   "text": "按教师个人查看：点击跳转教师备课检查页面",
+   "path": "管理者查看教研分析报告 › 1.2.3.2",
+   "parent": "Zxrmdrb4Pox3BBxJ658clV18n0g",
+   "comments": null
+  },
+  {
+   "id": "CYSodtIc3oHxunxGYArcHOD1nzd",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "1.3",
+   "depth": 2,
+   "text": "资源沉淀总数：拆分为资源类型胶囊标签，如“📄 教案 12份 | 📊 课件 8份 | 📝 试卷 9份”。",
+   "path": "管理者查看教研分析报告 › 1.3",
+   "parent": "JHkkdtCtOorJ7OxpRAuc8EVrnpf",
+   "comments": null
+  },
+  {
+   "id": "G9OvdZOZuoEhWxxgoTNcrRkuncg",
+   "type": "list-item",
+   "marker": "4.",
+   "ordinal": "1.4",
+   "depth": 2,
+   "text": "课程报告情况：已生成/应生成AI课堂报告的数量",
+   "path": "管理者查看教研分析报告 › 1.4",
+   "parent": "JHkkdtCtOorJ7OxpRAuc8EVrnpf",
+   "comments": null
+  },
+  {
+   "id": "PgxZdwMN7on72fxnRRCco1lfn3b",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "**点击生成AI教研报告**",
+   "path": "管理者查看教研分析报告 › 2",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "UAbKdIMomoem88xOYmFc50tOnPe",
+   "type": "list-item",
+   "marker": "a.",
+   "ordinal": "2.a",
+   "depth": 2,
+   "text": "生成中：展示AI思考过程，如正在读取XXX内容。",
+   "path": "管理者查看教研分析报告 › 2.a",
+   "parent": "PgxZdwMN7on72fxnRRCco1lfn3b",
+   "comments": null
+  },
+  {
+   "id": "W4mqdBqkOo6Egdxf0Gbcv0KJnWb",
+   "type": "list-item",
+   "marker": "b.",
+   "ordinal": "2.b",
+   "depth": 2,
+   "text": "已生成：（覆盖思考过程）",
+   "path": "管理者查看教研分析报告 › 2.b",
+   "parent": "PgxZdwMN7on72fxnRRCco1lfn3b",
+   "comments": null
+  },
+  {
+   "id": "HVtmdNohyoGeEKxagxBcY51ZnRe",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "2.b.1",
+   "depth": 3,
+   "text": "**集备质量评估：**",
+   "path": "管理者查看教研分析报告 › 2.b.1",
+   "parent": "W4mqdBqkOo6Egdxf0Gbcv0KJnWb",
+   "comments": null
+  },
+  {
+   "id": "Hqsxd6yBOoWWzdxcTbCcHqHXnld",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "2.b.1.1",
+   "depth": 4,
+   "text": "根据评价维度展示评语和质性评价（如优、良、待提升）",
+   "path": "管理者查看教研分析报告 › 2.b.1.1",
+   "parent": "HVtmdNohyoGeEKxagxBcY51ZnRe",
+   "comments": null
+  },
+  {
+   "id": "IVvkdfGhroq3RSx8jSxcdN03nYf",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2.b.1.2",
+   "depth": 4,
+   "text": "支持引用溯源，关键结论可点击跳转至对应页面",
+   "path": "管理者查看教研分析报告 › 2.b.1.2",
+   "parent": "HVtmdNohyoGeEKxagxBcY51ZnRe",
+   "comments": null
+  },
+  {
+   "id": "Du0Udi4VMovZu9xJtyBcB3mDnrd",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2.b.2",
+   "depth": 3,
+   "text": "**个备质量评估：**",
+   "path": "管理者查看教研分析报告 › 2.b.2",
+   "parent": "W4mqdBqkOo6Egdxf0Gbcv0KJnWb",
+   "comments": null
+  },
+  {
+   "id": "PbBndbKjQoOIQRxPqoocDn3cn2g",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "2.b.2.1",
+   "depth": 4,
+   "text": "整体展示每位教师在本次集备活动中的教研质量，每位教师展示综合评语和质性评价（特殊标记亮点教师和待关注教师）",
+   "path": "管理者查看教研分析报告 › 2.b.2.1",
+   "parent": "Du0Udi4VMovZu9xJtyBcB3mDnrd",
+   "comments": null
+  },
+  {
+   "id": "BmpvdKadboefYKxszXXcYIEynoc",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2.b.2.2",
+   "depth": 4,
+   "text": "支持展开查看教师个人教研报告（按课时分析）",
+   "path": "管理者查看教研分析报告 › 2.b.2.2",
+   "parent": "Du0Udi4VMovZu9xJtyBcB3mDnrd",
+   "comments": null
+  },
+  {
+   "id": "JkE8dFUEaoPkdAx33IVc03g2n8g",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "2.b.2.2.1",
+   "depth": 5,
+   "text": "个备质量评估：：每个课时结合个备资源和教学反思，根据教学目标和教学重难点，生按课时的备课总结，根据以下两个维度、七个指标分析",
+   "path": "管理者查看教研分析报告 › 2.b.2.2.1",
+   "parent": "BmpvdKadboefYKxszXXcYIEynoc",
+   "comments": null
+  },
+  {
+   "id": "Tyx2dqzkLoH3P5xbT2gcxgjonOd",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "2.b.2.2.1.1",
+   "depth": 6,
+   "text": "结构维度：整体结构设计、教学环节设置、逻辑衔接",
+   "path": "管理者查看教研分析报告 › 2.b.2.2.1.1",
+   "parent": "JkE8dFUEaoPkdAx33IVc03g2n8g",
+   "comments": null
+  },
+  {
+   "id": "FydKds5YQoj24fxSEE8cnNWlnfe",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2.b.2.2.1.2",
+   "depth": 6,
+   "text": "内容维度：教学内容、教学方法、教学案例、核心素养落地",
+   "path": "管理者查看教研分析报告 › 2.b.2.2.1.2",
+   "parent": "JkE8dFUEaoPkdAx33IVc03g2n8g",
+   "comments": null
+  },
+  {
+   "id": "HyGydQQODoNljSxm6ltc3NJVnSc",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "2.b.2.2.1.3",
+   "depth": 6,
+   "text": "关键结论支持点击引用溯源证据",
+   "path": "管理者查看教研分析报告 › 2.b.2.2.1.3",
+   "parent": "JkE8dFUEaoPkdAx33IVc03g2n8g",
+   "comments": null
+  },
+  {
+   "id": "XaagdfehuoNabBxFE7pcItrDndh",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2.b.2.2.2",
+   "depth": 5,
+   "text": "课堂实现评估：",
+   "path": "管理者查看教研分析报告 › 2.b.2.2.2",
+   "parent": "BmpvdKadboefYKxszXXcYIEynoc",
+   "comments": null
+  },
+  {
+   "id": "Sek7dja6XobTEOxSux7c8VF3nuc",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "2.b.2.2.2.1",
+   "depth": 6,
+   "text": "分析上传的AI课堂顾问，评价教研成果在真实课堂中的落地贯彻情况",
+   "path": "管理者查看教研分析报告 › 2.b.2.2.2.1",
+   "parent": "XaagdfehuoNabBxFE7pcItrDndh",
+   "comments": null
+  },
+  {
+   "id": "EcC7doWO8obGpHxYBMYc1AvYneb",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2.b.2.2.2.2",
+   "depth": 6,
+   "text": "关键结论支持点击引用溯源证据",
+   "path": "管理者查看教研分析报告 › 2.b.2.2.2.2",
+   "parent": "XaagdfehuoNabBxFE7pcItrDndh",
+   "comments": null
+  },
+  {
+   "id": "RzrcdRzRvopnlRxAUXicjPLsnkc",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "2.b.2.2.3",
+   "depth": 5,
+   "text": "个备改进优化方案",
+   "path": "管理者查看教研分析报告 › 2.b.2.2.3",
+   "parent": "BmpvdKadboefYKxszXXcYIEynoc",
+   "comments": null
+  },
+  {
+   "id": "Nd7rdo4j3o6R1wxLdWlcgG0fnZg",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "2.b.3",
+   "depth": 3,
+   "text": "**教研活动总结（综合评语，简短）**",
+   "path": "管理者查看教研分析报告 › 2.b.3",
+   "parent": "W4mqdBqkOo6Egdxf0Gbcv0KJnWb",
+   "comments": null
+  },
+  {
+   "id": "LyFXdlKXioeKkdxa9GFc3azunlc",
+   "type": "list-item",
+   "marker": "4.",
+   "ordinal": "2.b.4",
+   "depth": 3,
+   "text": "**改进建议**",
+   "path": "管理者查看教研分析报告 › 2.b.4",
+   "parent": "W4mqdBqkOo6Egdxf0Gbcv0KJnWb",
+   "comments": null
+  },
+  {
+   "id": "O4WFdyWsfoDjprxWNCrcgRiynkh",
+   "type": "list-item",
+   "marker": "c.",
+   "ordinal": "2.c",
+   "depth": 2,
+   "text": "操作：",
+   "path": "管理者查看教研分析报告 › 2.c",
+   "parent": "PgxZdwMN7on72fxnRRCco1lfn3b",
+   "comments": null
+  },
+  {
+   "id": "XKb8dAfR0obPJxx7uRkclZN5nHe",
+   "type": "list-item",
+   "marker": "i.",
+   "ordinal": "2.c.i",
+   "depth": 3,
+   "text": "支持导出教研报告",
+   "path": "管理者查看教研分析报告 › 2.c.i",
+   "parent": "O4WFdyWsfoDjprxWNCrcgRiynkh",
+   "comments": null
+  },
+  {
+   "id": "PG61dHdSZoX2QtxM6HrcoW4Jnlb",
+   "type": "list-item",
+   "marker": "ii.",
+   "ordinal": "2.c.ii",
+   "depth": 3,
+   "text": "一键发送个人报告",
+   "path": "管理者查看教研分析报告 › 2.c.ii",
+   "parent": "O4WFdyWsfoDjprxWNCrcgRiynkh",
+   "comments": null
+  },
+  {
+   "id": "Pgy7dIZh7o2NTXx93DfcbJBkned",
+   "type": "list-item",
+   "marker": "iii.",
+   "ordinal": "2.c.iii",
+   "depth": 3,
+   "text": "更多：重新生成",
+   "path": "管理者查看教研分析报告 › 2.c.iii",
+   "parent": "O4WFdyWsfoDjprxWNCrcgRiynkh",
+   "comments": null
+  },
+  {
+   "id": "NC2Wdgr9rokL9kxqha3ce4PonGd",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "3",
+   "depth": 1,
+   "text": "（详见2.教研设置）：支持切换和点击查看模板**支持上传教研报告模版**",
+   "path": "管理者查看教研分析报告 › 3",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "Pa4SdZKMkoo4irxIKhxcbDSCnfd",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "3.1",
+   "depth": 2,
+   "text": "展示教研设置-教研活动设置中上传的教研活动模板，支持切换",
+   "path": "管理者查看教研分析报告 › 3.1",
+   "parent": "NC2Wdgr9rokL9kxqha3ce4PonGd",
+   "comments": null
+  },
+  {
+   "id": "Lhr4dUcZ2oo7cgxe7VEcLAjonue",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "3.2",
+   "depth": 2,
+   "text": "支持自定义输入，最多输入500字（仅用于当前活动分析）",
+   "path": "管理者查看教研分析报告 › 3.2",
+   "parent": "NC2Wdgr9rokL9kxqha3ce4PonGd",
+   "comments": null
+  },
+  {
+   "id": "TjFVd8IAJovfB5xicmicmvOhnZb",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "3.3",
+   "depth": 2,
+   "text": "支持上传模板（仅用于当前活动）",
+   "path": "管理者查看教研分析报告 › 3.3",
+   "parent": "NC2Wdgr9rokL9kxqha3ce4PonGd",
+   "comments": null
+  },
+  {
+   "id": "BOoqdurQnoqonLxjmELcWrXknec",
+   "type": "heading",
+   "level": 3,
+   "text": "教师查看个备分析报告",
+   "path": "三、需求说明 › AI教研报告p1 › 教师查看个备分析报告"
+  },
+  {
+   "id": "XV6udXjhpoxkbrxeOGVcufuXnGe",
+   "type": "attachment",
+   "media": "m-3ad8e0be0af5",
+   "name": "gebei-quality-analysis.html",
+   "mime": "text/html",
+   "bytes": 101205,
+   "path": "教师查看个备分析报告",
+   "parent": null
+  },
+  {
+   "id": "Duubd25XbomkOcxb5klcfO6qnjh",
+   "type": "image",
+   "media": "m-ecb8db7ef596",
+   "name": "image.png",
+   "alt": "图片展示的是鸿儒教研平台中教师查看个备分析报告的界面。左侧为导航栏，有“我的备课”“我的教研”等选项。右侧上方显示“我的备课”“刘鹏翔资源库”等信息。中部是“备课资源”和“个备资源”板块，其中“个备资源”板块有“AI助教已反馈，为您推荐资源信息”提示，下方列出多个资源文件，如“1春睿秋冬-课件(课件PPT).pptx”等，部分文件有绿色对勾标识。该图与上下文介绍的在个备资源处新增“个备资源分析”功能相契合，呈现了功能呈现时的界面情况。",
+   "caption": "",
+   "width": "1910",
+   "height": "915",
+   "path": "教师查看个备分析报告",
+   "parent": null
+  },
+  {
+   "id": "BBtSdFSZpo1HwTxHN7YcSYWLnWe",
+   "type": "image",
+   "media": "m-c7e9d9e0b961",
+   "name": "image.png",
+   "alt": "图片展示的是教师查看个备分析报告的界面。页面上方显示“个备资源分析”标题，下方有“第一课时 - 《1 春夏秋冬》”等内容。左侧有“个备资源总评”和“单资源深度解析”板块，其中“单资源深度解析”下有“1 春夏秋冬教案.docx”资源，列出其目标达成度、内容质量、作业设计等评价项及对应建议。右侧有“一键优化”按钮。该图片与上下文介绍的在个备资源处新增“个备资源分析”功能，呈现初次分析跳转至分析页、已有分析报告后点击呈现重新分析按钮等内容相契合。",
+   "caption": "",
+   "width": "1910",
+   "height": "915",
+   "path": "教师查看个备分析报告",
+   "parent": null
+  },
+  {
+   "id": "Q66TdY6rboqZaVxQWJ0cvpa1nAf",
+   "type": "image",
+   "media": "m-7ac3fdeed275",
+   "name": "image.png",
+   "alt": "这张图片展示的是教师查看个备分析报告的界面，左侧是第一课时《1 春夏秋冬》的个备资源分析页面，包含个备质量总评、单资源深度解析等内容，还设置了优化建议板块；右侧是 Hainate 工具窗口，显示已整理2条建议与1个附件，其中针对《1 春夏秋冬》的分析给出了2条优化建议，整体对应文档中教师查看个备分析报告的功能场景，呈现了个备资源分析的相关内容与优化提示。",
+   "caption": "",
+   "width": "1910",
+   "height": "915",
+   "path": "教师查看个备分析报告",
+   "parent": null
+  },
+  {
+   "id": "OkjTdxQUpou8trxhqpCce5MZnOf",
+   "type": "image",
+   "media": "m-c3db4b94b663",
+   "name": "image.png",
+   "alt": "图片展示的是教师在鸿儒教研平台查看个备分析报告的界面。左侧为导航栏，有“我的备课”“我的教研”等选项。右侧上方显示“我的备课 - 1春篇秋卷 - 第一单元 - 一课一练”，下方有“准备资源”“个备资源”等板块。在“个备资源”板块中，有“1春篇秋卷 - 第一单元 - 一课一练”等资源，下方有“基于个备资源的AI生成”区域，提示“您的个备资源暂无AI生成”，并有“点击个备资源分析”按钮。该图片与上下文介绍的教师查看个备分析报告功能相契合。",
+   "caption": "",
+   "width": "1910",
+   "height": "915",
+   "path": "教师查看个备分析报告",
+   "parent": null
+  },
+  {
+   "id": "VVbJdbUaPoMcRexyINac8yhbnJb",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "在每课时的个备资源处新增“个备资源分析”",
+   "path": "教师查看个备分析报告 › 1",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "YstDdgu98o7GQMxuHJOcF9jxnFc",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "出现时机：老师个备上传了一个资源之后",
+   "path": "教师查看个备分析报告 › 1",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "Tq7hdpfrHoZkajx6IeLcbc7inPd",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "状态：",
+   "path": "教师查看个备分析报告 › 2",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "LhP5dzIDQoACUZx355EcF8nYnrf",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "2.1",
+   "depth": 2,
+   "text": "初次分析：跳转至个备资源分析页",
+   "path": "教师查看个备分析报告 › 2.1",
+   "parent": "Tq7hdpfrHoZkajx6IeLcbc7inPd",
+   "comments": null
+  },
+  {
+   "id": "Gh03dCgBBoHNlFxUia2cjSaEnbc",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2.2",
+   "depth": 2,
+   "text": "已有分析报告后老师又新上传或者更新了资源",
+   "path": "教师查看个备分析报告 › 2.2",
+   "parent": "Tq7hdpfrHoZkajx6IeLcbc7inPd",
+   "comments": null
+  },
+  {
+   "id": "XUw6dAIq0oxX8OxueaucXALoncb",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "2.2.1",
+   "depth": 3,
+   "text": "点击进入后呈现提示：“检测到您更新了2个新资源，可点击重新分析按钮对更新资源进行分析”",
+   "path": "教师查看个备分析报告 › 2.2.1",
+   "parent": "Gh03dCgBBoHNlFxUia2cjSaEnbc",
+   "comments": null
+  },
+  {
+   "id": "Nwx3d5j0roOS3Ox7gWjclb2bnbc",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2.2.2",
+   "depth": 3,
+   "text": "呈现重新分析按钮",
+   "path": "教师查看个备分析报告 › 2.2.2",
+   "parent": "Gh03dCgBBoHNlFxUia2cjSaEnbc",
+   "comments": null
+  },
+  {
+   "id": "TywldT0NvowGhqxgclocqCe9nJg",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "2.2.3",
+   "depth": 3,
+   "text": "点击后，提示条消失，页面变为AI分析的流式，分析完成后刷新报告。",
+   "path": "教师查看个备分析报告 › 2.2.3",
+   "parent": "Gh03dCgBBoHNlFxUia2cjSaEnbc",
+   "comments": null
+  },
+  {
+   "id": "PnPEdNVM7omeOrxZZERcPikmnhe",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "个备资源分析",
+   "path": "教师查看个备分析报告 › 1",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "QzmkdY0Z0oNUbZxefNdcwk6cnye",
+   "type": "list-item",
+   "marker": "a.",
+   "ordinal": "1.a",
+   "depth": 2,
+   "text": "个备质量总评：综合评级（优、良、待提升）、综合评语（100字左右，概括整体优缺点）",
+   "path": "教师查看个备分析报告 › 1.a",
+   "parent": "PnPEdNVM7omeOrxZZERcPikmnhe",
+   "comments": null
+  },
+  {
+   "id": "BzPmdPqOMotuESxFOjjcD1sJnIh",
+   "type": "list-item",
+   "marker": "b.",
+   "ordinal": "1.b",
+   "depth": 2,
+   "text": "单资源深度解析：每一个文件作为一个独立的卡片展开。",
+   "path": "教师查看个备分析报告 › 1.b",
+   "parent": "PnPEdNVM7omeOrxZZERcPikmnhe",
+   "comments": null
+  },
+  {
+   "id": "UT8wdbA4voG8OaxcX4WcL7fnnPf",
+   "type": "list-item",
+   "marker": "i.",
+   "ordinal": "1.b.i",
+   "depth": 3,
+   "text": "亮点：提炼出彩之处",
+   "path": "教师查看个备分析报告 › 1.b.i",
+   "parent": "BzPmdPqOMotuESxFOjjcD1sJnIh",
+   "comments": null
+  },
+  {
+   "id": "VVUUdUQPaoauK3xIRUicwHHVnVh",
+   "type": "list-item",
+   "marker": "ii.",
+   "ordinal": "1.b.ii",
+   "depth": 3,
+   "text": "优化建议：指出可优化方向。在具体的优化建议之后支持“一键优化”（支持教案、），点击进入AI备课",
+   "path": "教师查看个备分析报告 › 1.b.ii",
+   "parent": "BzPmdPqOMotuESxFOjjcD1sJnIh",
+   "comments": null
+  },
+  {
+   "id": "XJsYdJ3TYodt6ox0WlhcbmOanvh",
+   "type": "heading",
+   "level": 2,
+   "text": "日程卡片优化",
+   "path": "三、需求说明 › 日程卡片优化"
+  },
+  {
+   "id": "GNf1detkdoZ6Ekxc1Mvcy4won7d",
+   "type": "paragraph",
+   "text": "PC端",
+   "path": "日程卡片优化",
+   "comments": null
+  },
+  {
+   "id": "Hw6jdqtcVoz8GixNcpqcoCkznFe",
+   "type": "image",
+   "media": "m-316576003b46",
+   "name": "image.png",
+   "alt": "这是鸿儒教研PC端的2020学年第二学期教研计划日程界面，左侧为日期排布的日程日历，对应标注了不同时段的教研活动。界面右侧弹出“青年教师课堂展示”活动卡片，该活动时间为2020年10月23日14:00-15:30，参与人员有4位，当前活动状态显示“会议纪要尚未生成”，卡片下方设有“添加附件”选项与红色“开始活动”主操作按钮，其余操作、活动相关基本信息及纪要状态规则与文档说明的需求要求一致。",
+   "caption": "",
+   "width": "1920",
+   "height": "1020",
+   "path": "日程卡片优化",
+   "parent": null
+  },
+  {
+   "id": "SOZLdHisUoKlxoxYDxIcAe9Xngd",
+   "type": "image",
+   "media": "m-db8686e8a139",
+   "name": "image.png",
+   "alt": "图片展示的是鸿儒教研AI纪要&教研报告中日程卡片优化的PC端界面。左侧为日程日历，显示2026年10月1 - 31日，有活动卡片显示。右侧是“4猜字谜”集体备课的活动详情，包括时间、地点、主题、主备人等信息，还显示会议纪要未生成。下方有“开始活动”按钮。该图片与上下文介绍的教研活动卡片基本信息、活动纪要状态、附件及操作等内容相契合，直观呈现了日程卡片优化后的界面样式。",
+   "caption": "",
+   "width": "1910",
+   "height": "915",
+   "path": "日程卡片优化",
+   "parent": null
+  },
+  {
+   "id": "SMVvdGvCvo8VH2xljDsc2wpSnqc",
+   "type": "paragraph",
+   "text": "移动端：",
+   "path": "日程卡片优化",
+   "comments": null
+  },
+  {
+   "id": "CDgXd3apEoz5DDxO8Qzccyb7nJh",
+   "type": "attachment",
+   "media": "m-09cffb130d3c",
+   "name": "mobile-ai-minutes.html",
+   "mime": "text/html",
+   "bytes": 43879,
+   "path": "日程卡片优化",
+   "parent": null
+  },
+  {
+   "id": "Fy8fd3FltoM54IxOQNbcCWPKnwd",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "**教研活动卡片**",
+   "path": "日程卡片优化 › 1",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "CN7idfwWUoIqe4xQL7Qc6BdZnOh",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.1",
+   "depth": 2,
+   "text": "：活动名、时间、地方、负责人、参与人、学段、教研组、参与方式、活动类型、活动描述（和当前一致）**基本信息**",
+   "path": "日程卡片优化 › 1.1",
+   "parent": "Fy8fd3FltoM54IxOQNbcCWPKnwd",
+   "comments": null
+  },
+  {
+   "id": "XQQLdVUFGo37OJx9zOdcuWQenbf",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "1.2",
+   "depth": 2,
+   "text": "**活动纪要状态**",
+   "path": "日程卡片优化 › 1.2",
+   "parent": "Fy8fd3FltoM54IxOQNbcCWPKnwd",
+   "comments": null
+  },
+  {
+   "id": "VJapdE2z7oLfSUxuJuRcKkAUn0f",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.2.1",
+   "depth": 3,
+   "text": "活动未结束：未生成",
+   "path": "日程卡片优化 › 1.2.1",
+   "parent": "XQQLdVUFGo37OJx9zOdcuWQenbf",
+   "comments": null
+  },
+  {
+   "id": "MvwOdcDProV2uAxNfqYceLBnnCc",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "1.2.2",
+   "depth": 3,
+   "text": "活动已结束",
+   "path": "日程卡片优化 › 1.2.2",
+   "parent": "XQQLdVUFGo37OJx9zOdcuWQenbf",
+   "comments": null
+  },
+  {
+   "id": "HbyJdHj70oadO7xgbSkcYQ5fnse",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.2.2.1",
+   "depth": 4,
+   "text": "已生成”；用户上传的“已上传”有纪要：AI生成的“",
+   "path": "日程卡片优化 › 1.2.2.1",
+   "parent": "MvwOdcDProV2uAxNfqYceLBnnCc",
+   "comments": null
+  },
+  {
+   "id": "F8SVdRHlvoptGnxOxJVcT3R0nWz",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "1.2.2.2",
+   "depth": 4,
+   "text": "无纪要：待生成",
+   "path": "日程卡片优化 › 1.2.2.2",
+   "parent": "MvwOdcDProV2uAxNfqYceLBnnCc",
+   "comments": null
+  },
+  {
+   "id": "IHoodYlXoo83Fox1QJmciRyCnbd",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "1.3",
+   "depth": 2,
+   "text": "：**附件**",
+   "path": "日程卡片优化 › 1.3",
+   "parent": "Fy8fd3FltoM54IxOQNbcCWPKnwd",
+   "comments": null
+  },
+  {
+   "id": "RntjdzOv3ogIv6xqgn2cHbjOnNb",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.3.1",
+   "depth": 3,
+   "text": "支持添加附件（和当前一致）",
+   "path": "日程卡片优化 › 1.3.1",
+   "parent": "IHoodYlXoo83Fox1QJmciRyCnbd",
+   "comments": null
+  },
+  {
+   "id": "RFeXdQFlIo6u97xmVCZcKuYXnyg",
+   "type": "list-item",
+   "marker": "4.",
+   "ordinal": "1.4",
+   "depth": 2,
+   "text": "**操作**",
+   "path": "日程卡片优化 › 1.4",
+   "parent": "Fy8fd3FltoM54IxOQNbcCWPKnwd",
+   "comments": null
+  },
+  {
+   "id": "Ta2XdtvFwoHzGBxsjWMcexACnBh",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.4.1",
+   "depth": 3,
+   "text": "主操作（以活动结束时间判断）和活动列表页按钮文案一致",
+   "path": "日程卡片优化 › 1.4.1",
+   "parent": "RFeXdQFlIo6u97xmVCZcKuYXnyg",
+   "comments": null
+  },
+  {
+   "id": "ZOXrdymKRocFamx9hEucE0JSnIb",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "1.4.2",
+   "depth": 3,
+   "text": "删除活动（弱化）：仅创建人支持删除卡片，删除时二次弹窗提醒。",
+   "path": "日程卡片优化 › 1.4.2",
+   "parent": "RFeXdQFlIo6u97xmVCZcKuYXnyg",
+   "comments": null
+  },
+  {
+   "id": "U0Bqd5qbdoMR3txoe0Hc2DJcndf",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "**集备活动卡片**",
+   "path": "日程卡片优化 › 2",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "YOwgdTnhDoK0tQxXQrfcDOoFnTd",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "2.1",
+   "depth": 2,
+   "text": "基本信息：活动名、时间、地点、集备范围、主备教师、备课组、研讨清单、（和当前一致）出勤情况、资源沉淀",
+   "path": "日程卡片优化 › 2.1",
+   "parent": "U0Bqd5qbdoMR3txoe0Hc2DJcndf",
+   "comments": null
+  },
+  {
+   "id": "BoW3dJXHios8QQxf9k9cszV9nLe",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2.2",
+   "depth": 2,
+   "text": "**活动纪要状态**",
+   "path": "日程卡片优化 › 2.2",
+   "parent": "U0Bqd5qbdoMR3txoe0Hc2DJcndf",
+   "comments": null
+  },
+  {
+   "id": "UUe7d3LNioIPBgxR0xKcfAJynLh",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "2.2.1",
+   "depth": 3,
+   "text": "活动未结束：未生成",
+   "path": "日程卡片优化 › 2.2.1",
+   "parent": "BoW3dJXHios8QQxf9k9cszV9nLe",
+   "comments": null
+  },
+  {
+   "id": "C9YCdbsFQobBIPx4JUlc9IfPnkb",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2.2.2",
+   "depth": 3,
+   "text": "活动已结束",
+   "path": "日程卡片优化 › 2.2.2",
+   "parent": "BoW3dJXHios8QQxf9k9cszV9nLe",
+   "comments": null
+  },
+  {
+   "id": "DmBxdM3GjoNkSCxuObHcEmOdneh",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "2.2.2.1",
+   "depth": 4,
+   "text": "有纪要：AI生成的“已生成”；用户上传的“已上传”",
+   "path": "日程卡片优化 › 2.2.2.1",
+   "parent": "C9YCdbsFQobBIPx4JUlc9IfPnkb",
+   "comments": null
+  },
+  {
+   "id": "FQ4Md5JKUodyoTxzmQtckdM7n4g",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2.2.2.2",
+   "depth": 4,
+   "text": "无纪要：待生成",
+   "path": "日程卡片优化 › 2.2.2.2",
+   "parent": "C9YCdbsFQobBIPx4JUlc9IfPnkb",
+   "comments": null
+  },
+  {
+   "id": "KArvdFrIKooHqXxD1wVcrKbwnAb",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "2.3",
+   "depth": 2,
+   "text": "**操作**",
+   "path": "日程卡片优化 › 2.3",
+   "parent": "U0Bqd5qbdoMR3txoe0Hc2DJcndf",
+   "comments": null
+  },
+  {
+   "id": "Foe5ddvAbo91hixpyXschwnYn5C",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "2.3.1",
+   "depth": 3,
+   "text": "主操作（以活动结束时间判断）和活动列表页按钮文案一致",
+   "path": "日程卡片优化 › 2.3.1",
+   "parent": "KArvdFrIKooHqXxD1wVcrKbwnAb",
+   "comments": null
+  },
+  {
+   "id": "Z9f1dZRCloXyofx1aDwcvpXVnwd",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2.3.2",
+   "depth": 3,
+   "text": "删除活动（弱化）：仅创建人支持删除卡片，删除时二次弹窗提醒。",
+   "path": "日程卡片优化 › 2.3.2",
+   "parent": "KArvdFrIKooHqXxD1wVcrKbwnAb",
+   "comments": null
+  },
+  {
+   "id": "CZA0dgY4UoQedhx6NFlc8DORnTc",
+   "type": "heading",
+   "level": 2,
+   "text": "教研设置",
+   "path": "三、需求说明 › 教研设置"
+  },
+  {
+   "id": "Xf6idj3ZKot5bHxiuFJcVX8Unhh",
+   "type": "image",
+   "media": "m-7f321853542f",
+   "name": "image.png",
+   "alt": "该图片为学校教研设置板块的AI分析设置页面，页面标题为“学校教研设置”，设有“教研设置”“数据标签策略”“AI分析设置”三个分页，当前处于AI分析设置页。页面展示了4条AI分析模板条目，每条条目包含模板名称、状态、负责人、创建时间、操作栏信息，所有模板的状态均为“未创建”，部分操作栏标注有“查看”选项，页面右上角还有“新建AI分析模板”的蓝色按钮。",
+   "caption": "",
+   "width": "2727",
+   "height": "1343",
+   "path": "教研设置",
+   "parent": null
+  },
+  {
+   "id": "OAqwdg27EosI0AxXYdKcXXEPnJf",
+   "type": "paragraph",
+   "text": "https://codebuddy.work/agents/share/w4wdnVy0ORrLFj8e5P857A7bO5VQDSi4DwJLxlkN7E07fa3lVwr07_SxwGToqc6p?platform=workbuddy",
+   "path": "教研设置",
+   "comments": null
+  },
+  {
+   "id": "KeHEdtNJbozkAxxwStXcHbkon1c",
+   "type": "paragraph",
+   "text": "新增AI分析设置tab",
+   "path": "教研设置",
+   "comments": null
+  },
+  {
+   "id": "UtmWdOVqyoTws5xaXzScxqVAnac",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "支持用户上传AI分析模版，",
+   "path": "教研设置 › 1",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "BWiddApQnoJgrmxGT0ZcNy3on5V",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.1",
+   "depth": 2,
+   "text": "适用模块默认为AI活动纪要~~orAI教研报告~~",
+   "path": "教研设置 › 1.1",
+   "parent": "UtmWdOVqyoTws5xaXzScxqVAnac",
+   "comments": null
+  },
+  {
+   "id": "Mdi0d0bCOoKUdtxucJ5cGxDjnWf",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "1.2",
+   "depth": 2,
+   "text": "选择本地文件",
+   "path": "教研设置 › 1.2",
+   "parent": "UtmWdOVqyoTws5xaXzScxqVAnac",
+   "comments": null
+  },
+  {
+   "id": "W3EPd3y1woZJIJxqtJYcOSSyn4c",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "列表展示",
+   "path": "教研设置 › 2",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "I4P8dQirPo3u8FxR0tVcFdGHnSh",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "2.1",
+   "depth": 2,
+   "text": "分析名称",
+   "path": "教研设置 › 2.1",
+   "parent": "W3EPd3y1woZJIJxqtJYcOSSyn4c",
+   "comments": null
+  },
+  {
+   "id": "BQYCdtU3Koe0XqxZWYQc9lF7nIc",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2.2",
+   "depth": 2,
+   "text": "适用模块",
+   "path": "教研设置 › 2.2",
+   "parent": "W3EPd3y1woZJIJxqtJYcOSSyn4c",
+   "comments": null
+  },
+  {
+   "id": "Vlh6dovqbojWhrxYZn7cjdUQnvh",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "2.3",
+   "depth": 2,
+   "text": "创建人",
+   "path": "教研设置 › 2.3",
+   "parent": "W3EPd3y1woZJIJxqtJYcOSSyn4c",
+   "comments": null
+  },
+  {
+   "id": "JfoLdRBfHogCGYxpdXbcxABknkc",
+   "type": "list-item",
+   "marker": "4.",
+   "ordinal": "2.4",
+   "depth": 2,
+   "text": "创建时间",
+   "path": "教研设置 › 2.4",
+   "parent": "W3EPd3y1woZJIJxqtJYcOSSyn4c",
+   "comments": null
+  },
+  {
+   "id": "PikxdF4wjom7mUxE29RcYhI3nJW",
+   "type": "list-item",
+   "marker": "5.",
+   "ordinal": "2.5",
+   "depth": 2,
+   "text": "操作：查看、删除",
+   "path": "教研设置 › 2.5",
+   "parent": "W3EPd3y1woZJIJxqtJYcOSSyn4c",
+   "comments": null
+  },
+  {
+   "id": "YMZ4d9vp7o1q48x0fH6cG7OnnHd",
+   "type": "heading",
+   "level": 1,
+   "text": "四、算法及知识萃取需求",
+   "path": "四、算法及知识萃取需求"
+  },
+  {
+   "id": "EW0ldMlaYouwuLxSkt4cewuanKf",
+   "type": "heading",
+   "level": 2,
+   "text": "纪要内容",
+   "path": "四、算法及知识萃取需求 › 纪要内容"
+  },
+  {
+   "id": "NisgdpVs1omjZtxElcdcLClQnkb",
+   "type": "heading",
+   "level": 3,
+   "text": "前置参考",
+   "path": "四、算法及知识萃取需求 › 纪要内容 › 前置参考"
+  },
+  {
+   "id": "x-0018",
+   "type": "table-row",
+   "head": [
+    "数据",
+    "来源"
+   ],
+   "cells": [
+    "活动目标",
+    ""
+   ],
+   "rowLabel": "活动目标",
+   "path": "前置参考 › 活动目标",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "SPcfd1OQ8og4fZxRhPkcuT9enef",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "教研活动：教研活动目标",
+   "path": "前置参考 › 1",
+   "parent": "x-0018",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "VgOPdPBGTowWiVx40SRcY0FVndc",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "集备活动：单元计划",
+   "path": "前置参考 › 2",
+   "parent": "x-0018",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "x-0019",
+   "type": "table-row",
+   "head": [
+    "数据",
+    "来源"
+   ],
+   "cells": [
+    "会议纪要分析模版",
+    ""
+   ],
+   "rowLabel": "会议纪要分析模版",
+   "path": "前置参考 › 会议纪要分析模版",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "ItZ8ddcItorTr9xEe7TcX4Wonqe",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "用户上传",
+   "path": "前置参考 › 1",
+   "parent": "x-0019",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "x-0020",
+   "type": "table-row",
+   "head": [
+    "数据",
+    "来源"
+   ],
+   "cells": [
+    "共思随记",
+    "用户发送"
+   ],
+   "rowLabel": "共思随记",
+   "path": "前置参考 › 共思随记",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0021",
+   "type": "table-row",
+   "head": [
+    "数据",
+    "来源"
+   ],
+   "cells": [
+    "上传资源&附件",
+    ""
+   ],
+   "rowLabel": "上传资源&附件",
+   "path": "前置参考 › 上传资源&附件",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "ORROdp8yWoSG12xg9c4cN1LZnog",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "教研活动：附件",
+   "path": "前置参考 › 1",
+   "parent": "x-0021",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "NMvcdzVsSoestqxV7AucQMaUnbg",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "集备活动：资源&个备资源",
+   "path": "前置参考 › 2",
+   "parent": "x-0021",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "HfeKduPnHop1Nhxj4ixchetwnPb",
+   "type": "heading",
+   "level": 3,
+   "text": "纪要生成要求",
+   "path": "四、算法及知识萃取需求 › 纪要内容 › 纪要生成要求"
+  },
+  {
+   "id": "WFYAdLASmoNuwJxLba4cCfNwnjf",
+   "type": "heading",
+   "level": 4,
+   "text": "一、 性能与触发机制",
+   "path": "四、算法及知识萃取需求 › 纪要内容 › 纪要生成要求 › 一、 性能与触发机制"
+  },
+  {
+   "id": "VidTdWh9qoi6nZx9EIfc3TifnLc",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "系统需在5分钟内，返回完整的AI活动纪要。",
+   "path": "一、 性能与触发机制 › 1",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "QIHVdxCrGo2dstxyOBkcQGhonff",
+   "type": "heading",
+   "level": 4,
+   "text": "二、 核心结构与溯源要求",
+   "path": "四、算法及知识萃取需求 › 纪要内容 › 纪要生成要求 › 二、 核心结构与溯源要求"
+  },
+  {
+   "id": "AJIidaZSLoeSvAxcQugckZM5nrd",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "核心结论",
+   "path": "二、 核心结构与溯源要求 › 1",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "N0AjdQgJZo5hc9xCinnciUc5nB3",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.1",
+   "depth": 2,
+   "text": "核心结论：放在最前，满足用户“3秒看懂会议重点”的诉求。",
+   "path": "二、 核心结构与溯源要求 › 1.1",
+   "parent": "AJIidaZSLoeSvAxcQugckZM5nrd",
+   "comments": null
+  },
+  {
+   "id": "VGfCdUCFyowG5CxzDajcpwbZngc",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "1.2",
+   "depth": 2,
+   "text": "关键问题：点出本次教研解决了什么痛点，或者存在什么争议。",
+   "path": "二、 核心结构与溯源要求 › 1.2",
+   "parent": "AJIidaZSLoeSvAxcQugckZM5nrd",
+   "comments": null
+  },
+  {
+   "id": "Qka1d1bz1oFUtyxWrcvcbQKQnGe",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "1.3",
+   "depth": 2,
+   "text": "讨论内容：展示过程，体现教师们的参与度。",
+   "path": "二、 核心结构与溯源要求 › 1.3",
+   "parent": "AJIidaZSLoeSvAxcQugckZM5nrd",
+   "comments": null
+  },
+  {
+   "id": "I7RrdWzw7omIroxyD3ucWDamnje",
+   "type": "list-item",
+   "marker": "4.",
+   "ordinal": "1.4",
+   "depth": 2,
+   "text": "决议事项：明确达成了什么共识。是“What”，是拍板的规则/共识。（如：决议：期末试卷难度系数控制在0.65左右）",
+   "path": "二、 核心结构与溯源要求 › 1.4",
+   "parent": "AJIidaZSLoeSvAxcQugckZM5nrd",
+   "comments": null
+  },
+  {
+   "id": "Er11dJYJUoveoUxxl3ScW7qgnSf",
+   "type": "list-item",
+   "marker": "5.",
+   "ordinal": "1.5",
+   "depth": 2,
+   "text": "待办：明确下一步谁去干活，闭环落地。是“Who + When”，是具体的动作。（如：待办：张老师于本周五前完成第三单元教案初稿）",
+   "path": "二、 核心结构与溯源要求 › 1.5",
+   "parent": "AJIidaZSLoeSvAxcQugckZM5nrd",
+   "comments": null
+  },
+  {
+   "id": "QazgdGaspoeuDAxDDQWcn2gknCc",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "证据溯源：纪要中的结论，必须携带原始音频的时间戳或文本片段索引，支持前端实现“点击一键回溯至原文/原音出处”。",
+   "path": "二、 核心结构与溯源要求 › 2",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "PIwudgfQfoKdadxO1xscCQxVnEf",
+   "type": "heading",
+   "level": 4,
+   "text": "三、 角色识别与内容提纯",
+   "path": "四、算法及知识萃取需求 › 纪要内容 › 纪要生成要求 › 三、 角色识别与内容提纯"
+  },
+  {
+   "id": "POG5djQdxodtjNxdd1SczBFznyf",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "发言人识别：",
+   "path": "三、 角色识别与内容提纯 › 1",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "AhGUdcxoWoZ3uAxPck9c8RlXnmf",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.1",
+   "depth": 2,
+   "text": "声纹为主：基于参会人的声纹库进行 1:N 比对。",
+   "path": "三、 角色识别与内容提纯 › 1.1",
+   "parent": "POG5djQdxodtjNxdd1SczBFznyf",
+   "comments": null
+  },
+  {
+   "id": "GhxvdtjMwoQHtRxb0ImccHAjnGf",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "1.2",
+   "depth": 2,
+   "text": "信息兜底：结合会议系统的参会人列表（入会/签到信息），对声纹识别置信度低的段落进行逻辑纠偏。",
+   "path": "三、 角色识别与内容提纯 › 1.2",
+   "parent": "POG5djQdxodtjNxdd1SczBFznyf",
+   "comments": null
+  },
+  {
+   "id": "DTrkdDlnFoQZImx45b4chfR8nzb",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "1.3",
+   "depth": 2,
+   "text": "边界要求：若声纹不匹配且无法推断，需标记为“发言人n”。",
+   "path": "三、 角色识别与内容提纯 › 1.3",
+   "parent": "POG5djQdxodtjNxdd1SczBFznyf",
+   "comments": null
+  },
+  {
+   "id": "OLxwdw8looS1g4xlAqrc0LEVnkd",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "主题相关性过滤：",
+   "path": "三、 角色识别与内容提纯 › 2",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "XyXmdUVZRoCFXtxbQXic3AvTnah",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "2.1",
+   "depth": 2,
+   "text": "必须基于教研/集备/教育教学的领域知识进行强过滤，剔除寒暄、闲聊、设备调试、与教研无关的行政杂务等内容。",
+   "path": "三、 角色识别与内容提纯 › 2.1",
+   "parent": "OLxwdw8looS1g4xlAqrc0LEVnkd",
+   "comments": null
+  },
+  {
+   "id": "FM9MdnfNeoOcM1xx3JQciZJ7nLc",
+   "type": "heading",
+   "level": 4,
+   "text": "四、其他",
+   "path": "四、算法及知识萃取需求 › 纪要内容 › 纪要生成要求 › 四、其他"
+  },
+  {
+   "id": "GNCddN2ntodiYLxJJkGcr3WcnQg",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "篇幅不能过长，目标纪要字数=有效转写文本字数×10%-20%。",
+   "path": "四、其他 › 1",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "I2D5deLYFoSufzxzOCQcu1Jynwf",
+   "type": "heading",
+   "level": 3,
+   "text": "prompt示例（采用 “Map-Reduce（分段提取）+ 聚合总结” 的策略）",
+   "path": "四、算法及知识萃取需求 › 纪要内容 › prompt示例（采用 “Map-Reduce（分段提取）+ 聚合总结” 的策略）"
+  },
+  {
+   "id": "ZGiFdW3qCoYbDUxQrFFcltUenHd",
+   "type": "heading",
+   "level": 4,
+   "text": "Prompt 预处理",
+   "path": "四、算法及知识萃取需求 › 纪要内容 › prompt示例（采用 “Map-Reduce（分段提取）+ 聚合总结” 的策略） › Prompt 预处理"
+  },
+  {
+   "id": "Poi6dwHAVolJ9Jx12Lqc002mngh",
+   "type": "paragraph",
+   "text": "**在语音转写层（ASR）完成声纹识别**",
+   "path": "Prompt 预处理",
+   "comments": null
+  },
+  {
+   "id": "TqcFdLMqCoemwGxYw84cb2vDnbb",
+   "type": "paragraph",
+   "text": "#ASR后处理Prompt (用于纠偏)",
+   "path": "Prompt 预处理",
+   "comments": null
+  },
+  {
+   "id": "VwjZd4HSGoX8T9xOU5JcttX1nTg",
+   "type": "paragraph",
+   "text": "#Input：",
+   "path": "Prompt 预处理",
+   "comments": null
+  },
+  {
+   "id": "GU0UdXlJBoY3NDxtXxQcr6yvnUg",
+   "type": "paragraph",
+   "text": "参会人名单：[{\"id\": \"001\", \"name\": \"张老师\"}, {\"id\": \"002\", \"name\": \"李主任\"}]",
+   "path": "Prompt 预处理",
+   "comments": null
+  },
+  {
+   "id": "UIt5d5BVeoPzLexu6kEcCShlnBh",
+   "type": "paragraph",
+   "text": "声纹比对结果：[{\"speaker_tag\": \"spk_1\", \"match_id\": \"001\", \"confidence\": 0.92}]原始转写：[spk_1] 我觉得这个单元的重点是...",
+   "path": "Prompt 预处理",
+   "comments": null
+  },
+  {
+   "id": "VTqKdKismoKxEHxgqq4cgwOrnAd",
+   "type": "paragraph",
+   "text": "# Task:请将原始转写中的 替换为真实姓名 。如果置信度低于0.6，请保留为 。spk_1张老师未知发言人X",
+   "path": "Prompt 预处理",
+   "comments": null
+  },
+  {
+   "id": "C2fddngzDopIjFxvnVUc0WBlnme",
+   "type": "heading",
+   "level": 4,
+   "text": "【Prompt A：分段内容提取与溯源】",
+   "path": "四、算法及知识萃取需求 › 纪要内容 › prompt示例（采用 “Map-Reduce（分段提取）+ 聚合总结” 的策略） › 【Prompt A：分段内容提取与溯源】"
+  },
+  {
+   "id": "F02Cd7ZluoUM2yxOtQbcWnJAnXe",
+   "type": "paragraph",
+   "text": "**将长音频转写文本按 5-10 分钟或固定字数切分，对每一块提取“有效教研内容、发言人观点、带时间戳的证据”。目的：过滤无关内容，抽取有价值的发言，并强制保留时间戳。**",
+   "path": "【Prompt A：分段内容提取与溯源】",
+   "comments": null
+  },
+  {
+   "id": "MLZDdX4nuoE1fyxzCWyc2ofZnWK",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "Role：",
+   "path": "【Prompt A：分段内容提取与溯源】 › 1",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "NyDTdWOD9oH1DExPMecc1fVYnYe",
+   "type": "paragraph",
+   "text": "你是一位专业的教研活动记录助理，擅长从庞杂的会议录音转写文本中，提取与“教研、集备、教育教学”高度相关的核心内容，并过滤掉无效闲聊。如果片段中未出现某结论，切勿自行编造",
+   "path": "【Prompt A：分段内容提取与溯源】",
+   "comments": null
+  },
+  {
+   "id": "RMRods6dAomaPhxCBwrcf4Rxn7N",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "Task：",
+   "path": "【Prompt A：分段内容提取与溯源】 › 1",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "D2UjdSimio8tsXxEXqDclD8TnEh",
+   "type": "paragraph",
+   "text": "请阅读以下会议记录片段，提取所有有价值的发言和结论。",
+   "path": "【Prompt A：分段内容提取与溯源】",
+   "comments": null
+  },
+  {
+   "id": "SSBodl6ELoBvP6xpYz7cKJF8nog",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "Rules：",
+   "path": "【Prompt A：分段内容提取与溯源】 › 1",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "FNyqdnNJtoNiBHxYTUocb1wynjf",
+   "type": "list-item",
+   "marker": "a.",
+   "ordinal": "1.a",
+   "depth": 2,
+   "text": "：必须剔除寒暄、设备调试、跑题闲聊、与教学无关的行政通知。**强效降噪**",
+   "path": "【Prompt A：分段内容提取与溯源】 › 1.a",
+   "parent": "SSBodl6ELoBvP6xpYz7cKJF8nog",
+   "comments": null
+  },
+  {
+   "id": "Gntmdm149oKwqVxHRfpcdgdCnad",
+   "type": "list-item",
+   "marker": "b.",
+   "ordinal": "1.b",
+   "depth": 2,
+   "text": "：提取的每一条观点、结论，都必须附带原始文本中的 [时间戳] 和 原话引用 作为证据。**强制溯源**",
+   "path": "【Prompt A：分段内容提取与溯源】 › 1.b",
+   "parent": "SSBodl6ELoBvP6xpYz7cKJF8nog",
+   "comments": null
+  },
+  {
+   "id": "Ts3TdwprcoVlusxUmQacPmL4nxf",
+   "type": "list-item",
+   "marker": "c.",
+   "ordinal": "1.c",
+   "depth": 2,
+   "text": "：保留文本中已有的发言人标签（如：发言人A、张老师）。**发言人保留**",
+   "path": "【Prompt A：分段内容提取与溯源】 › 1.c",
+   "parent": "SSBodl6ELoBvP6xpYz7cKJF8nog",
+   "comments": null
+  },
+  {
+   "id": "UaFedXoydoqQxMxn0luckl4inTd",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "Input (输入片段)：",
+   "path": "【Prompt A：分段内容提取与溯源】 › 2",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "F6Ymdck41ouNP3xP9H7cf0xknre",
+   "type": "paragraph",
+   "text": "[00:01:00] 发言人A: 今天我们讨论一下明天的情景对话环节怎么弄。",
+   "path": "【Prompt A：分段内容提取与溯源】",
+   "comments": null
+  },
+  {
+   "id": "FQnRdroejoRmbUxbFFDcFgR5nYc",
+   "type": "paragraph",
+   "text": "[00:01:15] 发言人B: 我建议这里使用小组合作的方式。",
+   "path": "【Prompt A：分段内容提取与溯源】",
+   "comments": null
+  },
+  {
+   "id": "DgQadjx73ose2sxQWaQcW2dSnif",
+   "type": "paragraph",
+   "text": "[00:01:30] 发言人A: 同意，这个提议很好。",
+   "path": "【Prompt A：分段内容提取与溯源】",
+   "comments": null
+  },
+  {
+   "id": "Th78djQcvonN8NxNxFAc2F9pnkg",
+   "type": "paragraph",
+   "text": "[00:01:45] 发言人C: 对了，下午记得交考勤表。",
+   "path": "【Prompt A：分段内容提取与溯源】",
+   "comments": null
+  },
+  {
+   "id": "YIVGd00T1orrxMx99kfcPouInxf",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "Output Format (JSON)",
+   "path": "【Prompt A：分段内容提取与溯源】 › 1",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "Pz0NdTZZlol8IPxzF5fc7Q7GnWb",
+   "type": "paragraph",
+   "text": "请严格按以下 JSON 格式输出：",
+   "path": "【Prompt A：分段内容提取与溯源】",
+   "comments": null
+  },
+  {
+   "id": "XY6Xdt853oMdQJxsb6hcSGobn0f",
+   "type": "paragraph",
+   "text": "{",
+   "path": "【Prompt A：分段内容提取与溯源】",
+   "comments": null
+  },
+  {
+   "id": "YjYFdtxydot90nxfVZPcdLRyn0f",
+   "type": "paragraph",
+   "text": "\"valid_discussions\": [",
+   "path": "【Prompt A：分段内容提取与溯源】",
+   "comments": null
+  },
+  {
+   "id": "BsHQdiWoEowPn3xBZh3c4HQHnSf",
+   "type": "paragraph",
+   "text": "{",
+   "path": "【Prompt A：分段内容提取与溯源】",
+   "comments": null
+  },
+  {
+   "id": "Amind6R33o9rurx53rectWPPnqe",
+   "type": "paragraph",
+   "text": "\"topic\": \"情景对话环节设计\",",
+   "path": "【Prompt A：分段内容提取与溯源】",
+   "comments": null
+  },
+  {
+   "id": "QLotdF8YyoReMCxSmTBcWsURnZg",
+   "type": "paragraph",
+   "text": "\"speaker\": \"发言人B\",",
+   "path": "【Prompt A：分段内容提取与溯源】",
+   "comments": null
+  },
+  {
+   "id": "FgATdvoE8ocnS8xODfqcQJdun1D",
+   "type": "paragraph",
+   "text": "\"viewpoint\": \"提出了在情景对话环节应使用小组合作的方式进行讨论\",",
+   "path": "【Prompt A：分段内容提取与溯源】",
+   "comments": null
+  },
+  {
+   "id": "GCN7dbzjToMlTbx3NEecnfe4nBg",
+   "type": "paragraph",
+   "text": "\"timestamp\": \"[00:01:15]\",",
+   "path": "【Prompt A：分段内容提取与溯源】",
+   "comments": null
+  },
+  {
+   "id": "LEUsdJk5HokwEbxWy6PcYvOynrf",
+   "type": "paragraph",
+   "text": "\"original_text\": \"我建议这里使用小组合作的方式。\"",
+   "path": "【Prompt A：分段内容提取与溯源】",
+   "comments": null
+  },
+  {
+   "id": "C4mMdqATZopXJbx70Ibc17tlnPf",
+   "type": "paragraph",
+   "text": "}",
+   "path": "【Prompt A：分段内容提取与溯源】",
+   "comments": null
+  },
+  {
+   "id": "NPkAd8ZRxoaYghxo6a8cq3Xpn3c",
+   "type": "paragraph",
+   "text": "],",
+   "path": "【Prompt A：分段内容提取与溯源】",
+   "comments": null
+  },
+  {
+   "id": "MjD5dLPDyoosJSxhDxnc3mPXnhc",
+   "type": "paragraph",
+   "text": "\"valid_conclusions\": [",
+   "path": "【Prompt A：分段内容提取与溯源】",
+   "comments": null
+  },
+  {
+   "id": "PpgLdIdvGotrWsx8oFNcJP6bnEf",
+   "type": "paragraph",
+   "text": "{",
+   "path": "【Prompt A：分段内容提取与溯源】",
+   "comments": null
+  },
+  {
+   "id": "QRsOdtmOkotKPIxgs3ScoYfXnPc",
+   "type": "paragraph",
+   "text": "\"conclusion\": \"采用小组合作方式进行情景对话\",",
+   "path": "【Prompt A：分段内容提取与溯源】",
+   "comments": null
+  },
+  {
+   "id": "NqY2d5i32o8l6nxJNOMcxIw5ncb",
+   "type": "paragraph",
+   "text": "\"supporting_speakers\": [\"发言人B\", \"发言人A\"],",
+   "path": "【Prompt A：分段内容提取与溯源】",
+   "comments": null
+  },
+  {
+   "id": "J0sjdFbwGo1UCdxUG68coa7qnO8",
+   "type": "paragraph",
+   "text": "\"timestamp\": \"[00:01:30]\",",
+   "path": "【Prompt A：分段内容提取与溯源】",
+   "comments": null
+  },
+  {
+   "id": "JfVjdIMDloHY3Sxm2rGc1kdhnwe",
+   "type": "paragraph",
+   "text": "\"original_text\": \"同意，这个提议很好。\"",
+   "path": "【Prompt A：分段内容提取与溯源】",
+   "comments": null
+  },
+  {
+   "id": "OWqGd9jy4owNt7xd3nec3Hfbn0f",
+   "type": "paragraph",
+   "text": "}",
+   "path": "【Prompt A：分段内容提取与溯源】",
+   "comments": null
+  },
+  {
+   "id": "P4KPdWBWBoTQ6GxM8Gjck0fXnk0",
+   "type": "paragraph",
+   "text": "]",
+   "path": "【Prompt A：分段内容提取与溯源】",
+   "comments": null
+  },
+  {
+   "id": "VZxhdzQZnotd86xotnUctegmnxc",
+   "type": "paragraph",
+   "text": "}",
+   "path": "【Prompt A：分段内容提取与溯源】",
+   "comments": null
+  },
+  {
+   "id": "XTNqdOajUo5vtzxS0uHca5qInUe",
+   "type": "heading",
+   "level": 4,
+   "text": "【Prompt B：全局聚合与结构化生成】",
+   "path": "四、算法及知识萃取需求 › 纪要内容 › prompt示例（采用 “Map-Reduce（分段提取）+ 聚合总结” 的策略） › 【Prompt B：全局聚合与结构化生成】"
+  },
+  {
+   "id": "EwHFdtbxZobVi5xpEhjc1Q03nmf",
+   "type": "paragraph",
+   "text": "**将所有切片的提取结果，生成最终的核心结论、目标达成判定及个人总结。将Map阶段的所有 JSON 汇总，生成最终展示给用户的结构化报告。**",
+   "path": "【Prompt B：全局聚合与结构化生成】",
+   "comments": null
+  },
+  {
+   "id": "Dt4JdUzs2oUqBXxbTIdcQpSpnmg",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "Role",
+   "path": "【Prompt B：全局聚合与结构化生成】 › 1",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "Roqqd14AAoUKOJxwOvicR6UYn4e",
+   "type": "paragraph",
+   "text": "你是一位资深教研专家和会议总结专家。你需要根据提供的分段会议提取结果，生成一份高质量的AI教研活动纪要。**如果片段中未出现某结论，切勿自行编造**",
+   "path": "【Prompt B：全局聚合与结构化生成】",
+   "comments": null
+  },
+  {
+   "id": "KUXYdE1dPol0HJxssq0ct16Inpg",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "Task",
+   "path": "【Prompt B：全局聚合与结构化生成】 › 1",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "Fe7Ddl8j4oGKA8xdAVjc40PJnhg",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "请按照结构要求，生成最终的会议纪要。包含：核心结论、关键问题、讨论内容、决议事项、待办事项。（如果用户已上传纪要模版，请按照纪要模版生成）",
+   "path": "【Prompt B：全局聚合与结构化生成】 › 2",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "Gioedo006oKc1tx62MxcYy0OnAh",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "3",
+   "depth": 1,
+   "text": "Rules",
+   "path": "【Prompt B：全局聚合与结构化生成】 › 3",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "UvUDdyNeIoUydVxSvMbc00VLnEg",
+   "type": "list-item",
+   "marker": "4.",
+   "ordinal": "4",
+   "depth": 1,
+   "text": "核心结论：提炼本次教研最重要的 3-5 条定调性结论。(支持溯源)",
+   "path": "【Prompt B：全局聚合与结构化生成】 › 4",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "Jm44d0e79oZh6BxJcKsc4BaWnLb",
+   "type": "list-item",
+   "marker": "5.",
+   "ordinal": "5",
+   "depth": 1,
+   "text": "关键问题：列出会议中探讨的核心痛点或争议点。",
+   "path": "【Prompt B：全局聚合与结构化生成】 › 5",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "T6madQKHGoqVerxbSakc8b8WnJb",
+   "type": "list-item",
+   "marker": "6.",
+   "ordinal": "6",
+   "depth": 1,
+   "text": "结构化讨论内容 & 个人发言总结(按议题分组，而非时间流水账) ****议题 1：XXXXX**** * ：提出了在情景对话环节应使用小组合作的方式进行讨论，此提议得到认可。 ****张老师*****(👉 溯源: [00:15:20])* * ：补充了需要设计评价量表。* ****李老师*****(👉 溯源: [00:18:30])*****议题 2：XXXXX**** * ...",
+   "path": "【Prompt B：全局聚合与结构化生成】 › 6",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "LhUzdt37Hok1nexdBNQcPIWVnJb",
+   "type": "list-item",
+   "marker": "7.",
+   "ordinal": "7",
+   "depth": 1,
+   "text": "决议事项：达成了什么明确的共识/规则。*(支持溯源)*",
+   "path": "【Prompt B：全局聚合与结构化生成】 › 7",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "BNOCdmm5goLIX8xnbdUc8NHcnfd",
+   "type": "list-item",
+   "marker": "8.",
+   "ordinal": "8",
+   "depth": 1,
+   "text": "待办事项：具体动作，明确任务动作和责任人*(支持溯源)*",
+   "path": "【Prompt B：全局聚合与结构化生成】 › 8",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "U4LRdrLBHoohQ9xfKUscD4kXnhg",
+   "type": "heading",
+   "level": 4,
+   "text": "【Prompt C：多源资源融合与内容增厚】",
+   "path": "四、算法及知识萃取需求 › 纪要内容 › prompt示例（采用 “Map-Reduce（分段提取）+ 聚合总结” 的策略） › 【Prompt C：多源资源融合与内容增厚】"
+  },
+  {
+   "id": "VlYhd21Z0oRwhEx84PAcdSBFnej",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "# Role你是一位深耕教育领域的资深教研专家，同时也是一位严谨的会议归档编辑。你擅长将口语化的会议记录与文档资料、文字互动进行完美融合，输出一份专业、详实的教研活动纪要。",
+   "path": "【Prompt C：多源资源融合与内容增厚】 › 1",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "TXvwdkopHoZDWHxj3dpcWvGvn0d",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "# Context (上下文输入)你将收到四部分信息：",
+   "path": "【Prompt C：多源资源融合与内容增厚】 › 2",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "WjpTdX73soUsZvxq7VIcAzeBnYw",
+   "type": "paragraph",
+   "text": "`【活动目标】`：本次活动预期的教研目标或单元设计（可能为空）。",
+   "path": "【Prompt C：多源资源融合与内容增厚】",
+   "comments": null
+  },
+  {
+   "id": "UjaJdHjnMoFRJjxL7OBcZ0NJn35",
+   "type": "paragraph",
+   "text": "`【音频纪要初稿】`：由语音转写提取并初步聚合的纪要草稿（包含了核心结论、讨论过程、待办等）。",
+   "path": "【Prompt C：多源资源融合与内容增厚】",
+   "comments": null
+  },
+  {
+   "id": "QCK2dq0ieoy9DVxpoBscqeK9nLO",
+   "type": "paragraph",
+   "text": "`【研讨区互动记录】`：会议过程中，教师在聊天区发送的文字或上传的附件名称列表。",
+   "path": "【Prompt C：多源资源融合与内容增厚】",
+   "comments": null
+  },
+  {
+   "id": "WfMdd8rSMo2jt4xFD7TcR5HYnEe",
+   "type": "paragraph",
+   "text": "`【会议附件列表】`：会议开始前或过程中上传的相关资源文件名称。",
+   "path": "【Prompt C：多源资源融合与内容增厚】",
+   "comments": null
+  },
+  {
+   "id": "VeSWd1kNKoqpgXxp0NCc7Zein5r",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "# Task请对比以上四部分信息，对 `【音频纪要初稿】` 进行深度加工，使其更完善。具体执行以下操作：",
+   "path": "【Prompt C：多源资源融合与内容增厚】 › 1",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "MP2cdoDfCo0xLWxUULTcuZ9inyf",
+   "type": "paragraph",
+   "text": "：提取 `【研讨区互动记录】` 中的有效信息。 - 如果互动内容是对音频观点的补充（例如：某老师在聊天区发了具体的教学资源链接或补充了数据），请将其整合到对应的“讨论内容”中，并注明“（据研讨区互动补充）”。 - 如果互动内容与音频完全重复，请忽略以防冗余。 ：根据讨论的上下文语义，将 `【会议附件列表】` 中的文件挂载到相关的结论或讨论话题下（例如：“关于XXX问题，详见附件《XXX.docx》”）。****互动记录融合（去重与补充）********附件资源关联****",
+   "path": "【Prompt C：多源资源融合与内容增厚】",
+   "comments": null
+  },
+  {
+   "id": "NfvPdM3vSohoJZxUZ1Jczbtbn4g",
+   "type": "paragraph",
+   "text": "：将音频初稿中口语化、断句混乱的表述，润色为书面化的教研专业术语，但要保持原意不变。****语气润色****",
+   "path": "【Prompt C：多源资源融合与内容增厚】",
+   "comments": null
+  },
+  {
+   "id": "Yl62d8PlAogHJlx8EhNcQ1Ixney",
+   "type": "paragraph",
+   "text": "。- 例如，某老师提出了一个方案（讨论内容），最终被大家采纳变成了规则（决议事项）。那么： - 在【决议事项】中写明：“通过了XXX方案”。 - 在【讨论内容】中********同一事实/观点，只能出现在最合适的某一个模块中********",
+   "path": "【Prompt C：多源资源融合与内容增厚】",
+   "comments": null
+  },
+  {
+   "id": "CFoNdl2kuoUqMoxDUQzcuu9Jnqe",
+   "type": "paragraph",
+   "text": "，只能写：“就该方案进行了讨论，各方达成共识”。- ****绝对不能再把该方案的详细原话重复一遍****",
+   "path": "【Prompt C：多源资源融合与内容增厚】",
+   "comments": null
+  },
+  {
+   "id": "RlC2dbOjjoPElpxn9Wac7C7in0c",
+   "type": "paragraph",
+   "text": "是高度凝练的全局总结，不要在“核心结论”里长篇大论展开细节。****核心结论****",
+   "path": "【Prompt C：多源资源融合与内容增厚】",
+   "comments": null
+  },
+  {
+   "id": "UuPsdcfkIocmIXxv8Bdchj0kn3Z",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "# Constraints (防幻觉约束)- ：如果互动记录和附件中没有相关内容，严禁强行补充。- 所有的补充内容必须与教研、教学高度相关。如果互动区全是在闲聊，直接丢弃，不要体现在纪要里。****绝对禁止编造****",
+   "path": "【Prompt C：多源资源融合与内容增厚】 › 1",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "ATwBdPDspob6Etxs9VXcRRVynVd",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "# Input Data (数据输入)【活动目标】：{{goal_text}}【音频纪要初稿】：{{map_reduce_result}}【研讨区互动记录】：{{chat_history}}【会议附件列表】：{{attachment_list}}# Output Format (输出格式要求)请输出最终的 Markdown 格式纪要。结构需严格按照以下要求：### 🎯 目标达成情况（基于活动目标给出评估）### 💡 核心结论（提炼最关键的几点）### 🔍 关键问题与讨论过程（按照议题分点，并将互动区的文字/附件融入其中，保留溯源提示）### ✅ 决议事项（明确的拍板决定）### 📝 待办事项（包含任务、负责人、时间）",
+   "path": "【Prompt C：多源资源融合与内容增厚】 › 2",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "GKjGd8zylo3BosxLTmNcaxNJnGc",
+   "type": "heading",
+   "level": 3,
+   "text": "活动纪要真实音频示例",
+   "path": "四、算法及知识萃取需求 › 纪要内容 › 活动纪要真实音频示例"
+  },
+  {
+   "id": "HOtkdDkDvoxOfSxuyxhc4fbPnEg",
+   "type": "paragraph",
+   "text": "https://codebuddy.work/agents/share/XtjeaYig30t_5ZoRtoub_d8WBBTco2RCleu7q5l4-ggncFQ_4P_f65s--wlRSY1S?platform=workbuddy",
+   "path": "活动纪要真实音频示例",
+   "comments": null
+  },
+  {
+   "id": "PYjBdJMrxoCDU5xRkK3cmU3snIb",
+   "type": "attachment",
+   "media": "m-898c7c2d3d88",
+   "name": "初二英语集体备课.m4a",
+   "mime": "audio/x-m4a",
+   "bytes": 30191914,
+   "path": "活动纪要真实音频示例",
+   "parent": null
+  },
+  {
+   "id": "OFobd8dC9oeaFwxGN08c3Npqn7b",
+   "type": "image",
+   "media": "m-cee602b10aa0",
+   "name": "image.png",
+   "alt": "图片展示的是鸿儒教研AI纪要&教研报告中关于算法及知识萃取需求的纪要内容。左侧为会议界面，显示会议时间为2024年10月29日14:00 - 15:00，有10人参会。右侧是纪要文本，涵盖会议开场、会议流程、会议内容、会议总结等部分，其中“会议内容”部分以红色高亮显示，详细记录了各环节讨论情况，如算法及知识萃取需求、知识萃取需求、算法需求等，还列出了相关问题及讨论要点。",
+   "caption": "",
+   "width": "3828",
+   "height": "1962",
+   "path": "活动纪要真实音频示例",
+   "parent": null
+  },
+  {
+   "id": "Vc3YdCW4uoCNqhxVGqScfg3jnVh",
+   "type": "heading",
+   "level": 2,
+   "text": "报告内容",
+   "path": "四、算法及知识萃取需求 › 报告内容"
+  },
+  {
+   "id": "HeQAdxFyToYO0QxOu85cXccPn3d",
+   "type": "heading",
+   "level": 3,
+   "text": "前置参考",
+   "path": "四、算法及知识萃取需求 › 报告内容 › 前置参考"
+  },
+  {
+   "id": "x-0022",
+   "type": "table-row",
+   "head": [
+    "数据",
+    "来源",
+    "缺失处理"
+   ],
+   "cells": [
+    "教研基本信息",
+    "活动名、时间、地点、集备范围、主备教师、备课组、研讨清单、出勤情况、资源沉淀",
+    "/"
+   ],
+   "rowLabel": "教研基本信息",
+   "path": "前置参考 › 教研基本信息",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0023",
+   "type": "table-row",
+   "head": [
+    "数据",
+    "来源",
+    "缺失处理"
+   ],
+   "cells": [
+    "活动纪要",
+    "",
+    "忽略"
+   ],
+   "rowLabel": "活动纪要",
+   "path": "前置参考 › 活动纪要",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0024",
+   "type": "table-row",
+   "head": [
+    "数据",
+    "来源",
+    "缺失处理"
+   ],
+   "cells": [
+    "教研产出",
+    "集备资源、个备资源、教学反思",
+    "忽略"
+   ],
+   "rowLabel": "教研产出",
+   "path": "前置参考 › 教研产出",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "x-0025",
+   "type": "table-row",
+   "head": [
+    "数据",
+    "来源",
+    "缺失处理"
+   ],
+   "cells": [
+    "课堂落地数据（可选）",
+    "本次教研对应的课堂AI课堂顾问报告",
+    "忽略"
+   ],
+   "rowLabel": "课堂落地数据（可选）",
+   "path": "前置参考 › 课堂落地数据（可选）",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "AbXOdGrI4o6ak2xfgpqc5vYnn3b",
+   "type": "heading",
+   "level": 3,
+   "text": "个备资源分析",
+   "path": "四、算法及知识萃取需求 › 报告内容 › 个备资源分析"
+  },
+  {
+   "id": "x-0027",
+   "type": "table-row",
+   "head": [
+    "资源类型",
+    "分析维度"
+   ],
+   "cells": [
+    "教案",
+    ""
+   ],
+   "rowLabel": "教案",
+   "path": "个备资源分析 › 教案",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "YH2Nd60GeoJJ3JxmDByc4HORn1g",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "目标设计与重难点：目标表述是否规范（如使用可观测的行为动词），是否切合学生的实际认知水平（最近发展区），是否具备可检测性。",
+   "path": "个备资源分析 › 1",
+   "parent": "x-0027",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "E0TldWTwDovkuWx8siWcokNjnpd",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "教学内容与学情：教材处理是否得当（如是否合理取舍、有效整合），内容设计是否联系学生生活实际，是否有助于突破重难点。",
+   "path": "个备资源分析 › 2",
+   "parent": "x-0027",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "SX1idtFEcoqgr5xV5GVcK3Ylnuc",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "3",
+   "depth": 1,
+   "text": "教学环节设计和方法：情境创设是否有效，教学活动设计是否丰富且能激发学生兴趣，课堂互动设计是否合理，是否具备应对课堂生成的预设。",
+   "path": "个备资源分析 › 3",
+   "parent": "x-0027",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "QAuVdxBcqobFrex29GccFNXvn2b",
+   "type": "list-item",
+   "marker": "4.",
+   "ordinal": "4",
+   "depth": 1,
+   "text": "教学资源与手段：资源选择是否贴合教学内容，多媒体运用是否恰到好处，是否避免了“为用而用”的形式主义。",
+   "path": "个备资源分析 › 4",
+   "parent": "x-0027",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "F6YXd7J5VosH96x2MGicxLkVn64",
+   "type": "list-item",
+   "marker": "5.",
+   "ordinal": "5",
+   "depth": 1,
+   "text": "作业设计与板书：作业量与难度是否适中，板书是否具备启发性和美感。",
+   "path": "个备资源分析 › 5",
+   "parent": "x-0027",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "NUtudoSXyo8EGNxx6Wxc39B6n3b",
+   "type": "list-item",
+   "marker": "6.",
+   "ordinal": "6",
+   "depth": 1,
+   "text": "教学评价与反思维度：在实际评价中，各维度的权重会根据具体的评价场景（如常规教学检查、教学竞赛、公开课评审）有所侧重，但以上六个维度基本涵盖了中小学教案评价的核心框架",
+   "path": "个备资源分析 › 6",
+   "parent": "x-0027",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "x-0028",
+   "type": "table-row",
+   "head": [
+    "资源类型",
+    "分析维度"
+   ],
+   "cells": [
+    "课件",
+    ""
+   ],
+   "rowLabel": "课件",
+   "path": "个备资源分析 › 课件",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "SPc2d980LoHp7nxPSHIcmBJinub",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "内容逻辑与结构：内容结构是否与教案高度匹配，逻辑主线是否清晰；页面导航与层级是否明确，是否有助于呈现知识脉络与重难点。",
+   "path": "个备资源分析 › 1",
+   "parent": "x-0028",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "YjOIdl7sHoxVdwxdo5dcHR36ncq",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "视觉呈现与认知负荷：排版是否美观大方、重点突出；文字量控制是否合理（避免字满为患），图文搭配是否符合多媒体学习认知规律，是否有效降低学生认知负荷。",
+   "path": "个备资源分析 › 2",
+   "parent": "x-0028",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "U7rkd8xGWoPTpMxwkihcfwy0n5g",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "3",
+   "depth": 1,
+   "text": "媒体与互动设计：音视频、动画等媒体资源的插入是否必要且适度；是否设计了启发式问题、交互式元素或图表工具来引导学生思考，避免“满堂灌”。",
+   "path": "个备资源分析 › 3",
+   "parent": "x-0028",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "YErod1cmgoRhCdx0rMAcuRInnVc",
+   "type": "list-item",
+   "marker": "4.",
+   "ordinal": "4",
+   "depth": 1,
+   "text": "规范性与技术性：文字、拼音、公式、标点等是否准确无误；动画效果是否恰当不花哨；版面切换是否顺畅，兼容性是否良好。",
+   "path": "个备资源分析 › 4",
+   "parent": "x-0028",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "x-0029",
+   "type": "table-row",
+   "head": [
+    "资源类型",
+    "分析维度"
+   ],
+   "cells": [
+    "作业",
+    ""
+   ],
+   "rowLabel": "作业",
+   "path": "个备资源分析 › 作业",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "ZfpadXIP0on7bvxJfkRcqRIvnkd",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "目标对应与内容覆盖：作业内容是否紧扣本节课的教学目标与重难点；是否有效覆盖了核心知识、易错点与核心素养的考查。",
+   "path": "个备资源分析 › 1",
+   "parent": "x-0029",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "RK5fd0iX5oTqDjx71KlchG01nGh",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "题型结构与思维层级：题型是否丰富多样；识记类、理解类、应用类与综合探究类题目的比例是否合理，是否注重高阶思维的培养。",
+   "path": "个备资源分析 › 2",
+   "parent": "x-0029",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "NohGdHxppoQ005x9MEFcRdYwnFd",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "3",
+   "depth": 1,
+   "text": "分层与弹性设计：是否体现了“双减”政策要求，设计了必做与选做、基础与拓展等分层任务，以满足不同学力学生的发展需求。",
+   "path": "个备资源分析 › 3",
+   "parent": "x-0029",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "XG6Idp4LSofnIsx6tiKcB9XRn8c",
+   "type": "list-item",
+   "marker": "4.",
+   "ordinal": "4",
+   "depth": 1,
+   "text": "情境性与实践性：题目是否创设了真实、贴近生活的情境；是否包含跨学科融合或动手实践类任务，是否有助于促进知识向能力的迁移。",
+   "path": "个备资源分析 › 4",
+   "parent": "x-0029",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "MOIVdkoSmoY2Z5xYQORc97x7ncg",
+   "type": "list-item",
+   "marker": "5.",
+   "ordinal": "5",
+   "depth": 1,
+   "text": "作业量与规范性：题量是否适中，预计完成时间是否合理；题干表述是否清晰、无歧义；答案是否存在唯一性或多维标准。",
+   "path": "个备资源分析 › 5",
+   "parent": "x-0029",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "x-0030",
+   "type": "table-row",
+   "head": [
+    "资源类型",
+    "分析维度"
+   ],
+   "cells": [
+    "学案",
+    ""
+   ],
+   "rowLabel": "学案",
+   "path": "个备资源分析 › 学案",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "XSledfhjcocVGQxJra5cigPWn1e",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "目标导航与学法指导：是否以学生视角清晰呈现了学习目标；是否提供了明确的阅读提示、思考方向或解题策略，发挥“导学”功能。",
+   "path": "个备资源分析 › 1",
+   "parent": "x-0030",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "GKi4d3x33o0kqfxA7GAcuAYen4M",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "任务驱动与问题链设计：是否将知识点转化为可操作、有梯度的学习任务；问题设置是否具有启发性与连贯性，能否引导学生自主探究。",
+   "path": "个备资源分析 › 2",
+   "parent": "x-0030",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "DtYEdvAxsohIJfx0lWmczLsznGh",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "3",
+   "depth": 1,
+   "text": "支架搭建与活动设计：是否提供了必要的图表、框架或背景资料等学习支架；是否设计了小组合作、讨论交流等互动环节。",
+   "path": "个备资源分析 › 3",
+   "parent": "x-0030",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "BOKFdFa8hoCU7bxBxYQc9C1YnVe",
+   "type": "list-item",
+   "marker": "4.",
+   "ordinal": "4",
+   "depth": 1,
+   "text": "留白反思与评价反馈：版面设计是否留有足够的学生书写、记录空间；是否包含“学后反思”、“自我评价”或“同伴互评”模块。",
+   "path": "个备资源分析 › 4",
+   "parent": "x-0030",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "x-0031",
+   "type": "table-row",
+   "head": [
+    "资源类型",
+    "分析维度"
+   ],
+   "cells": [
+    "试卷",
+    ""
+   ],
+   "rowLabel": "试卷",
+   "path": "个备资源分析 › 试卷",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "YXBidVKMXo8dwWxK8A4cwYNvnCf",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "知识点覆盖与课标契合度：是否全面覆盖了本阶段的核心考点与课标要求；重难点知识的考查权重分配是否科学合理。",
+   "path": "个备资源分析 › 1",
+   "parent": "x-0031",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "RCa1djxiEo0PQYxcF23cmPl9n9e",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "难度与区分度分布：试题的易、中、难比例（如7:2:1）是否合理；能否有效区分不同层次学生的学业水平，避免过难或过易。",
+   "path": "个备资源分析 › 2",
+   "parent": "x-0031",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "NSnLdY4uiolVgDxozNEcUIVanjc",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "3",
+   "depth": 1,
+   "text": "题型多样性与能力考查：题型是否丰富且符合考试规范；是否侧重考查学生综合运用知识解决实际问题的能力，而非死记硬背。",
+   "path": "个备资源分析 › 3",
+   "parent": "x-0031",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "LpRTdC124oAZJvxY3lDc6VPInve",
+   "type": "list-item",
+   "marker": "4.",
+   "ordinal": "4",
+   "depth": 1,
+   "text": "试题规范性与科学性：题干表述是否严谨科学、无歧义；图表、数据是否准确清晰；是否存在超纲、偏题、怪题现象。",
+   "path": "个备资源分析 › 4",
+   "parent": "x-0031",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "HBUTdItO0o4THexB8g9clt0Ln4g",
+   "type": "list-item",
+   "marker": "5.",
+   "ordinal": "5",
+   "depth": 1,
+   "text": "卷面排版与阅读负荷：卷面排版是否清晰、疏密有致；阅读量与作答空间是否适中，是否有利于学生稳定发挥。",
+   "path": "个备资源分析 › 5",
+   "parent": "x-0031",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "WtJVdjXZcoWay3x9nstcDwGinJp",
+   "type": "heading",
+   "level": 3,
+   "text": "示例：",
+   "path": "四、算法及知识萃取需求 › 报告内容 › 示例："
+  },
+  {
+   "id": "PxOSdIFkZoaXNJx6wd3c7VaZnl6",
+   "type": "heading",
+   "level": 3,
+   "text": "总结内容@知识萃取",
+   "path": "四、算法及知识萃取需求 › 报告内容 › 总结内容@知识萃取"
+  },
+  {
+   "id": "x-0032",
+   "type": "table-row",
+   "head": [
+    "结构",
+    "核心内容",
+    "参考依据",
+    "功能"
+   ],
+   "cells": [
+    "数据概览",
+    "",
+    "",
+    ""
+   ],
+   "rowLabel": "数据概览",
+   "path": "总结内容@知识萃取 › 数据概览",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "C7OOdLuMeompGhxMiNqchkM5nTh",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "教研基础信息：活动主题、时间、参与教师、研讨课时 / 单元",
+   "path": "总结内容@知识萃取 › 1",
+   "parent": "x-0032",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "B7TVddA0cobdR6xa7uwctNx3npc",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "本次材料提交概览：共案、个人教案课件、教学反思、课堂记录的收集完成情况",
+   "path": "总结内容@知识萃取 › 2",
+   "parent": "x-0032",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "x-0033",
+   "type": "table-row",
+   "head": [
+    "结构",
+    "核心内容",
+    "参考依据",
+    "功能"
+   ],
+   "cells": [
+    "集备质量评估",
+    "",
+    "集备资源、会议纪要",
+    "每条结论可回溯到纪要原文与录音时间点"
+   ],
+   "rowLabel": "集备质量评估",
+   "path": "总结内容@知识萃取 › 集备质量评估",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "TgsSdvc1FoAhq5xnJblcndzOnUe",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "需要界定集备质量分析的维度，如：参与充分度、共识清晰度、结论可执行性",
+   "path": "总结内容@知识萃取 › 1",
+   "parent": "x-0033",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "X8wGdIUrKoMeLgx1BrocJn6rnwb",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "每个维度需要有评语总结",
+   "path": "总结内容@知识萃取 › 2",
+   "parent": "x-0033",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "L4fsdV1B3oDOjbxMD38cMdfRn8f",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "3",
+   "depth": 1,
+   "text": "每个维度需要有质性评价，如：优、良、差。并给出评价标准",
+   "path": "总结内容@知识萃取 › 3",
+   "parent": "x-0033",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "x-0034",
+   "type": "table-row",
+   "head": [
+    "结构",
+    "核心内容",
+    "参考依据",
+    "功能"
+   ],
+   "cells": [
+    "教师个人教研质量评估",
+    "",
+    "",
+    ""
+   ],
+   "rowLabel": "教师个人教研质量评估",
+   "path": "总结内容@知识萃取 › 教师个人教研质量评估",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "CCXvdTPJ3oU6xdxnQMlcAswLnRb",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "个备资源评估：每个课时结合个备资源和教学反思，根据教学目标和教学重难点，生按课时的备课总结，根据以下两个维度、七个指标分析",
+   "path": "总结内容@知识萃取 › 1",
+   "parent": "x-0034",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "Bt3UdA6u2oxytcxSq7JcgZcmnuf",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1.1",
+   "depth": 2,
+   "text": "结构维度：整体结构设计、教学环节设置、逻辑衔接",
+   "path": "总结内容@知识萃取 › 1.1",
+   "parent": "CCXvdTPJ3oU6xdxnQMlcAswLnRb",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "TLH7dQsTuoKYySxZJsxcPmQMnId",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "1.2",
+   "depth": 2,
+   "text": "内容维度：教学内容、教学方法、教学案例、核心素养落地",
+   "path": "总结内容@知识萃取 › 1.2",
+   "parent": "CCXvdTPJ3oU6xdxnQMlcAswLnRb",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "WvSod15HLo4kXixyAOIcQXGrnYe",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "课堂实现评估：评价教研成果在真实课堂中的落地贯彻情况",
+   "path": "总结内容@知识萃取 › 2",
+   "parent": "x-0034",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "W5qzdm4s8oKz6xxrxRecR5Pznsd",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "2.1",
+   "depth": 2,
+   "text": "AI课堂顾问报告",
+   "path": "总结内容@知识萃取 › 2.1",
+   "parent": "WvSod15HLo4kXixyAOIcQXGrnYe",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "PlpqdCGSIodMclx4V5Qc50Jknag",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2.2",
+   "depth": 2,
+   "text": "听评课记录",
+   "path": "总结内容@知识萃取 › 2.2",
+   "parent": "WvSod15HLo4kXixyAOIcQXGrnYe",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "TPARd7PWlokZCUxb7wZclpfknge",
+   "type": "list-item",
+   "marker": "3.",
+   "ordinal": "3",
+   "depth": 1,
+   "text": "综合评价及后续个备改进优化方案",
+   "path": "总结内容@知识萃取 › 3",
+   "parent": "x-0034",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "Md9UdrLOooGnBnxjpP3cKgvPnvd",
+   "type": "paragraph",
+   "text": "个备资源",
+   "path": "总结内容@知识萃取",
+   "parent": "x-0034",
+   "comments": null,
+   "cell": 2
+  },
+  {
+   "id": "MqAXdecB7odUS5xaKBJcpiFvnPe",
+   "type": "paragraph",
+   "text": "AI课堂顾问总结",
+   "path": "总结内容@知识萃取",
+   "parent": "x-0034",
+   "comments": null,
+   "cell": 2
+  },
+  {
+   "id": "E21Mdf2mpoj4TWxOaINcqrQZnyb",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "可点击评价定位至具体资源页面",
+   "path": "总结内容@知识萃取 › 1",
+   "parent": "x-0034",
+   "comments": null,
+   "cell": 3
+  },
+  {
+   "id": "L81SdwgQXoCzloxlXpVcJFESnTd",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "结论可回溯到AI课堂顾问报告和音视频时间点",
+   "path": "总结内容@知识萃取 › 2",
+   "parent": "x-0034",
+   "comments": null,
+   "cell": 3
+  },
+  {
+   "id": "x-0035",
+   "type": "table-row",
+   "head": [
+    "结构",
+    "核心内容",
+    "参考依据",
+    "功能"
+   ],
+   "cells": [
+    "总结&改进建议",
+    "",
+    "",
+    ""
+   ],
+   "rowLabel": "总结&改进建议",
+   "path": "总结内容@知识萃取 › 总结&改进建议",
+   "parent": null,
+   "comments": null
+  },
+  {
+   "id": "DwsFdBg3toqnEyxpTnycEQpwnSe",
+   "type": "list-item",
+   "marker": "1.",
+   "ordinal": "1",
+   "depth": 1,
+   "text": "本次教研活动综合评价",
+   "path": "总结内容@知识萃取 › 1",
+   "parent": "x-0035",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "Prt2df0t2oEb5uxgBWucqhSxn7b",
+   "type": "list-item",
+   "marker": "2.",
+   "ordinal": "2",
+   "depth": 1,
+   "text": "下次教研活动改进建议",
+   "path": "总结内容@知识萃取 › 2",
+   "parent": "x-0035",
+   "comments": null,
+   "cell": 1
+  },
+  {
+   "id": "7698929558132739065",
+   "type": "comment",
+   "ref": "c1",
+   "anchorBlockId": "IgOkdyDPaoS3cxxeYGycvymRnme",
+   "quote": "活动检查列表优化",
+   "thread": [
+    {
+     "user": "沈超杰",
+     "text": "原来活动录制的业务和数据怎么处理"
+    },
+    {
+     "user": "刘雨晨",
+     "text": "@沈超杰 已补充在该模块下的第三点中"
+    }
+   ],
+   "reactions": null,
+   "path": "评论区"
+  },
+  {
+   "id": "7699025314298465311",
+   "type": "comment",
+   "ref": "c2",
+   "anchorBlockId": "Jv7pdVQGaoighrxPGnFcrpq7nkc",
+   "quote": "AI活动纪要",
+   "thread": [
+    {
+     "user": "刘雨晨",
+     "text": "看一下浏览器和客户端的用户数量"
+    }
+   ],
+   "reactions": null,
+   "path": "评论区"
+  },
+  {
+   "id": "7699674293520567322",
+   "type": "comment",
+   "ref": "c3",
+   "anchorBlockId": "EAuhdE72soJetsx72OfcT3NfnnX",
+   "quote": "开始活动",
+   "thread": [
+    {
+     "user": "刘雨晨",
+     "text": "介入光合力"
+    }
+   ],
+   "reactions": null,
+   "path": "评论区"
+  },
+  {
+   "id": "7699371015368903665",
+   "type": "comment",
+   "ref": "c4",
+   "anchorBlockId": "BSYldiA3SogLIFxikqJcgW5mntd",
+   "quote": "录制中的提示和退出弹窗： 录制页顶部常驻：“会议录音中，请勿退出页面（请勿关闭小程序），否则录音将中断。” 退出页面弹窗：录音尚未结束，退出当前页面将中断本次录音。是否继续退出？",
+   "thread": [
+    {
+     "user": "刘雨晨",
+     "text": "根据需求评审补充@沈超杰"
+    }
+   ],
+   "reactions": null,
+   "path": "评论区"
+  },
+  {
+   "id": "7699785475145436180",
+   "type": "comment",
+   "ref": "c5",
+   "anchorBlockId": "URCBd3ekFogloAxLqoKc13EEnFf",
+   "quote": "设置单元设计（原有功能迁移）：主备人可编辑，非主备人仅可查看和评论",
+   "thread": [
+    {
+     "user": "刘雨晨",
+     "text": "补充"
+    }
+   ],
+   "reactions": null,
+   "path": "评论区"
+  },
+  {
+   "id": "7698931289776212924",
+   "type": "comment",
+   "ref": "c6",
+   "anchorBlockId": "G3Yvd1rTnoajLKx6yxDcXp8BnRb",
+   "quote": "资源证据：点击跳转至资源页面",
+   "thread": [
+    {
+     "user": "沈超杰",
+     "text": "资源页面是指集备资源区 ？ 还是实时研讨互动区? 补充原型"
+    }
+   ],
+   "reactions": null,
+   "path": "评论区"
+  },
+  {
+   "id": "7699369140145998833",
+   "type": "comment",
+   "ref": "c7",
+   "anchorBlockId": "Vub2dr4fXoKiSexks5YcSOP6nHd",
+   "quote": "支持切换发言人：对某条记录的发言人点击修改，下拉框展示所有参会人员名单，支持修改单条和全局替换",
+   "thread": [
+    {
+     "user": "刘雨晨",
+     "text": "@沈超杰 根据评审会议的讨论点补充"
+    }
+   ],
+   "reactions": null,
+   "path": "评论区"
+  },
+  {
+   "id": "7699037318685920258",
+   "type": "comment",
+   "ref": "c8",
+   "anchorBlockId": "BcPPdv0XtoJtLsxeOjzcHuE7nRd",
+   "quote": "重叠发言： 多人同时说话的区间不计入任何一方的有效发言时长，避免百分比之和超过 100%。",
+   "thread": [
+    {
+     "user": "刘雨晨",
+     "text": "找一下真实的录音样本"
+    },
+    {
+     "user": "刘雨晨",
+     "text": "1. 说话人有的距离设备远有的距离近；2. 多人讨论的音频"
+    }
+   ],
+   "reactions": null,
+   "path": "评论区"
+  },
+  {
+   "id": "7699673595856882687",
+   "type": "comment",
+   "ref": "c9",
+   "anchorBlockId": "KzVrdSjghobezuxiH5vc5c9snpb",
+   "quote": "构建声纹库",
+   "thread": [
+    {
+     "user": "刘雨晨",
+     "text": "和交付联动，在培训的时候就录制好"
+    }
+   ],
+   "reactions": null,
+   "path": "评论区"
+  },
+  {
+   "id": "7698640167900367802",
+   "type": "comment",
+   "ref": "c10",
+   "anchorBlockId": "R0W4dg2ofoqiDjxHN1Fc36qBnsb",
+   "quote": "《声纹采集与使用授权协议》",
+   "thread": [
+    {
+     "user": "刘雨晨",
+     "text": "三方协议参考:\n[https://privacy.qq.com/document/preview/d545d727db9a4ba6ba1304fb8f0d725a](https://privacy.qq.com/document/preview/d545d727db9a4ba6ba1304fb8f0d725a)"
+    }
+   ],
+   "reactions": null,
+   "path": "评论区"
+  },
+  {
+   "id": "7698932552983137305",
+   "type": "comment",
+   "ref": "c11",
+   "anchorBlockId": "M0WtdAOjuoWhLtxd5Z3ctPAfnSg",
+   "quote": "数据同步：声纹提取成功后，【用户ID + 声纹特征文件】同步至海思谷的声纹管理，并为“已关联”状态。",
+   "thread": [
+    {
+     "user": "沈超杰",
+     "text": "如果老师在saas已有声纹, 但并未在我们平台录制, 是提示未录制还是已生效"
+    },
+    {
+     "user": "刘雨晨",
+     "text": "@沈超杰 根据会议结论是，模型更新了需要老师都在嗨夫子录一下"
+    }
+   ],
+   "reactions": null,
+   "path": "评论区"
+  }
+ ],
+ "media": [
+  {
+   "id": "m-e1bb37d62968",
+   "token": "FEvzbfWgMoGdKMx4usacJZgmnCh",
+   "kind": "media",
+   "name": "鸿儒教研-AI会议纪要-可交互原型.zip",
+   "mime": "application/zip",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-24e7883740f0",
+   "token": "Q2dxb8tcJoZ3KJxM2fQcSEZGnqy",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-e991554ade4b",
+   "token": "LvN7bVA65oTR2JxkLwxcOJijnpf",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-bff75355948b",
+   "token": "IIikbCdzpoPhzHx5hevcG73ln1f",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-d6d1a9bfaf3b",
+   "token": "OcN2wryBghcbqwbhEETc0HdGn5b",
+   "kind": "whiteboard",
+   "name": "whiteboard",
+   "mime": "image/jpeg",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-5b52e09f6ad6",
+   "token": "EKOcbNXvOohPiSxf55OclEvwnlg",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-c1095786d772",
+   "token": "OpphbbkJwojNdNxE2uPc51rnnJh",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-84b87ba5ad3b",
+   "token": "KVSGbRAV6otP1pxKdmhcvonsnAg",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-180e15f220eb",
+   "token": "UKzWbSdiWoC5INxlZTZcziUGntc",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-b3dcacf37a77",
+   "token": "YD3sbiPNOo2yQWxWXpZc11d4nUe",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-b092f19cd450",
+   "token": "Pbo5bbn3koqiRHxsspic5702n6d",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-552747b1e7d6",
+   "token": "DN1Kb8IvvoRgJDxMK6acx9lDnAb",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-2294fb2fda87",
+   "token": "Bi4Bb4t8moefMkxjJN5cMUgNnld",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-d08be4e827ad",
+   "token": "PS50bCzb0o4bmoxVI85cuua0nMh",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-f368f24d9b6a",
+   "token": "QL0IbzD9oo8K7LxWvF9c3h8eneh",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-6f0ed872039b",
+   "token": "DA9rb0f9eovcDlxRdKIcZeaenEd",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-7bbc9b81d00f",
+   "token": "FfBubaUJjofOBqxqrMScpjULnBd",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-9c5a89d7b528",
+   "token": "TzCQbc7iOoDW2YxTnzZcD9YHnMf",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-6ac4063a7095",
+   "token": "DFHcbaF5eotgSIxtHUPcgzs4nvc",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-b173616b4ba3",
+   "token": "GXoQbq87To6fssx25AHcQdCsn7b",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-9c13770dd066",
+   "token": "AuxDbeDXBowyVixsiCgc7L0rnyE",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-57f5be6ef37a",
+   "token": "LbpOboChyopOUOxXTqicXUS3nyd",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-9bf008c3b4b1",
+   "token": "LEMibNIKyoItcSxOWeJczviKnyd",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-eea3b2e01cb6",
+   "token": "V3A1bdqdOo7Ky5xrhc3czXcEnce",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-de01d1e530ff",
+   "token": "UTXvbmxcjo3Sf5xlbKfcDrlxneg",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-b7a4b79f092e",
+   "token": "HyVOb9966oPUDLxrsyuc53nKn1e",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-9aea0d02a986",
+   "token": "QCf1bc0yYoKihgxmTiGcru7gnJf",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-bb44b4742e7f",
+   "token": "JqGvbbEqHo2s3JxkcJbccscxnld",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-eae51abfe54d",
+   "token": "FOGlbWFhlotr4axPlgoc0wIwnqc",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-6d917929921d",
+   "token": "M0VNbQHRQoNQI1xXq1acKD45nii",
+   "kind": "media",
+   "name": "voiceprint-management.html",
+   "mime": "text/html",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-bb8c1e249b75",
+   "token": "YEwNbYBs6oFY71xI7YQc2aNon9f",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-53250a54fb69",
+   "token": "NPaJbFkaHoO83QxuX2gcXgSsnbb",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-1f157546e72a",
+   "token": "FWFfbxbsboPH6Yx52Nyc2mZqnke",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-bf4efc4d1e49",
+   "token": "UuUEbh5ZnoCOJ6xH0sbc3C5enMb",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-d2a1a6f337cb",
+   "token": "Mx2pw5yjkhnk0rbKz84c0aywnA9",
+   "kind": "whiteboard",
+   "name": "whiteboard",
+   "mime": "image/jpeg",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-f1784979041f",
+   "token": "Lug1bAqMCoirJMx5ix1c4v7Bnqs",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-01befedd224e",
+   "token": "U9wmbaeX9odOtpxBz4BclK0tnpb",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-cb72aec6f2b3",
+   "token": "Dw2JbVxO3owEsexZWG6c0U4tnfo",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-3ad8e0be0af5",
+   "token": "PIYaby6gVoTJufx9Tv3cHtUwnrc",
+   "kind": "media",
+   "name": "gebei-quality-analysis.html",
+   "mime": "text/html",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-ecb8db7ef596",
+   "token": "QXSjbBzBYoofq5xs08yc7haNnMb",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-c7e9d9e0b961",
+   "token": "TuHEbh1u5oClWSxdmz9cPpAlnQc",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-7ac3fdeed275",
+   "token": "LTQWbNHqSo4ysgxchr6cyIFqnpd",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-c3db4b94b663",
+   "token": "DBHZbPQcLoYLqcxFRQXcOKGVnYg",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-316576003b46",
+   "token": "S6IQb61VRoQbjGx5oO6czkOqnEb",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-db8686e8a139",
+   "token": "A8gWb0JxAoSewjxxgQacXpPInX6",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-09cffb130d3c",
+   "token": "DTBFbLmxao76ELxUj4Dcnkftnyh",
+   "kind": "media",
+   "name": "mobile-ai-minutes.html",
+   "mime": "text/html",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-7f321853542f",
+   "token": "Mybubvj1soUpoNxbGL1cLbaznOb",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-898c7c2d3d88",
+   "token": "VsMEbfBTmosIS9xTyf0cVoRbntg",
+   "kind": "media",
+   "name": "初二英语集体备课.m4a",
+   "mime": "audio/x-m4a",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  },
+  {
+   "id": "m-cee602b10aa0",
+   "token": "JsWibkROGoEJHMxsg4gcqeinnU2",
+   "kind": "media",
+   "name": "image.png",
+   "mime": "image/png",
+   "file": null,
+   "bytes": 0,
+   "sha256": null,
+   "status": "pending"
+  }
+ ],
+ "guard": {
+  "algo": "conservation-v1",
+  "source": "xml",
+  "mediaTokens": [
+   "A8gWb0JxAoSewjxxgQacXpPInX6",
+   "AuxDbeDXBowyVixsiCgc7L0rnyE",
+   "Bi4Bb4t8moefMkxjJN5cMUgNnld",
+   "DA9rb0f9eovcDlxRdKIcZeaenEd",
+   "DBHZbPQcLoYLqcxFRQXcOKGVnYg",
+   "DFHcbaF5eotgSIxtHUPcgzs4nvc",
+   "DN1Kb8IvvoRgJDxMK6acx9lDnAb",
+   "DTBFbLmxao76ELxUj4Dcnkftnyh",
+   "Dw2JbVxO3owEsexZWG6c0U4tnfo",
+   "EKOcbNXvOohPiSxf55OclEvwnlg",
+   "FEvzbfWgMoGdKMx4usacJZgmnCh",
+   "FOGlbWFhlotr4axPlgoc0wIwnqc",
+   "FWFfbxbsboPH6Yx52Nyc2mZqnke",
+   "FfBubaUJjofOBqxqrMScpjULnBd",
+   "GXoQbq87To6fssx25AHcQdCsn7b",
+   "HyVOb9966oPUDLxrsyuc53nKn1e",
+   "IIikbCdzpoPhzHx5hevcG73ln1f",
+   "JqGvbbEqHo2s3JxkcJbccscxnld",
+   "JsWibkROGoEJHMxsg4gcqeinnU2",
+   "KVSGbRAV6otP1pxKdmhcvonsnAg",
+   "LEMibNIKyoItcSxOWeJczviKnyd",
+   "LTQWbNHqSo4ysgxchr6cyIFqnpd",
+   "LbpOboChyopOUOxXTqicXUS3nyd",
+   "Lug1bAqMCoirJMx5ix1c4v7Bnqs",
+   "LvN7bVA65oTR2JxkLwxcOJijnpf",
+   "M0VNbQHRQoNQI1xXq1acKD45nii",
+   "Mx2pw5yjkhnk0rbKz84c0aywnA9",
+   "Mybubvj1soUpoNxbGL1cLbaznOb",
+   "NPaJbFkaHoO83QxuX2gcXgSsnbb",
+   "OcN2wryBghcbqwbhEETc0HdGn5b",
+   "OpphbbkJwojNdNxE2uPc51rnnJh",
+   "PIYaby6gVoTJufx9Tv3cHtUwnrc",
+   "PS50bCzb0o4bmoxVI85cuua0nMh",
+   "Pbo5bbn3koqiRHxsspic5702n6d",
+   "Q2dxb8tcJoZ3KJxM2fQcSEZGnqy",
+   "QCf1bc0yYoKihgxmTiGcru7gnJf",
+   "QL0IbzD9oo8K7LxWvF9c3h8eneh",
+   "QXSjbBzBYoofq5xs08yc7haNnMb",
+   "S6IQb61VRoQbjGx5oO6czkOqnEb",
+   "TuHEbh1u5oClWSxdmz9cPpAlnQc",
+   "TzCQbc7iOoDW2YxTnzZcD9YHnMf",
+   "U9wmbaeX9odOtpxBz4BclK0tnpb",
+   "UKzWbSdiWoC5INxlZTZcziUGntc",
+   "UTXvbmxcjo3Sf5xlbKfcDrlxneg",
+   "UuUEbh5ZnoCOJ6xH0sbc3C5enMb",
+   "V3A1bdqdOo7Ky5xrhc3czXcEnce",
+   "VsMEbfBTmosIS9xTyf0cVoRbntg",
+   "YD3sbiPNOo2yQWxWXpZc11d4nUe",
+   "YEwNbYBs6oFY71xI7YQc2aNon9f"
+  ],
+  "textSha": "0fbebfd12c816a1273d4995d356457ab267a7bdfabb1c2955b38d567b0ba4753"
+ }
+}

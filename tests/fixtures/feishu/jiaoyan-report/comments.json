@@ -1,0 +1,1437 @@
+{
+ "file_token": "PL5ndphOGoIoU5xQwwCcvcWWnIX",
+ "items": [
+  {
+   "comment_id": "7694526940870380491",
+   "create_time": 1791521660,
+   "extra": {
+    "content_anchor_id": "BpFDd4iVDoMNCQx2wQHcYKdWnyc"
+   },
+   "is_solved": false,
+   "is_whole": false,
+   "quote": "AI教研报告",
+   "relation": {
+    "content_deleted": true,
+    "relation": "{\"22-PL5ndphOGoIoU5xQwwCcvcWWnIX\":{\"objType\":22,\"objVersion\":5796}}"
+   },
+   "reply_list": {
+    "replies": [
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": "这个页面兼顾了计划设置、活动过程实际进展，适合放置教研报告页面"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1791521660,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7694526940891384764",
+      "update_time": 1791521660,
+      "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+     }
+    ]
+   },
+   "solver_user_id": null,
+   "update_time": 1791950356,
+   "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+  },
+  {
+   "comment_id": "7694848445017770974",
+   "create_time": 1791596516,
+   "extra": {
+    "content_anchor_id": "N1b8d4Ru2ocMgWxVNJucaeR2nTf"
+   },
+   "is_solved": true,
+   "is_whole": false,
+   "quote": "AI教研报告",
+   "relation": {
+    "content_deleted": true,
+    "relation": "{\"22-PL5ndphOGoIoU5xQwwCcvcWWnIX\":{\"objType\":22,\"objVersion\":4778}}"
+   },
+   "reply_list": {
+    "replies": [
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": "生成前是否需要确认？\n  a. 展示已有数据情况，如集备活动单元计划、集备范围、集备资源数量、教师个备资源数量、教学反思、集备活动纪要、AI课堂总结\n  b. 已有内容则勾选展示，没有内容则提示去关联"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1791596516,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7694848445034580964",
+      "update_time": 1791596516,
+      "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+     }
+    ]
+   },
+   "solver_user_id": "ou_a377f21d407d61ba10031cc94db9650c",
+   "update_time": 1791875365,
+   "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+  },
+  {
+   "comment_id": "7694921397742668730",
+   "create_time": 1791613502,
+   "extra": {
+    "content_anchor_id": "PKN6dM10som1TQxdtbxc31MonMe"
+   },
+   "is_solved": true,
+   "is_whole": false,
+   "quote": "[图片]",
+   "relation": {
+    "content_deleted": true,
+    "relation": "{\"22-PL5ndphOGoIoU5xQwwCcvcWWnIX\":{\"objType\":22,\"objVersion\":5079}}"
+   },
+   "reply_list": {
+    "replies": [
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": "单元计划的定位和用户使用情况，问下交付魏子涵"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1791613502,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7694921397767801834",
+      "update_time": 1791613502,
+      "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+     },
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": {
+          "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+         },
+         "text_run": null,
+         "type": "person"
+        },
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": " "
+         },
+         "type": "text_run"
+        },
+        {
+         "docs_link": {
+          "url": "https://hailiang.feishu.cn/wiki/IlthwJWHjiXoxAkNIxScyFHvnxd"
+         },
+         "person": null,
+         "text_run": null,
+         "type": "docs_link"
+        }
+       ]
+      },
+      "create_time": 1791793385,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7695693990015831240",
+      "update_time": 1791793385,
+      "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+     },
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": {
+          "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+         },
+         "text_run": null,
+         "type": "person"
+        },
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": "和子涵聊了一下，基本没有人在用，可以弱化一下该功能的位置"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1791793753,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7695695570501029047",
+      "update_time": 1791793753,
+      "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+     }
+    ]
+   },
+   "solver_user_id": "ou_a377f21d407d61ba10031cc94db9650c",
+   "update_time": 1791883570,
+   "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+  },
+  {
+   "comment_id": "7695606436142877887",
+   "create_time": 1791772999,
+   "extra": {
+    "content_anchor_id": "W7zLdaCPYoDyo5xlgPxcQrJPnqh"
+   },
+   "is_solved": true,
+   "is_whole": false,
+   "quote": "创建活动纪要（支持点击生成）",
+   "relation": {
+    "content_deleted": false,
+    "relation": "{\"22-PL5ndphOGoIoU5xQwwCcvcWWnIX\":{\"objType\":22,\"index\":22,\"objVersion\":6121,\"positionInfo\":{\"blockID\":\"HbyJdHj70oadO7xgbSkcYQ5fnse\"}}}"
+   },
+   "reply_list": {
+    "replies": [
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": "无会议录音，纪要内容为空即可，工程侧判断无需AI生成"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1791772999,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7695606436163767496",
+      "update_time": 1791772999,
+      "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+     }
+    ]
+   },
+   "solver_user_id": "ou_a377f21d407d61ba10031cc94db9650c",
+   "update_time": 1792637894,
+   "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+  },
+  {
+   "comment_id": "7695620543740546346",
+   "create_time": 1791776284,
+   "extra": {
+    "content_anchor_id": "CDdcdHiTgouG6Rx5VC2c368qnYb"
+   },
+   "is_solved": false,
+   "is_whole": false,
+   "quote": "场景模板预设",
+   "relation": {
+    "content_deleted": true,
+    "relation": "{\"22-PL5ndphOGoIoU5xQwwCcvcWWnIX\":{\"objType\":22,\"objVersion\":6940}}"
+   },
+   "reply_list": {
+    "replies": [
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": "AI决策，无需用户选择"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1791776284,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7695620543755685062",
+      "update_time": 1791776284,
+      "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+     }
+    ]
+   },
+   "solver_user_id": null,
+   "update_time": 1791871377,
+   "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+  },
+  {
+   "comment_id": "7695690076008779011",
+   "create_time": 1791792473,
+   "extra": {
+    "content_anchor_id": "TI6DdD8P2ogrD3xXAd7c859Enwf"
+   },
+   "is_solved": true,
+   "is_whole": false,
+   "quote": "出勤情况",
+   "relation": {
+    "content_deleted": false,
+    "relation": "{\"22-PL5ndphOGoIoU5xQwwCcvcWWnIX\":{\"objType\":22,\"index\":24,\"objVersion\":4704,\"positionInfo\":{\"blockID\":\"YOwgdTnhDoK0tQxXQrfcDOoFnTd\"}}}"
+   },
+   "reply_list": {
+    "replies": [
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": "保留，可手动设置应参会人员是否出勤"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1791792473,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7695690076033977573",
+      "update_time": 1791792482,
+      "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+     }
+    ]
+   },
+   "solver_user_id": "ou_a377f21d407d61ba10031cc94db9650c",
+   "update_time": 1792475018,
+   "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+  },
+  {
+   "comment_id": "7695707145005829385",
+   "create_time": 1791796448,
+   "extra": {
+    "content_anchor_id": "STkOdmA25oNDtdxpp5KcEFNenle"
+   },
+   "is_solved": true,
+   "is_whole": false,
+   "quote": "更新会议纪要",
+   "relation": {
+    "content_deleted": true,
+    "relation": "{\"22-PL5ndphOGoIoU5xQwwCcvcWWnIX\":{\"objType\":22,\"objVersion\":4723}}"
+   },
+   "reply_list": {
+    "replies": [
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": "必须保留，因为要看纪要的生成状态"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1791796448,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7695707145035074783",
+      "update_time": 1791796448,
+      "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+     }
+    ]
+   },
+   "solver_user_id": "ou_a377f21d407d61ba10031cc94db9650c",
+   "update_time": 1791875067,
+   "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+  },
+  {
+   "comment_id": "7695733982458645763",
+   "create_time": 1791802696,
+   "extra": {
+    "content_anchor_id": "TI3LdYwmNokV66xL5wPc7RcXn0e"
+   },
+   "is_solved": false,
+   "is_whole": false,
+   "quote": "列表为空，无操作按钮",
+   "relation": {
+    "content_deleted": true,
+    "relation": "{\"22-PL5ndphOGoIoU5xQwwCcvcWWnIX\":{\"objType\":22,\"objVersion\":3943}}"
+   },
+   "reply_list": {
+    "replies": [
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": "后续支持用户自行点击生成"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1791802696,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7695733982477962442",
+      "update_time": 1791802696,
+      "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+     }
+    ]
+   },
+   "solver_user_id": null,
+   "update_time": 1791807440,
+   "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+  },
+  {
+   "comment_id": "7696081327359069396",
+   "create_time": 1791883569,
+   "extra": {
+    "content_anchor_id": "I2ALdUWNHong9Jxf1UPcBSX3nIb"
+   },
+   "is_solved": true,
+   "is_whole": false,
+   "quote": "[图片]",
+   "relation": {
+    "content_deleted": true,
+    "relation": "{\"22-PL5ndphOGoIoU5xQwwCcvcWWnIX\":{\"objType\":22,\"objVersion\":5096}}"
+   },
+   "reply_list": {
+    "replies": [
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": {
+          "url": "https://hailiang.feishu.cn/wiki/O86FwWwQViyikfkaz9jc7zUunBc?comment_id=7694921397742668730&comment_type=0&comment_anchor=true"
+         },
+         "person": null,
+         "text_run": null,
+         "type": "docs_link"
+        },
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": "和子涵聊了一下，基本没有人在用，可以弱化一下该功能的位置"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1791883569,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7696081327375813831",
+      "update_time": 1791883569,
+      "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+     }
+    ]
+   },
+   "solver_user_id": "ou_a377f21d407d61ba10031cc94db9650c",
+   "update_time": 1791885448,
+   "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+  },
+  {
+   "comment_id": "7696089396054871247",
+   "create_time": 1791885447,
+   "extra": {
+    "content_anchor_id": "K7b5djcptowk35xVSiscjnArnNe"
+   },
+   "is_solved": true,
+   "is_whole": false,
+   "quote": "设置单元设计",
+   "relation": {
+    "content_deleted": false,
+    "relation": "{\"22-PL5ndphOGoIoU5xQwwCcvcWWnIX\":{\"objType\":22,\"index\":13,\"objVersion\":7548,\"positionInfo\":{\"blockID\":\"URCBd3ekFogloAxLqoKc13EEnFf\"}}}"
+   },
+   "reply_list": {
+    "replies": [
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": {
+          "url": "https://hailiang.feishu.cn/wiki/O86FwWwQViyikfkaz9jc7zUunBc?comment_id=7694921397742668730&comment_type=0&comment_anchor=true"
+         },
+         "person": null,
+         "text_run": null,
+         "type": "docs_link"
+        },
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": "和子涵聊了一下，基本没有人在用，可以弱化一下该功能的位置"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1791885447,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7696089396071746759",
+      "update_time": 1791885447,
+      "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+     }
+    ]
+   },
+   "solver_user_id": "ou_a377f21d407d61ba10031cc94db9650c",
+   "update_time": 1792551055,
+   "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+  },
+  {
+   "comment_id": "7698640167900367802",
+   "create_time": 1792479345,
+   "extra": {
+    "content_anchor_id": "R0W4dg2ofoqiDjxHN1Fc36qBnsb"
+   },
+   "is_solved": false,
+   "is_whole": false,
+   "quote": "《声纹采集与使用授权协议》",
+   "relation": {
+    "content_deleted": false,
+    "relation": "{\"22-PL5ndphOGoIoU5xQwwCcvcWWnIX\":{\"objType\":22,\"index\":19,\"objVersion\":6610,\"positionInfo\":{\"blockID\":\"R0W4dg2ofoqiDjxHN1Fc36qBnsb\"}}}"
+   },
+   "reply_list": {
+    "replies": [
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": "三方协议参考:\n"
+         },
+         "type": "text_run"
+        },
+        {
+         "docs_link": {
+          "url": "https://privacy.qq.com/document/preview/d545d727db9a4ba6ba1304fb8f0d725a"
+         },
+         "person": null,
+         "text_run": null,
+         "type": "docs_link"
+        }
+       ]
+      },
+      "create_time": 1792479345,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7698640167917128639",
+      "update_time": 1792479402,
+      "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+     }
+    ]
+   },
+   "solver_user_id": null,
+   "update_time": 1792479402,
+   "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+  },
+  {
+   "comment_id": "7698929384752679971",
+   "create_time": 1792546684,
+   "extra": {
+    "content_anchor_id": "RoSEd3uaHoalexx2iXncaswfnoh"
+   },
+   "is_solved": true,
+   "is_whole": false,
+   "quote": "[图片]",
+   "relation": {
+    "content_deleted": false,
+    "relation": "{\"22-PL5ndphOGoIoU5xQwwCcvcWWnIX\":{\"objType\":22,\"index\":6,\"objVersion\":7029,\"positionInfo\":{\"blockID\":\"RoSEd3uaHoalexx2iXncaswfnoh\"}}}"
+   },
+   "reply_list": {
+    "replies": [
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": "原型有么"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1792546684,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7698929384769506310",
+      "update_time": 1792546684,
+      "user_id": "ou_ee6b4e96ff3973276291804b5c82a9fe"
+     }
+    ]
+   },
+   "solver_user_id": "ou_a377f21d407d61ba10031cc94db9650c",
+   "update_time": 1792563226,
+   "user_id": "ou_ee6b4e96ff3973276291804b5c82a9fe"
+  },
+  {
+   "comment_id": "7698929558132739065",
+   "create_time": 1792546724,
+   "extra": {
+    "content_anchor_id": "IgOkdyDPaoS3cxxeYGycvymRnme"
+   },
+   "is_solved": false,
+   "is_whole": false,
+   "quote": "活动检查列表优化",
+   "relation": {
+    "content_deleted": false,
+    "relation": "{\"22-PL5ndphOGoIoU5xQwwCcvcWWnIX\":{\"objType\":22,\"index\":1,\"objVersion\":7031,\"positionInfo\":{\"blockID\":\"IgOkdyDPaoS3cxxeYGycvymRnme\"}}}"
+   },
+   "reply_list": {
+    "replies": [
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": "原来活动录制的业务和数据怎么处理"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1792546724,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7698929558149499886",
+      "update_time": 1792546731,
+      "user_id": "ou_ee6b4e96ff3973276291804b5c82a9fe"
+     },
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": {
+          "user_id": "ou_ee6b4e96ff3973276291804b5c82a9fe"
+         },
+         "text_run": null,
+         "type": "person"
+        },
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": " 已补充在该模块下的第三点中"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1792563199,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7699000317899230209",
+      "update_time": 1792563199,
+      "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+     }
+    ]
+   },
+   "solver_user_id": null,
+   "update_time": 1792563199,
+   "user_id": "ou_ee6b4e96ff3973276291804b5c82a9fe"
+  },
+  {
+   "comment_id": "7698929671722765247",
+   "create_time": 1792546751,
+   "extra": {
+    "content_anchor_id": "EAuhdE72soJetsx72OfcT3NfnnX"
+   },
+   "is_solved": true,
+   "is_whole": false,
+   "quote": "开始活动",
+   "relation": {
+    "content_deleted": false,
+    "relation": "{\"22-PL5ndphOGoIoU5xQwwCcvcWWnIX\":{\"objType\":22,\"index\":4,\"objVersion\":7032,\"positionInfo\":{\"blockID\":\"EAuhdE72soJetsx72OfcT3NfnnX\"}}}"
+   },
+   "reply_list": {
+    "replies": [
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": "移动端涉及么"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1792546751,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7698929671735479278",
+      "update_time": 1792546751,
+      "user_id": "ou_ee6b4e96ff3973276291804b5c82a9fe"
+     },
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": {
+          "user_id": "ou_ee6b4e96ff3973276291804b5c82a9fe"
+         },
+         "text_run": null,
+         "type": "person"
+        },
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": " 已补充"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1792549991,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7698943588927769530",
+      "update_time": 1792549991,
+      "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+     }
+    ]
+   },
+   "solver_user_id": "ou_a377f21d407d61ba10031cc94db9650c",
+   "update_time": 1792651236,
+   "user_id": "ou_ee6b4e96ff3973276291804b5c82a9fe"
+  },
+  {
+   "comment_id": "7698929890598358009",
+   "create_time": 1792546801,
+   "extra": {
+    "content_anchor_id": "OjfXdNtjmo9q6Cxrr10cMyB6nyd"
+   },
+   "is_solved": true,
+   "is_whole": false,
+   "quote": "集备活动",
+   "relation": {
+    "content_deleted": false,
+    "relation": "{\"22-PL5ndphOGoIoU5xQwwCcvcWWnIX\":{\"objType\":22,\"index\":12,\"objVersion\":7044,\"positionInfo\":{\"blockID\":\"OjfXdNtjmo9q6Cxrr10cMyB6nyd\"}}}"
+   },
+   "reply_list": {
+    "replies": [
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": "原型 交互 补充下"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1792546801,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7698929890615217155",
+      "update_time": 1792546801,
+      "user_id": "ou_ee6b4e96ff3973276291804b5c82a9fe"
+     }
+    ]
+   },
+   "solver_user_id": "ou_a377f21d407d61ba10031cc94db9650c",
+   "update_time": 1792563230,
+   "user_id": "ou_ee6b4e96ff3973276291804b5c82a9fe"
+  },
+  {
+   "comment_id": "7698930679978937365",
+   "create_time": 1792546985,
+   "extra": {
+    "content_anchor_id": "BTyrdeGLKogUkCxxbCzcZoQMnEJ"
+   },
+   "is_solved": true,
+   "is_whole": false,
+   "quote": "页面基础功能",
+   "relation": {
+    "content_deleted": false,
+    "relation": "{\"22-PL5ndphOGoIoU5xQwwCcvcWWnIX\":{\"objType\":22,\"index\":7,\"objVersion\":7069,\"positionInfo\":{\"blockID\":\"BTyrdeGLKogUkCxxbCzcZoQMnEJ\"}}}"
+   },
+   "reply_list": {
+    "replies": [
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": "补充原型"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1792546985,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7698930679995747360",
+      "update_time": 1792546985,
+      "user_id": "ou_ee6b4e96ff3973276291804b5c82a9fe"
+     }
+    ]
+   },
+   "solver_user_id": "ou_a377f21d407d61ba10031cc94db9650c",
+   "update_time": 1792563227,
+   "user_id": "ou_ee6b4e96ff3973276291804b5c82a9fe"
+  },
+  {
+   "comment_id": "7698931289776212924",
+   "create_time": 1792547127,
+   "extra": {
+    "content_anchor_id": "G3Yvd1rTnoajLKx6yxDcXp8BnRb"
+   },
+   "is_solved": false,
+   "is_whole": false,
+   "quote": "资源证据：点击跳转至资源页面",
+   "relation": {
+    "content_deleted": false,
+    "relation": "{\"22-PL5ndphOGoIoU5xQwwCcvcWWnIX\":{\"objType\":22,\"index\":14,\"objVersion\":7075,\"positionInfo\":{\"blockID\":\"G3Yvd1rTnoajLKx6yxDcXp8BnRb\"}}}"
+   },
+   "reply_list": {
+    "replies": [
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": "资源页面是指集备资源区 ？ 还是实时研讨互动区? 补充原型"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1792547127,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7698931289797200915",
+      "update_time": 1792547127,
+      "user_id": "ou_ee6b4e96ff3973276291804b5c82a9fe"
+     }
+    ]
+   },
+   "solver_user_id": null,
+   "update_time": 1792552654,
+   "user_id": "ou_ee6b4e96ff3973276291804b5c82a9fe"
+  },
+  {
+   "comment_id": "7698931775594073087",
+   "create_time": 1792547240,
+   "extra": {
+    "content_anchor_id": "EAuhdE72soJetsx72OfcT3NfnnX"
+   },
+   "is_solved": true,
+   "is_whole": false,
+   "quote": "开始活动",
+   "relation": {
+    "content_deleted": false,
+    "relation": "{\"22-PL5ndphOGoIoU5xQwwCcvcWWnIX\":{\"objType\":22,\"index\":4,\"objVersion\":7076,\"positionInfo\":{\"blockID\":\"EAuhdE72soJetsx72OfcT3NfnnX\"}}}"
+   },
+   "reply_list": {
+    "replies": [
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": "教研活动和集备活动原型都要哦"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1792547240,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7698931775615011838",
+      "update_time": 1792547240,
+      "user_id": "ou_ee6b4e96ff3973276291804b5c82a9fe"
+     }
+    ]
+   },
+   "solver_user_id": "ou_a377f21d407d61ba10031cc94db9650c",
+   "update_time": 1792651235,
+   "user_id": "ou_ee6b4e96ff3973276291804b5c82a9fe"
+  },
+  {
+   "comment_id": "7698932552983137305",
+   "create_time": 1792547421,
+   "extra": {
+    "content_anchor_id": "M0WtdAOjuoWhLtxd5Z3ctPAfnSg"
+   },
+   "is_solved": false,
+   "is_whole": false,
+   "quote": "数据同步：声纹提取成功后，【用户ID + 声纹特征文件】同步至海思谷的声纹管理，并为“已关联”状态。",
+   "relation": {
+    "content_deleted": false,
+    "relation": "{\"22-PL5ndphOGoIoU5xQwwCcvcWWnIX\":{\"objType\":22,\"index\":20,\"objVersion\":7077,\"positionInfo\":{\"blockID\":\"M0WtdAOjuoWhLtxd5Z3ctPAfnSg\"}}}"
+   },
+   "reply_list": {
+    "replies": [
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": "如果老师在saas已有声纹, 但并未在我们平台录制, 是提示未录制还是已生效"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1792547421,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7698932553004125210",
+      "update_time": 1792547421,
+      "user_id": "ou_ee6b4e96ff3973276291804b5c82a9fe"
+     },
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": {
+          "user_id": "ou_ee6b4e96ff3973276291804b5c82a9fe"
+         },
+         "text_run": null,
+         "type": "person"
+        },
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": " 根据会议结论是，模型更新了需要老师都在嗨夫子录一下"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1792641028,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7699334591220927520",
+      "update_time": 1792641028,
+      "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+     }
+    ]
+   },
+   "solver_user_id": null,
+   "update_time": 1792641028,
+   "user_id": "ou_ee6b4e96ff3973276291804b5c82a9fe"
+  },
+  {
+   "comment_id": "7699025314298465311",
+   "create_time": 1792569019,
+   "extra": {
+    "content_anchor_id": "Jv7pdVQGaoighrxPGnFcrpq7nkc"
+   },
+   "is_solved": false,
+   "is_whole": false,
+   "quote": "AI活动纪要",
+   "relation": {
+    "content_deleted": false,
+    "relation": "{\"22-PL5ndphOGoIoU5xQwwCcvcWWnIX\":{\"objType\":22,\"index\":2,\"objVersion\":8495,\"positionInfo\":{\"blockID\":\"Jv7pdVQGaoighrxPGnFcrpq7nkc\"}}}"
+   },
+   "reply_list": {
+    "replies": [
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": "看一下浏览器和客户端的用户数量"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1792569019,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7699025314316995519",
+      "update_time": 1792569019,
+      "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+     }
+    ]
+   },
+   "solver_user_id": null,
+   "update_time": 1792569019,
+   "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+  },
+  {
+   "comment_id": "7699027009208355875",
+   "create_time": 1792569414,
+   "extra": {
+    "content_anchor_id": "EAuhdE72soJetsx72OfcT3NfnnX"
+   },
+   "is_solved": true,
+   "is_whole": false,
+   "quote": "开始活动",
+   "relation": {
+    "content_deleted": false,
+    "relation": "{\"22-PL5ndphOGoIoU5xQwwCcvcWWnIX\":{\"objType\":22,\"index\":4,\"objVersion\":8496,\"positionInfo\":{\"blockID\":\"EAuhdE72soJetsx72OfcT3NfnnX\"}}}"
+   },
+   "reply_list": {
+    "replies": [
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": "支持在文本记录处切换发言人"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1792569414,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7699027009225165854",
+      "update_time": 1792569414,
+      "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+     }
+    ]
+   },
+   "solver_user_id": "ou_a377f21d407d61ba10031cc94db9650c",
+   "update_time": 1792649283,
+   "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+  },
+  {
+   "comment_id": "7699028944888089615",
+   "create_time": 1792569864,
+   "extra": {
+    "content_anchor_id": "Th4Rd5KLqo3tyCxgwSYcfT92nie"
+   },
+   "is_solved": false,
+   "is_whole": false,
+   "quote": "重新生成",
+   "relation": {
+    "content_deleted": true,
+    "relation": "{\"22-PL5ndphOGoIoU5xQwwCcvcWWnIX\":{\"objType\":22,\"objVersion\":8604}}"
+   },
+   "reply_list": {
+    "replies": [
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": "删除音频及本次会议纪要"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1792569864,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7699028944904932343",
+      "update_time": 1792569864,
+      "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+     }
+    ]
+   },
+   "solver_user_id": null,
+   "update_time": 1792649098,
+   "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+  },
+  {
+   "comment_id": "7699030112787893240",
+   "create_time": 1792570136,
+   "extra": {
+    "content_anchor_id": "JTucdXoT5oHRQAxe8hWcNoFDneg"
+   },
+   "is_solved": true,
+   "is_whole": false,
+   "quote": "实时录音：",
+   "relation": {
+    "content_deleted": false,
+    "relation": "{\"22-PL5ndphOGoIoU5xQwwCcvcWWnIX\":{\"objType\":22,\"index\":8,\"objVersion\":8498,\"positionInfo\":{\"blockID\":\"JTucdXoT5oHRQAxe8hWcNoFDneg\"}}}"
+   },
+   "reply_list": {
+    "replies": [
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": "录制中的提示和中断情况"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1792570136,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7699030112808799223",
+      "update_time": 1792570136,
+      "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+     }
+    ]
+   },
+   "solver_user_id": "ou_a377f21d407d61ba10031cc94db9650c",
+   "update_time": 1792649518,
+   "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+  },
+  {
+   "comment_id": "7699037318685920258",
+   "create_time": 1792571814,
+   "extra": {
+    "content_anchor_id": "BcPPdv0XtoJtLsxeOjzcHuE7nRd"
+   },
+   "is_solved": false,
+   "is_whole": false,
+   "quote": "重叠发言： 多人同时说话的区间不计入任何一方的有效发言时长，避免百分比之和超过 100%。",
+   "relation": {
+    "content_deleted": false,
+    "relation": "{\"22-PL5ndphOGoIoU5xQwwCcvcWWnIX\":{\"objType\":22,\"index\":17,\"objVersion\":8501,\"positionInfo\":{\"blockID\":\"BcPPdv0XtoJtLsxeOjzcHuE7nRd\"}}}"
+   },
+   "reply_list": {
+    "replies": [
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": "找一下真实的录音样本"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1792571814,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7699037318702763038",
+      "update_time": 1792571814,
+      "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+     },
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": "1. 说话人有的距离设备远有的距离近；2. 多人讨论的音频"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1792571864,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7699037533887302649",
+      "update_time": 1792571864,
+      "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+     }
+    ]
+   },
+   "solver_user_id": null,
+   "update_time": 1792571864,
+   "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+  },
+  {
+   "comment_id": "7699369140145998833",
+   "create_time": 1792649072,
+   "extra": {
+    "content_anchor_id": "Vub2dr4fXoKiSexks5YcSOP6nHd"
+   },
+   "is_solved": false,
+   "is_whole": false,
+   "quote": "支持切换发言人：对某条记录的发言人点击修改，下拉框展示所有参会人员名单，支持修改单条和全局替换",
+   "relation": {
+    "content_deleted": false,
+    "relation": "{\"22-PL5ndphOGoIoU5xQwwCcvcWWnIX\":{\"objType\":22,\"index\":16,\"objVersion\":8599,\"positionInfo\":{\"blockID\":\"Vub2dr4fXoKiSexks5YcSOP6nHd\"}}}"
+   },
+   "reply_list": {
+    "replies": [
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": {
+          "user_id": "ou_ee6b4e96ff3973276291804b5c82a9fe"
+         },
+         "text_run": null,
+         "type": "person"
+        },
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": " 根据评审会议的讨论点补充"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1792649072,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7699369140171181068",
+      "update_time": 1792649072,
+      "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+     }
+    ]
+   },
+   "solver_user_id": null,
+   "update_time": 1792649073,
+   "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+  },
+  {
+   "comment_id": "7699371015368903665",
+   "create_time": 1792649509,
+   "extra": {
+    "content_anchor_id": "part-NHardjpdto5dIKxWryFct1uEn5g"
+   },
+   "is_solved": false,
+   "is_whole": false,
+   "quote": "录制中的提示和退出弹窗： 录制页顶部常驻：“会议录音中，请勿退出页面（请勿关闭小程序），否则录音将中断。” 退出页面弹窗：录音尚未结束，退出当前页面将中断本次录音。是否继续退出？",
+   "relation": {
+    "content_deleted": false,
+    "relation": "{\"22-PL5ndphOGoIoU5xQwwCcvcWWnIX\":{\"objType\":22,\"index\":9,\"objVersion\":8669,\"positionInfo\":{\"blockID\":\"BSYldiA3SogLIFxikqJcgW5mntd\"}}}"
+   },
+   "reply_list": {
+    "replies": [
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": "根据需求评审补充"
+         },
+         "type": "text_run"
+        },
+        {
+         "docs_link": null,
+         "person": {
+          "user_id": "ou_ee6b4e96ff3973276291804b5c82a9fe"
+         },
+         "text_run": null,
+         "type": "person"
+        }
+       ]
+      },
+      "create_time": 1792649509,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7699371015389973493",
+      "update_time": 1792649517,
+      "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+     }
+    ]
+   },
+   "solver_user_id": null,
+   "update_time": 1792649517,
+   "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+  },
+  {
+   "comment_id": "7699673595856882687",
+   "create_time": 1792719959,
+   "extra": {
+    "content_anchor_id": "KzVrdSjghobezuxiH5vc5c9snpb"
+   },
+   "is_solved": false,
+   "is_whole": false,
+   "quote": "构建声纹库",
+   "relation": {
+    "content_deleted": false,
+    "relation": "{\"22-PL5ndphOGoIoU5xQwwCcvcWWnIX\":{\"objType\":22,\"index\":18,\"objVersion\":9096,\"positionInfo\":{\"blockID\":\"KzVrdSjghobezuxiH5vc5c9snpb\"}}}"
+   },
+   "reply_list": {
+    "replies": [
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": "和交付联动，在培训的时候就录制好"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1792719959,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7699673595877821443",
+      "update_time": 1792719959,
+      "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+     }
+    ]
+   },
+   "solver_user_id": null,
+   "update_time": 1792719959,
+   "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+  },
+  {
+   "comment_id": "7699674293520567322",
+   "create_time": 1792720121,
+   "extra": {
+    "content_anchor_id": "EAuhdE72soJetsx72OfcT3NfnnX"
+   },
+   "is_solved": false,
+   "is_whole": false,
+   "quote": "开始活动",
+   "relation": {
+    "content_deleted": false,
+    "relation": "{\"22-PL5ndphOGoIoU5xQwwCcvcWWnIX\":{\"objType\":22,\"index\":4,\"objVersion\":9097,\"positionInfo\":{\"blockID\":\"EAuhdE72soJetsx72OfcT3NfnnX\"}}}"
+   },
+   "reply_list": {
+    "replies": [
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": "介入光合力"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1792720121,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7699674293537491906",
+      "update_time": 1792720121,
+      "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+     }
+    ]
+   },
+   "solver_user_id": null,
+   "update_time": 1792720122,
+   "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+  },
+  {
+   "comment_id": "7699785475145436180",
+   "create_time": 1792746008,
+   "extra": {
+    "content_anchor_id": "URCBd3ekFogloAxLqoKc13EEnFf"
+   },
+   "is_solved": false,
+   "is_whole": false,
+   "quote": "设置单元设计（原有功能迁移）：主备人可编辑，非主备人仅可查看和评论",
+   "relation": {
+    "content_deleted": false,
+    "relation": "{\"22-PL5ndphOGoIoU5xQwwCcvcWWnIX\":{\"objType\":22,\"index\":13,\"objVersion\":9125,\"positionInfo\":{\"blockID\":\"URCBd3ekFogloAxLqoKc13EEnFf\"}}}"
+   },
+   "reply_list": {
+    "replies": [
+     {
+      "content": {
+       "elements": [
+        {
+         "docs_link": null,
+         "person": null,
+         "text_run": {
+          "text": "补充"
+         },
+         "type": "text_run"
+        }
+       ]
+      },
+      "create_time": 1792746008,
+      "extra": {
+       "image_list": []
+      },
+      "reply_id": "7699785475170503699",
+      "update_time": 1792746008,
+      "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+     }
+    ]
+   },
+   "solver_user_id": null,
+   "update_time": 1792746008,
+   "user_id": "ou_a377f21d407d61ba10031cc94db9650c"
+  }
+ ]
+}

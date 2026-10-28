@@ -1,0 +1,35 @@
+{
+ "c1": {
+  "data": "<comment comment-id=\"7698929558132739065\" block-id=\"IgOkdyDPaoS3cxxeYGycvymRnme\"><quote>活动检查列表优化</quote><msg user=\"沈超杰\">原来活动录制的业务和数据怎么处理</msg><msg user=\"刘雨晨\">@沈超杰 已补充在该模块下的第三点中</msg></comment>"
+ },
+ "c10": {
+  "data": "<comment comment-id=\"7698640167900367802\" block-id=\"R0W4dg2ofoqiDjxHN1Fc36qBnsb\"><quote>《声纹采集与使用授权协议》</quote><msg user=\"刘雨晨\">三方协议参考:\n[https://privacy.qq.com/document/preview/d545d727db9a4ba6ba1304fb8f0d725a](https://privacy.qq.com/document/preview/d545d727db9a4ba6ba1304fb8f0d725a)</msg></comment>"
+ },
+ "c11": {
+  "data": "<comment comment-id=\"7698932552983137305\" block-id=\"M0WtdAOjuoWhLtxd5Z3ctPAfnSg\"><quote>数据同步：声纹提取成功后，【用户ID + 声纹特征文件】同步至海思谷的声纹管理，并为“已关联”状态。</quote><msg user=\"沈超杰\">如果老师在saas已有声纹, 但并未在我们平台录制, 是提示未录制还是已生效</msg><msg user=\"刘雨晨\">@沈超杰 根据会议结论是，模型更新了需要老师都在嗨夫子录一下</msg></comment>"
+ },
+ "c2": {
+  "data": "<comment comment-id=\"7699025314298465311\" block-id=\"Jv7pdVQGaoighrxPGnFcrpq7nkc\"><quote>AI活动纪要</quote><msg user=\"刘雨晨\">看一下浏览器和客户端的用户数量</msg></comment>"
+ },
+ "c3": {
+  "data": "<comment comment-id=\"7699674293520567322\" start-block-id=\"EAuhdE72soJetsx72OfcT3NfnnX\" end-block-id=\"I9DLdvjJwoJnGCxj2rwcdpVSnEe\"><quote>开始活动</quote><msg user=\"刘雨晨\">介入光合力</msg></comment>"
+ },
+ "c4": {
+  "data": "<comment comment-id=\"7699371015368903665\" start-block-id=\"BSYldiA3SogLIFxikqJcgW5mntd\" end-block-id=\"J796dCDPvoSDhjxuKkKch8XLnYL\"><quote>录制中的提示和退出弹窗： 录制页顶部常驻：“会议录音中，请勿退出页面（请勿关闭小程序），否则录音将中断。” 退出页面弹窗：录音尚未结束，退出当前页面将中断本次录音。是否继续退出？</quote><msg user=\"刘雨晨\">根据需求评审补充@沈超杰</msg></comment>"
+ },
+ "c5": {
+  "data": "<comment comment-id=\"7699785475145436180\" block-id=\"URCBd3ekFogloAxLqoKc13EEnFf\"><quote>设置单元设计（原有功能迁移）：主备人可编辑，非主备人仅可查看和评论</quote><msg user=\"刘雨晨\">补充</msg></comment>"
+ },
+ "c6": {
+  "data": "<comment comment-id=\"7698931289776212924\" start-block-id=\"G3Yvd1rTnoajLKx6yxDcXp8BnRb\" end-block-id=\"E3QDdaGhjoQH8YxVw5Rc4fnbnBf\"><quote>资源证据：点击跳转至资源页面</quote><msg user=\"沈超杰\">资源页面是指集备资源区 ？ 还是实时研讨互动区? 补充原型</msg></comment>"
+ },
+ "c7": {
+  "data": "<comment comment-id=\"7699369140145998833\" block-id=\"Vub2dr4fXoKiSexks5YcSOP6nHd\"><quote>支持切换发言人：对某条记录的发言人点击修改，下拉框展示所有参会人员名单，支持修改单条和全局替换</quote><msg user=\"刘雨晨\">@沈超杰 根据评审会议的讨论点补充</msg></comment>"
+ },
+ "c8": {
+  "data": "<comment comment-id=\"7699037318685920258\" block-id=\"BcPPdv0XtoJtLsxeOjzcHuE7nRd\"><quote>重叠发言： 多人同时说话的区间不计入任何一方的有效发言时长，避免百分比之和超过 100%。</quote><msg user=\"刘雨晨\">找一下真实的录音样本</msg><msg user=\"刘雨晨\">1. 说话人有的距离设备远有的距离近；2. 多人讨论的音频</msg></comment>"
+ },
+ "c9": {
+  "data": "<comment comment-id=\"7699673595856882687\" block-id=\"KzVrdSjghobezuxiH5vc5c9snpb\"><quote>构建声纹库</quote><msg user=\"刘雨晨\">和交付联动，在培训的时候就录制好</msg></comment>"
+ }
+}
