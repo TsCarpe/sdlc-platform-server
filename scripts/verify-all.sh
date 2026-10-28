@@ -15,14 +15,8 @@ echo "== 平台健康检查 =="
 curl -sf "$BASE/api/health"
 echo
 
-# 回归期间暂停 Runner（否则它会领走 verify-m5 建的测试任务产生竞态），结束后恢复
-RUNNER_WAS_RUNNING=0
-if pgrep -f "runner/runner.mjs" >/dev/null 2>&1; then
-  RUNNER_WAS_RUNNING=1
-  pkill -f "runner/runner.mjs"
-  echo "== 已暂停 Runner（回归后自动恢复）=="
-fi
-# v2.1：同样暂停进程内 agent（否则它会抢领 verify-m5 建的测试任务产生竞态）
+# 回归期间暂停进程内 agent（否则它会抢领 verify-m5 建的测试任务产生竞态；外置 runner 已于
+# 2026-10-28 下线，单通道后仅剩此暂停面）
 AGENT_WAS_PAUSED=0
 if curl -sf "$BASE/api/agent/status" 2>/dev/null | grep -q '"paused":false'; then
   curl -sf -X POST "$BASE/api/agent/pause" >/dev/null 2>&1 && AGENT_WAS_PAUSED=1
@@ -33,11 +27,6 @@ FAIL=0
 
 # 恢复动作收敛为唯一出口（EXIT trap）：正常结尾与 Ctrl-C/异常中断 alike 都恢复被暂停的执行通道（AUDIT D8-3）
 restore() {
-  if [ "$RUNNER_WAS_RUNNING" = "1" ] && ! pgrep -f "runner/runner.mjs" >/dev/null 2>&1; then
-    nohup scripts/runner.sh > /tmp/sdlc-runner.log 2>&1 &
-    echo
-    echo "== Runner 已恢复 =="
-  fi
   if [ "$AGENT_WAS_PAUSED" = "1" ]; then
     curl -sf -X POST "$BASE/api/agent/resume" >/dev/null 2>&1 && echo "== 进程内 agent 已恢复 =="
     # resume 后验（review #18）：上行 curl 静默失败无信号——生产 agent 停摆无人知；
