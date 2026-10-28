@@ -28,3 +28,6 @@ class TaskRunContext:
     # executor 按 Settings 构造注入；None = 无飞书能力（feishu_fetch 不注册、prompt 无飞书分支）
     feishu: FeishuClient | None = None
     feishu_media_max_bytes: int = 10 * 1024 * 1024  # 大附件阈值（Settings 注入）
+    # 风险分级（P1-9 扇出核对用）：executor 构造时写入（卡上 risk_tier，缺省按 A——与
+    # loop/gate 同口径）；gate_review 的 put_draft 留痕核对按它判 A/B 级下限（4/2 次）
+    tier: str = "C"

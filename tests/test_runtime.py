@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from platform_sdlc.agent.executor import _RESULT_LINE
+from platform_sdlc.agent.executor import _RESULT_LINE, AgentExecutionResult
 from platform_sdlc.agent.loop import AgentLoop
 from platform_sdlc.common import ApiException
 from platform_sdlc.config import Settings
@@ -213,7 +213,8 @@ def test_expire_stale_filters_by_runner(env: tuple[Repos, Services]) -> None:
 
 def _loop(env: tuple[Repos, Services]) -> AgentLoop:
     repos, services = env
-    return AgentLoop(Settings(), repos, services)
+    # _env_file=None：禁掉仓根 .env（内含真实模型凭据），防单测触网（先例 test_v4_import）
+    return AgentLoop(Settings(_env_file=None), repos, services)  # pyright: ignore[reportCallIssue]
 
 
 def test_agent_self_check_branches(env: tuple[Repos, Services]) -> None:
@@ -256,33 +257,92 @@ def test_agent_self_check_branches(env: tuple[Repos, Services]) -> None:
     assert loop.self_check(task_of("quality_check")) is None
 
 
-def test_agent_loop_refuses_ab_gate(env: tuple[Repos, Services]) -> None:
-    """P1-9（A+B）：A/B 级 gate_review 在进程内直接 failed（不调模型），提示改用外置 runner。"""
+def test_agent_loop_runs_ab_gate_inproc(env: tuple[Repos, Services]) -> None:
+    """P1-9 进程内承载（runner 2026-10-28 下线）：A/B 级 gate_review 不再派发前拒绝——
+    放行进 executor（stub 记账），预置合法草稿后正常 done。"""
     repos, services = env
     loop = _loop(env)
+
+    class _StubExecutor:
+        def __init__(self) -> None:
+            self.calls: list[Task] = []
+
+        async def execute(self, task: Task) -> AgentExecutionResult:
+            self.calls.append(task)
+            return AgentExecutionResult(summary='{"stub": 1}', final_text='SDLC_TASK_RESULT {"stub": 1}')
+
+    stub = _StubExecutor()
+    loop.executor = stub  # type: ignore[assignment]  # 真executor会触网；stub只验证放行语义
     for tier in ("A", "B"):
         req_id = make_req(repos, services, status="published")
         repos.requirement.set_risk_tier(req_id, tier)
+        services.tasks.put_draft(req_id, "gate_issues", {
+            "md": "# 评审问题\n" + "内容。" * 50,
+            "contentJson": '{"issues":[{"code":"A-01","sev":"mid","scene":"白话场景"}]}'})
         t = services.tasks.create_guarded(req_id, "gate_review", "", "")
         claimed = services.tasks.claim(AgentLoop.RUNNER_NAME)
         assert claimed is not None and claimed.id == t.id
         asyncio.run(loop._handle(claimed))
         out = repos.task.find(t.id)
-        assert out is not None and out.status == "failed"
-        m = json.loads(out.result)
-        assert m["reason"] == "gate-requires-external" and "外置 runner" in m["error"]
+        assert out is not None and out.status == "done", out.result if out else None
+    assert [c.type for c in stub.calls] == ["gate_review", "gate_review"]
 
 
-def test_gate_prompt_marks_inprocess_degraded() -> None:
-    """P1-9：进程内 gate prompt 限定 C 级并要求 degraded/0/single-session 留痕；runner prompt 同步。"""
-    from platform_sdlc.agent.prompts import sys_prompt
-    card = Requirement(id="R", name="n", risk_tier="C")
-    txt = sys_prompt("gate_review", card, Path("/repo"), [])
-    for kw in ("只执行 C 级", "reviewMode | degraded", "fanout | 0", "contextMode | single-session"):
-        assert kw in txt
-    runner_src = (Path(__file__).resolve().parents[1] / "runner" / "runner.mjs").read_text(encoding="utf-8")
-    assert "reviewMode | external |" in runner_src
-    assert "A/B 级 degraded 或扇出不足会被平台 409 拒收" in runner_src
+def test_gate_prompt_fanout_by_tier() -> None:
+    """P1-9 进程内承载：A/B 档 prompt 指示 spawn_reviewer 扇出 + external/fresh 留痕；
+    C 档维持主会话自查 degraded/0/single-session。"""
+    from platform_sdlc.agent.prompts import gate_fanout_roles, gate_role_prompt, sys_prompt
+    for tier, need in (("A", 4), ("B", 2)):
+        card = Requirement(id="R", name="n", risk_tier=tier)
+        txt = sys_prompt("gate_review", card, Path("/repo"), [])
+        assert "spawn_reviewer" in txt and f"扇出 {need} 个角色子代理" in txt
+        assert "禁止单会话逐角色串行冒充扇出" in txt
+        for kw in ("reviewMode | external |", f"fanout | {need} |", "contextMode | fresh |"):
+            assert kw in txt, kw
+        assert "禁止虚报" in txt
+        assert len(gate_fanout_roles(tier)) == need
+    card_c = Requirement(id="R", name="n", risk_tier="C")
+    txt_c = sys_prompt("gate_review", card_c, Path("/repo"), [])
+    for kw in ("主会话五问自查", "reviewMode | degraded", "fanout | 0", "contextMode | single-session"):
+        assert kw in txt_c, kw
+    assert gate_fanout_roles("C") == []
+    rp = gate_role_prompt("data-model", "/repo")
+    assert "数据模型" in rp and "只读子代理" in rp and "/repo/skills/sdlc-gate/SKILL.md" in rp
+
+
+def test_gate_fanout_trace_check(tmp_path: Path) -> None:
+    """put_draft(gate_issues) 扇出留痕核对（P1-9 进程内承载）：external 留痕 fanout 须 ==
+    工作区实际计数；A 级不足指引「补足至 4 次」（防按低值改写留痕过工具关但 ingest 409 的
+    死局）；C 级 external 无下限；degraded 不核对。"""
+    from platform_sdlc.agent.tools import _check_gate_fanout, bump_fanout_count
+
+    def md_with(fanout: int, mode: str = "external", ctxm: str = "fresh") -> str:
+        return ("# issues\n\n| 项 | 值 |\n|---|---|\n| 评审状态 | 待裁决 |\n"
+                f"| reviewMode | {mode} |\n| fanout | {fanout} |\n| contextMode | {ctxm} |\n\n|编号|A-01|\n")
+
+    # A 级：留痕 4 / 实际 0 → 拒，文案指向补扇出而非改写留痕
+    with pytest.raises(ValueError, match="补足至 4"):
+        _check_gate_fanout(tmp_path, "A", md_with(4))
+    # 补 3 次仍留痕 4 → 拒（计数与留痕不符）
+    for _ in range(3):
+        bump_fanout_count(tmp_path)
+    with pytest.raises(ValueError, match="实际成功=3"):
+        _check_gate_fanout(tmp_path, "A", md_with(4))
+    # 第 4 次 → 计数与留痕一致且达下限 → 放行
+    bump_fanout_count(tmp_path)
+    _check_gate_fanout(tmp_path, "A", md_with(4))
+
+    # B 级（干净工作区）：下限 2
+    ws_b = tmp_path / "b"
+    ws_b.mkdir()
+    with pytest.raises(ValueError, match="补足至 2"):
+        _check_gate_fanout(ws_b, "B", md_with(2))
+
+    # C 级 external：无下限，计数 0 + 留痕 0 → 放行；degraded 不核对
+    ws_c = tmp_path / "c"
+    ws_c.mkdir()
+    _check_gate_fanout(ws_c, "C", md_with(0))
+    _check_gate_fanout(ws_c, "C", md_with(0, mode="degraded", ctxm="single-session"))
 
 
 def test_result_line_regex() -> None:

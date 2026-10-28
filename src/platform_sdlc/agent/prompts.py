@@ -101,19 +101,73 @@ def sys_prompt(task_type: str, card: Requirement, skills_repo: Path, repos_of: l
                 "5. 输出 SDLC_TASK_RESULT 行（修订条数/涉及章节）。")
     if task_type == "gate_review":
         tier = card.risk_tier or "A"
+        if tier in ("A", "B"):
+            need = 4 if tier == "A" else 2
+            roles = ("architecture 架构一致性 / data-model 数据模型与SQL / testability 测试可测性 / "
+                     "cross-check 交叉审查（只产分歧）" if tier == "A"
+                     else "data-model 数据模型与SQL / cross-check 交叉审查（只产分歧）")
+            fanout_step = (
+                f"3. 分档扇出纪律（{tier} 级，P1-9 语义保留——扇出逻辑不能丢）：依次调用 spawn_reviewer "
+                f"扇出 {need} 个角色子代理——{roles}。\n"
+                "   每次调用 = 一个全新上下文独立子代理（各自读输入三件独立评审；禁止单会话逐角色"
+                "串行冒充扇出）；平台按 spawn_reviewer 实际成功次数计数（工作区 gate-fanout.json），"
+                "少调会被 put_draft 拒收。\n"
+                f"   issues 头部必须写扇出留痕三行（平台 ingest 机械校验）：`| reviewMode | external |`、"
+                f"`| fanout | {need} |`、`| contextMode | fresh |`——fanout 与实际扇出数一致，禁止虚报。\n")
+        else:
+            fanout_step = (
+                "3. 分档扇出纪律（C 级）：主会话五问自查，不开子代理（无 spawn_reviewer 工具）。\n"
+                "   issues 头部必须写扇出留痕三行（P1-9，平台 ingest 机械校验）："
+                "`| reviewMode | degraded |`、`| fanout | 0 |`、`| contextMode | single-session |`。\n")
         return (f"{common}\n执行门禁评审（sdlc-gate，{tier} 档）：\n"
                 f"1. read_file 读取规范：{repo}/skills/sdlc-gate/SKILL.md 与 references/issue-template.md（issues 文件结构权威）、references/cross-check-guide.md。\n"
                 "2. 输入三件（CONTRACT）：get_digest_bundle（intake digest/audit）、get_design_doc（设计终稿）、list_cases（用例登记，读其头部风险分级）。\n"
-                "3. 分档扇出纪律：本进程内通道只执行 C 级（A/B 级任务在派发前已被平台拒绝，不会到达这里）——C=主会话五问自查，不开子代理。\n"
-                "   issues 头部必须写扇出留痕三行（P1-9，平台 ingest 机械校验）："
-                "`| reviewMode | degraded |`、`| fanout | 0 |`、`| contextMode | single-session |`——"
-                "进程内通道无 spawn 能力，必须如实标注降级，禁止写成 external/fresh。\n"
+                + fanout_step +
                 "4. 对抗式输出六字段：标题/场景（白话 2-3 句，禁代号）/原文（≤2 句摘引，禁只给行号）/位置/严重度（high|mid|low）/依据（hard=原文直接支撑｜soft=推导）；分歧条目 div:true；权衡条目 tradeoff:true 并建议驳回。\n"
                 "5. RECONCILE 四分类（契约误读/噪音剔除，不进清单；有效可行动/有效权衡进清单）+ 同根因合并（同根因条目 mergedUnit 相同，人裁决的是裁决单元不是发现数）。\n"
                 "6. 产出 issues 文件（issue-template 结构：头部 评审状态=待裁决/风险分级/设计文档/用例文件/CONTRACT 基准/业务背景/编号体系 + 速览 + 分歧清单 + 角色三表 + 备案区 + 裁决记录汇总留空）。\n"
                 '7. put_draft(type=gate_issues, md=issues 文件全文, contentJson={"issues":[{code:"D-01|A-xx|S-xx|T-xx",sev:"high|mid|low",theme,role,scene,quote,loc,basis:"hard|soft",div,tradeoff,filed,mergedUnit}]})。\n'
                 "8. 输出 SDLC_TASK_RESULT 行（发现数/裁决单元数/分歧数/备案数）。")
     raise ValueError(f"未知任务类型：{task_type}")
+
+
+_GATE_ROLES: dict[str, str] = {
+    "architecture": "架构一致性评审：设计文档与 digest 的流程/状态机/分层边界是否一致——编排顺序、"
+                    "跨角色交互、ER 与接口契约（D 表/F 编号）等价性、模块切分约束自洽",
+    "data-model": "数据模型与 SQL 评审：表结构/主外键/索引/枚举口径、迁移与兼容、SQL 语义正确性、"
+                  "与 digest 数据层（§3）的等价覆盖",
+    "testability": "测试可测性评审：用例登记对功能点/规则的覆盖缺口（points → 需求.FR-xx、"
+                   "verifyRefs → 体检.Pxx/需求.Axx 双向追踪）、不可测设计点",
+    "cross-check": "交叉审查：只产分歧（div:true）——各角色结论之间、结论与原文/契约之间的矛盾"
+                   "与偏差，不做独立发现",
+}
+
+
+def gate_fanout_roles(tier: str) -> list[str]:
+    """A/B 级扇出的角色分档（自 runner.mjs gate_review 口径移植：A=4 全角色，B=2 取
+    数据模型与SQL + 交叉审查）；C 级主会话自查，返回空。"""
+    if tier == "A":
+        return list(_GATE_ROLES)
+    if tier == "B":
+        return ["data-model", "cross-check"]
+    return []
+
+
+def gate_role_prompt(role: str, repo: str) -> str:
+    """gate_review 扇出子代理的 instructions（P1-9 进程内承载；角色口径自 runner.mjs
+    gate_review 分支的 A=4/B=2 分档移植）。子代理独立全新上下文，只读不写。"""
+    duty = _GATE_ROLES.get(role, "评审该角色范围内的设计问题")
+    return (
+        f"你是 SDLC 平台门禁评审的独立评审子代理（角色：{role}）。职责：{duty}。\n"
+        f"1. read_file 读取规范：{repo}/skills/sdlc-gate/SKILL.md 与 references/issue-template.md"
+        "（issues 文件结构权威）、references/cross-check-guide.md。\n"
+        "2. 工具取输入三件（CONTRACT）：get_digest_bundle（digest/audit）、get_design_doc（设计终稿）、"
+        "list_cases（用例登记）。\n"
+        "3. 对抗式输出六字段发现清单（markdown 列表，每条）：标题/场景（白话 2-3 句，禁代号）/原文"
+        "（≤2 句摘引，禁只给行号）/位置/严重度（high|mid|low）/依据（hard=原文直接支撑｜soft=推导）；"
+        "无发现的方面如实说明「未发现」。\n"
+        "4. 你是只读子代理：不写任何文件、不 put_draft——最终输出即评审报告全文（主评审汇合消费）。\n"
+    )
 
 
 def _source_import_steps(common: str, card: Requirement, repo: str, out_dir: Path | None,

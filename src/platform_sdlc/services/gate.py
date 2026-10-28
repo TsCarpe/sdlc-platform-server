@@ -158,7 +158,7 @@ class GateService:
             if not is_json_list(issues_raw) or not issues_raw:
                 raise ApiException(400, "issues 草稿 contentJson.issues 为空")
 
-            meta = _review_meta(d.md)
+            meta = review_meta(d.md)
             self._validate_review_meta(r.risk_tier, meta)
             self.repos.gate.set_review_meta(round_id, str(meta["reviewMode"]), int(meta["fanout"]),
                                             str(meta["contextMode"]))
@@ -327,8 +327,9 @@ class GateService:
 
     @staticmethod
     def _validate_review_meta(tier: str, meta: dict[str, Any]) -> None:
-        """P1-9（A+B 策略）：扇出留痕机械校验——A/B 级必须外置 runner 全新上下文扇出。
-        未标注（存量 issues 均为迁移窗口前产物）放行，由通道 prompt/模板在新建产物时强制写。"""
+        """P1-9（A+B 策略）：扇出留痕机械校验——A/B 级必须全新上下文扇出（进程内
+        spawn_reviewer 子代理承载，runner 2026-10-28 下线）。未标注（存量 issues 均为
+        迁移窗口前产物）放行，由通道 prompt/模板在新建产物时强制写。"""
         if not meta["present"]:
             return
         mode = str(meta["reviewMode"])
@@ -344,9 +345,9 @@ class GateService:
         if tier_v in ("A", "B"):
             need = 4 if tier_v == "A" else 2
             if mode == "degraded" or ctx != "fresh":
-                raise ApiException(409, f"{tier_v} 级评审须用外置 runner 全新上下文扇出"
+                raise ApiException(409, f"{tier_v} 级评审须全新上下文扇出"
                                         f"（reviewMode=external / fanout≥{need} / contextMode=fresh）；"
-                                        "进程内单会话降级评审仅限 C 级")
+                                        "单会话降级评审仅限 C 级")
             if fanout < need:
                 raise ApiException(409, f"{tier_v} 级评审扇出不足：fanout={fanout}（须 ≥{need}）")
         elif ctx != "single-session":
@@ -426,10 +427,11 @@ def _json(o: Any) -> str:
     return json.dumps(o, ensure_ascii=False, separators=(",", ":"))
 
 
-def _review_meta(md: str) -> dict[str, Any]:
+def review_meta(md: str) -> dict[str, Any]:
     """issues 头（首个 `## ` 标题前）解析 P1-9 扇出留痕三行：
     `| reviewMode | external \\| degraded |`、`| fanout | N |`、`| contextMode | fresh \\| single-session |`。
-    三行全缺 → present=False（迁移窗口前存量产物，不校验不展示）。"""
+    三行全缺 → present=False（迁移窗口前存量产物，不校验不展示）。
+    公共导出：agent 工具面（put_draft 留痕核对）复用同一解析器，禁第二套实现漂移。"""
     header = md.split("\n## ", 1)[0]
 
     def kv(field: str) -> str:
@@ -440,7 +442,7 @@ def _review_meta(md: str) -> dict[str, Any]:
     try:
         fanout = int(fanout_raw) if fanout_raw else 0
     except ValueError:
-        fanout = -1  # 非法值留给 _validate_review_meta 报 400
+        fanout = -1  # 非法值留给 GateService._validate_review_meta 报 400
     mode, ctx = kv("reviewMode"), kv("contextMode")
     return {"reviewMode": mode, "fanout": fanout, "contextMode": ctx,
             "present": bool(mode or fanout_raw or ctx)}

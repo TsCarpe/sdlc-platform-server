@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     agent_enabled: bool = False
     agent_poll_interval_ms: int = 3000
     agent_timeout_min: int = 30
+    gate_timeout_min: int = 60  # A/B 级评审专项：主会话+4 子 run+汇合共享同一墙钟，30min 不够
     agent_max_iters: int = 160
     agent_base_url: str = ""
     agent_model: str = ""

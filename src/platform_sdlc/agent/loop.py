@@ -101,22 +101,8 @@ class AgentLoop:
 
     async def _handle(self, t: Task) -> None:
         log.info("[agent] 领取 #%s %s @ %s", t.id, t.type, t.req_id)
-        # P1-9（A+B 策略）：A/B 级评审须由外置 runner 用 Agent 工具扇出 4/2 个全新上下文子代理；
-        # 进程内通道无 spawn 能力，静默降级单会话自审违反评审关口语义——直接失败并给出出路。
-        if t.type == "gate_review":
-            r = await asyncio.to_thread(self.repos.requirement.find, t.req_id)
-            tier = (r.risk_tier if r is not None else "") or "A"  # 未分级按 A（skill 分档同口径）
-            if tier in ("A", "B"):
-                await asyncio.to_thread(
-                    self.services.tasks.finish, t.id, False,
-                    {"error": f"{tier} 级评审须用外置 runner（进程内 agent 无全新上下文扇出能力，"
-                              "平台拒绝降级单会话评审）",
-                     "reason": "gate-requires-external",
-                     "hint": "启动 scripts/runner.sh 执行该任务（A=4 / B=2 子代理）；"
-                             "或调整风险分级后重新排队",
-                     "runner": self.RUNNER_NAME, "attempt": t.attempt})
-                log.warning("[agent] #%s 拒绝执行：%s 级 gate_review 需外置 runner", t.id, tier)
-                return
+        # P1-9 扇出已由进程内承载（runner 2026-10-28 下线）：A/B 级 gate_review 的全新上下文
+        # 扇出走 executor 装配的 spawn_reviewer 工具（gate-fanout.json 计数 + put_draft 留痕核对）。
         # 发布后兜底（评测 P0-2b）：claim 与发布之间需求可能已进终态，质检/合成类不再调模型，直接作废
         if await asyncio.to_thread(self.services.tasks.superseded_by_publish, t):
             await asyncio.to_thread(

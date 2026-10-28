@@ -339,7 +339,7 @@ def test_gate_ingest_review_meta(env: tuple[Repos, Services]) -> None:
 
     with pytest.raises(ApiException) as e1:
         ingest("degraded", 0, "single-session")
-    assert e1.value.status == 409 and "须用外置 runner" in str(e1.value)
+    assert e1.value.status == 409 and "须全新上下文扇出" in str(e1.value)
     rnd = repos.gate.find_round(rid)
     assert rnd is not None and rnd.review_mode == ""  # 拒收整体回滚，留痕不落库
 
