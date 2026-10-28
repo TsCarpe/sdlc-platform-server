@@ -60,7 +60,8 @@ def _run_parse_doc(parse_doc: Path, *, xml: Path, refmap: Path, out: Path, media
                    manifest: Path | None, url: str, document_id: str, revision_id: int) -> None:
     cmd = [sys.executable, str(parse_doc), "--xml", str(xml), "--refmap", str(refmap),
            "--out", str(out), "--media-dir", str(media_dir), "--url", url,
-           "--document-id", document_id, "--revision-id", str(revision_id)]
+           "--document-id", document_id, "--revision-id", str(revision_id),
+           "--download"]  # 只在该 flag 下进媒体回填（--media-manifest 命中免 lark-cli）
     if manifest is not None:
         cmd += ["--media-manifest", str(manifest)]
     r = subprocess.run(cmd, capture_output=True, text=True, timeout=300, check=False)

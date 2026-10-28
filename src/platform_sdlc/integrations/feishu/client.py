@@ -39,8 +39,10 @@ class FeishuForbiddenError(FeishuError):
     不入 _RETRYABLE_REASONS，重试直接 409 不烧 token）。"""
 
 
-# 权限类错误码（wiki 131006 node permission denied 实测；docx/drive 权限面同族码收进来）
-_FORBIDDEN_CODES = {131006, 1770002, 230002, 1061005}
+# 权限类错误码：131005 = 文档未分享给应用（服务端以 not found 回应，实测）；131006 =
+# node permission denied；docx/drive 权限面同族码一并收编。两者处置同：需分享/检查链接，
+# 映射 feishu-forbidden 不可重试（§7）
+_FORBIDDEN_CODES = {131005, 131006, 1770002, 230002, 1061005}
 _FORBIDDEN_HINTS = ("permission", "forbidden", "access denied", "no perm")
 
 

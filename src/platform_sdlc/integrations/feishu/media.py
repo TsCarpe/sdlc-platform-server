@@ -58,13 +58,14 @@ def _ext_of(mime: str, name: str, kind: str) -> str:
     return suffix if suffix else ".bin"
 
 
-def _attachment_sizes(doc: dict[str, Any]) -> dict[str, int]:
-    """attachment 块的 token→bytes（大附件阈值判据；media 条目的 bytes 是下载后回填）。"""
-    sizes: dict[str, int] = {}
+def _attachment_sizes(doc: dict[str, Any]) -> dict[str, str]:
+    """attachment 块的 mediaId→bytes 字符串（大附件阈值判据——attachment 块只有 media
+    引用（mediaId），无 token；media 条目的 bytes 是下载后回填字段，判断时恒 0）。"""
+    sizes: dict[str, str] = {}
     for raw in cast("list[Any]", doc.get("blocks") or []):
         b = as_dict(raw)
         if b.get("type") == "attachment":
-            sizes[str(b.get("token") or "")] = int(b.get("bytes") or 0)
+            sizes[str(b.get("media") or "")] = str(int(b.get("bytes") or 0))
     return sizes
 
 
@@ -87,7 +88,7 @@ def download_all(client: FeishuClient, doc: dict[str, Any], media_dir: Path,
         name = str(m.get("name") or "")
         mime = str(m.get("mime") or "")
         kind = str(m.get("kind") or "media")
-        size = sizes.get(token, 0)
+        size = int(sizes.get(media_id, 0))
         if kind == "media" and size > max_bytes:
             manifest[token] = {"path": None, "name": name, "mime": mime,
                                "skipped": "size-exceeded", "bytes": size}
