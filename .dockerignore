@@ -1,0 +1,28 @@
+# 黑名单列举式（不用 * + ! 白名单——白名单易漏 .build/ 这类新增目录）
+.git/
+.idea/
+.serena/
+.codegraph/
+.claude/
+.playwright-mcp/
+.venv/
+.pytest_cache/
+.ruff_cache/
+.github/
+data/
+static/
+tasks/
+sdlc/
+logs/
+backups/
+docs/
+tests/
+compose/
+scripts/
+node_modules/
+__pycache__/
+*.pyc
+.env
+.DS_Store
+debug_server.py
+# 保留进上下文：src/、pyproject.toml、uv.lock、deploy/、.build/（web 源码 + skills 暂存）

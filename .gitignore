@@ -16,3 +16,4 @@ logs/
 .codegraph/
 /.playwright-mcp/
 /tasks/
+/.build/

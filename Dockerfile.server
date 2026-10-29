@@ -1,0 +1,57 @@
+# SDLC 平台后端镜像（EXEC-PLAN-K8s 阶段 1）。
+# 多阶段：stage1 node 构建 web 前端 → stage2 python 运行时 + skills 仓固化。
+# 构建前置：deploy/build.sh 已把 web 仓源码暂存 .build/web/、skills 仓暂存 .build/skills/
+# （两仓在仓外进不了构建上下文；.dockerignore 黑名单不命中 .build/）。
+# 基础镜像走 SWR 的 docker.io 代理（公司内网拉取通路）；代理路径若不含 library/ 段，
+# 备选格式 swr.cn-north-4.myhuaweicloud.com/ddn-k8s/library/<img>（以实测为准，见 build.sh 前置探测）。
+
+# ---------- stage 1：web 前端构建（vite：base './' 零 env，同源 /api 无 CORS） ----------
+FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/node:20 AS web-builder
+WORKDIR /web
+ARG NPM_REGISTRY=https://registry.npmjs.org
+COPY .build/web/package.json .build/web/package-lock.json ./
+RUN npm config set registry "$NPM_REGISTRY" && npm ci
+COPY .build/web/ ./
+RUN npm run build
+
+# ---------- stage 2：运行时 ----------
+FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/python:3.12-slim
+
+# TZ 生效两层：tzdata（slim 无 zoneinfo 时 TZ 名解析失败回落 UTC——Times.now() naive 本地时间，
+# 全库时间戳会偏 8h）+ ENV。curl 必装：run_command 白名单 + 增量任务「curl 直落 raw/」硬依赖
+# （python slim 不带 curl，漏装则上线后第一个变更单任务即失败）；jq 顺带让 curl|jq 管道一次成功。
+# 不做 debian 源替换（trixie/bookworm 源路径假设易炸，三个包直装开销可忽略）。
+ENV PYTHONUNBUFFERED=1 TZ=Asia/Shanghai UV_LINK_MODE=copy UV_DEFAULT_INDEX=https://mirrors.aliyun.com/pypi/simple/
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends tzdata curl jq \
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
+    && echo "Asia/Shanghai" > /etc/timezone \
+    && useradd -u 1000 -m appuser
+WORKDIR /opt/app
+
+# uv 与本地生成 uv.lock 的版本对齐（版本漂移读不了 lock 时 --frozen 构建期即失败）
+RUN pip install --no-cache-dir -i https://mirrors.aliyun.com/pypi/simple/ "uv==0.11.16"
+
+# 依赖层：先锁文件只装依赖（保层缓存 + --compile-bytecode 启动免重编译）；
+# 项目是 editable 安装、无 src 时全量 sync 必失败，故拆两步（src 路径必须与 WORKDIR 一致）
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project --compile-bytecode
+COPY src/ ./src/
+RUN uv sync --frozen --no-dev
+
+# skills 仓（构建期固化版本，REVISION 留档溯源）+ 前端产物（stage1 产出）+ preStop 脚本
+COPY .build/skills/ /opt/app/skills/
+COPY --from=web-builder /web/dist ./static/
+COPY deploy/prestop.py /opt/app/prestop.py
+
+# 镜像级默认（K8s 由 ConfigMap 显式同值注入保可见性；绝对路径直解且程序不建目录——K8s 侧 initContainer 负责）
+ENV SDLC_AGENT_SKILLS_REPO=/opt/app/skills SDLC_MEDIA_DIR=/data/media SDLC_AGENT_WORKSPACE_ROOT=/data/ws
+RUN mkdir -p /data/media /data/ws && chown -R appuser:appuser /opt/app /data
+
+USER appuser
+EXPOSE 8888
+# 单进程硬编码 8888（SDLC_PORT 是死配置不消费）。--timeout-graceful-shutdown 30：SSE 聊天流
+# 生命周期上限 30min，不设则停机拖满 terminationGracePeriod 120s 被 SIGKILL——30s 主动收尾，
+# 在跑任务由启动期 expire_stale + _stale_sweeper 300s 兜底回收。
+CMD ["/opt/app/.venv/bin/uvicorn", "platform_sdlc.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8888", "--timeout-graceful-shutdown", "30"]

@@ -1,0 +1,17 @@
+# 一次性 kubectl apply（不进 Jenkins 流水）。数据面唯一持久卷：/data = media + tasks/<id>/out + sdlc/<reqId>/ 工作区。
+# ⚠ 待运维确认两项（runbook §7）：① storageClassName（留空 = 集群默认 StorageClass）；
+#   ② StorageClass 的 reclaimPolicy 必须 Retain——Delete 策略下 PVC 误删即文件数据全失
+#   （MySQL 库由公司 DB 平台备份，但 PVC 文件面不在其覆盖内，见 runbook §8）。
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sdlc-platform-data
+  labels:
+    app: sdlc-platform
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+  # storageClassName: <运维确认后填>

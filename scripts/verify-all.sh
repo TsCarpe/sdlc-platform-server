@@ -57,6 +57,12 @@ done
 if [ -n "$SDLC_AGENT_BASE_URL" ] && [ -n "$SDLC_AGENT_MODEL" ] && [ "${SDLC_VERIFY_AGENT:-}" = "1" ]; then
   echo
   echo "== verify-agent（SDLC_VERIFY_AGENT=1 且模型已配置）=="
+  # 先恢复被本脚本开头暂停的 agent：verify-agent 要求 enabled && running && !paused 才能真实领任务
+  # （本分支自建立即与 pause 语义矛盾、从未被真模型实跑过——EXEC-PLAN-K8s 阶段 1 批次 D 修正；
+  # 恢复后清零标志，EXIT trap 不再重复 resume；resume 失败则标志保留、trap 兜底重试并告警）
+  if [ "$AGENT_WAS_PAUSED" = "1" ]; then
+    curl -sf -X POST "$BASE/api/agent/resume" >/dev/null 2>&1 && AGENT_WAS_PAUSED=0 && echo "== 进程内 agent 已恢复（verify-agent 需要）=="
+  fi
   node scripts/verify-agent.mjs "$BASE" || FAIL=1
   echo "== verify-assistant =="
   node scripts/verify-assistant.mjs "$BASE" || FAIL=1
