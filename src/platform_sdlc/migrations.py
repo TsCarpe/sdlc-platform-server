@@ -70,7 +70,7 @@ _COLUMNS: list[tuple[str, str, str]] = [
     # v4.19：merged_at = 增量合并采纳时点（abort 守卫据真值判「已采纳」——此前以草稿不存在近似，
     # 而采纳即删草稿，近似恒空转：merge 后放弃会产出「块回滚、产物保持合并态」的分裂数据）
     ("req_change", "merged_at", "ALTER TABLE req_change ADD COLUMN merged_at DATETIME"),
-    ("fr_point", "source", "ALTER TABLE fr_point ADD COLUMN source VARCHAR(32) DEFAULT ''"),
+    ("fr_point", "source", "ALTER TABLE fr_point ADD COLUMN source VARCHAR(255) DEFAULT ''"),
     ("fr_point", "group_name", "ALTER TABLE fr_point ADD COLUMN group_name VARCHAR(255) DEFAULT ''"),
     ("fr_point", "module", "ALTER TABLE fr_point ADD COLUMN module VARCHAR(255) DEFAULT ''"),
     ("fr_point", "anchor", "ALTER TABLE fr_point ADD COLUMN anchor VARCHAR(64) COLLATE utf8mb4_bin DEFAULT ''"),
