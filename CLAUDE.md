@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目定位
 
-SDLC 产物协作平台后端（Python/FastAPI，v3.0 起自 Java 迁移）。单服务单库（SQLite 单连接单写者），
+SDLC 产物协作平台后端（Python/FastAPI，v3.0 起自 Java 迁移）。单服务单库（MySQL 8 + PyMySQL 连接池，
+EXEC-PLAN-K8s 阶段 2 起 SQLite 已退役；uvicorn 单 worker / K8s replicas=1 硬约束——db 层进程内 RLock
+串行模型不可多进程），
 任务队列 + 进程内单执行通道（openai-agents；外置 runner 已于 2026-10-28 下线，A/B 级评审扇出由
 进程内 spawn_reviewer 工具承载），产物走「草稿 → 人工采纳/发布」两态。
 前端在姊妹仓 `sdlc-platform-web`（构建产物拷入 `static/` 同源托管）。权威文档：人读契约 = `docs/ER图与业务流程.md` §13、
@@ -26,7 +28,7 @@ uv run pytest                  # 单元回归；单跑一条：uv run pytest tes
 uv run pyright && uv run ruff check src tests   # 类型 strict + lint
 scripts/verify-all.sh          # 黑盒全量回归（需服务已启动；自动暂停进程内 agent 防抢任务，结束自动恢复）
 node scripts/verify-agent.mjs  # agent 执行侧端到端冒烟（需模型余额）
-scripts/backup.sh              # SQLite 快照
+scripts/backup.sh              # mysqldump 快照（需 SDLC_DB_DSN；保留 30 份，每季 restore 演练）
 ```
 
 IDE 断点：直接 Debug `debug_server.py`（单进程无 reload，等价 dev.sh）。
@@ -40,13 +42,13 @@ IDE 断点：直接 Debug `debug_server.py`（单进程无 reload，等价 dev.s
   （条件 UPDATE，affected=1 才算领到——`POST /api/tasks/next` 保留为外部脚本的原子领取面，verify-*.mjs 走它）；
   `finish()` 仅 running 可回报终态。回归用 `/api/agent/pause` 防竞态（verify-all.sh 已内置）。
   A/B 级 gate_review 扇出由进程内 spawn_reviewer 工具承载（gate-fanout.json 计数 + put_draft 留痕核对）。
-- 路由层惯例：async 路由里的同步服务调用一律 `asyncio.to_thread(...)`——SQLite/文件 IO 不得冻结事件循环
+- 路由层惯例：async 路由里的同步服务调用一律 `asyncio.to_thread(...)`——数据库/文件 IO 不得冻结事件循环
   （进程内 agent 轮询、助理 SSE 流与请求共享同一循环）。
 - L2 自动编排：`orchestration.py` 的 `on_answered` / `on_published` 挂在作答/发布路由成功之后（编排失败不连累
   主流程）；「只自动一次」判断走 `task_repo.exists_by_type`（EXISTS 直查，不信 list 的 LIMIT 100 窗口）。
 - agent 工具面（`agent/tools.py` ALL_TOOLS）：读需求卡/澄清项/草稿/用例只读；写入仅 `put_draft`（草稿）与
   `upload_media`——正式产物无 agent 写通道，唯一人道是平台「采纳/发布」。查询助理（`routers/assistant.py`）
-  SSE 流式，独立 SQLite 会话库。
+  SSE 流式，会话并主库（chat_items 表）。
 - 错误面：服务层抛 `ApiException(status, msg)`（`common.py`）→ 全局异常处理器转 `{error}`；409 冲突走
   `ConflictException` 带 conflicts；入参宽松绑定 helpers（`jtext` / `jint_or_400` 等）集中在 `common.py`。
 - 数据：表结构集中在 `schema.sql`；需求删除为软删除（`deleted_at` 打标，running 任务先拒、queued 批量取消）。
@@ -54,7 +56,7 @@ IDE 断点：直接 Debug `debug_server.py`（单进程无 reload，等价 dev.s
 ## 硬约束
 
 - Python 3.12+ / uv；类型全量 strict（pyright）+ ruff；pytest 为单元回归，verify-*.mjs 为黑盒验收主力。
-- SQLite 单连接 + RLock：`db.tx()` = 服务操作粒度事务（可重入 = 嵌套加入外层）；循环体内无数据库查询；SQL 全参数化 + 显式排序。
+- MySQL（PyMySQL + DBUtils 池，`db.py` 适配层）：autocommit 连接 + **RLock 全局串行保留**（服务层「SELECT 守卫→UPDATE」的 TOCTOU 防护依赖全程持锁；tx 体内禁 await/起线程）；占位符写 `?`（适配层三段式转换：先转义字面 `%` 再换 `%s`）；`executescript` 容忍 1050/1061；时间列 DATETIME 但出口统一转 `Times.FMT` 字符串（全链路零感知）；循环体内无数据库查询；SQL 全参数化 + 显式排序；schema 变更走 schema.sql（MySQL 方言，`DEFAULT ('')` 表达式规则）+ migrations 判列补列幂等惯例。
 - schema 变更：schema.sql 加 `IF NOT EXISTS` 建表 + `migrations.py` 判列补列（幂等，八步惯例）。
 - 分层单向：main → routers → services → repositories → models；routers 不碰仓储。跨域流程汇聚点 =
   `orchestration.py`（作答/发布/开闸三钩子，挂路由成功后）+ `task.approve`（草稿采纳分流）；

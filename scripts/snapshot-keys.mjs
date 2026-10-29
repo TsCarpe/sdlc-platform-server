@@ -6,22 +6,33 @@
 // 用法：
 //   node scripts/snapshot-keys.mjs capture > keys-baseline.json
 //   node scripts/snapshot-keys.mjs check    keys-baseline.json
-import { spawn } from 'node:child_process'
+import { spawnSync, spawn } from 'node:child_process'
 import { setTimeout as sleep } from 'node:timers/promises'
-import { rmSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const PORT = 19000 + Math.floor(Math.random() * 1000)
 const BASE = `http://127.0.0.1:${PORT}`
-const DB = `/tmp/sdlc-snapshot-keys-${process.pid}.db`
 const DESIGN_MD = '# 设计\n\n## §0 方案总览\n\n决策。\n\n## §1 数据模型\n\n无变更。\n'
+
+// MySQL 化（M5）：临时实例 = 同一 server 上的临时 schema（mysql_admin.py 建删，用后即 DROP）
+const DSN = process.env.SDLC_DB_DSN || ''
+if (!DSN) { console.error('需要 SDLC_DB_DSN（mysql://user:pass@host:3306/db）'); process.exit(1) }
+const DB_NAME = `sdlc_snapshot_${process.pid}`
+const DB_DSN = DSN.replace(/\/[^/]*$/, `/${DB_NAME}`)
+const admin = (cmd) => spawnSync('uv', ['run', 'python', 'scripts/mysql_admin.py', cmd, DB_NAME],
+  { cwd: ROOT, env: process.env, encoding: 'utf8' })
+
+let created = false
+const adminOut = admin('create-db')
+if (adminOut.status !== 0) { console.error('临时库创建失败：\n' + (adminOut.stderr || '')); process.exit(1) }
+created = true
 
 const child = spawn('uv', ['run', 'uvicorn', 'platform_sdlc.main:create_app', '--factory',
   '--host', '127.0.0.1', '--port', String(PORT)], {
   cwd: ROOT,
-  env: { ...process.env, SDLC_DB_PATH: DB, SDLC_AGENT_ENABLED: 'false', SDLC_STATIC_DIR: '/tmp/sdlc-snapshot-no-static' },
+  env: { ...process.env, SDLC_DB_DSN: DB_DSN, SDLC_AGENT_ENABLED: 'false', SDLC_STATIC_DIR: '/tmp/sdlc-snapshot-no-static' },
   stdio: ['ignore', 'pipe', 'pipe']
 })
 let bootLog = ''
@@ -154,5 +165,5 @@ try {
   child.kill('SIGTERM')
   await sleep(300)
   try { child.kill('SIGKILL') } catch { /* 已退出 */ }
-  for (const f of [DB, DB + '-wal', DB + '-shm']) { try { rmSync(f, { force: true }) } catch { /* 忽略 */ } }
+  if (created) admin('drop-db')
 }

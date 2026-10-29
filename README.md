@@ -1,6 +1,7 @@
 # SDLC 产物协作平台 — 后端（Python）
 
-需求质检 + 用例登记 + 设计/门禁的团队共享面后端。**FastAPI + Pydantic + sqlite3**（uv 管理），
+需求质检 + 用例登记 + 设计/门禁的团队共享面后端。**FastAPI + Pydantic + PyMySQL**（uv 管理，
+数据层 MySQL 8 —— EXEC-PLAN-K8s 阶段 2 起 SQLite 已退役，适配层见 `src/platform_sdlc/db.py`），
 任务队列为进程内单执行通道（openai-agents；外置 runner 已于 2026-10-28 下线，飞书能力由进程内
 Python 接入承载），openai-agents 亦驱动查询聊天助理。
 前端见姊妹仓 `sdlc-platform-web`（构建产物拷入 `static/` 同源托管）。
@@ -10,9 +11,17 @@ Python 接入承载），openai-agents 亦驱动查询聊天助理。
 ## 快速开始
 
 ```bash
+# ① 本地 MySQL（首次：拉镜像 + 建库；之后每次开发前起）
+docker compose -f compose/mysql.dev.yml up -d
+# ② .env 写数据源（首次：cp .env.example .env 后按需改）
+#    SDLC_DB_DSN=mysql://root:sdlc@127.0.0.1:3306/sdlc
+# ③ 启动
 scripts/dev.sh        # uv sync + 启动 http://127.0.0.1:8888（前台，Ctrl-C 停止）
 scripts/dev-log.sh    # 同上，日志落盘 logs/server.log（tail -f logs/server.log 跟随）
 ```
+
+> 旧 SQLite 库迁移：`SDLC_DB_DSN=... uv run python scripts/migrate-sqlite-to-mysql.py --recreate`
+> （dry-run 三硬门 + 18 表对账；本机开发库已迁完，data/platform.db 留档）。
 
 IDE 断点调试：Debug `debug_server.py`（单进程无 reload，断点即生效）。
 
@@ -45,7 +54,8 @@ A/B 级 gate_review 评审的全新上下文扇出由进程内 `spawn_reviewer` 
 | `SDLC_FEISHU_APP_ID` / `SDLC_FEISHU_APP_SECRET` | 空 | 飞书应用凭据（docs_ai 服务端渲染链路，详见 `docs/DESIGN-飞书接入Python化.md`）。留空 = 无飞书能力：`feishu_fetch` 工具不注册、source_import 飞书源明确失败、`run_command` 白名单无 lark-cli（三处联动防模型 fallback） |
 | `SDLC_FEISHU_MEDIA_MAX_BYTES` | `10485760` | 飞书大附件阈值：超限附件登记元数据标 `skipped:size-exceeded` 不下载（任务不阻断） |
 | `SDLC_WRITE_TOKEN` | 空 | 设置后非 GET 的 `/api` 写接口要求 `X-Token` 头 |
-| `SDLC_DB_PATH` / `SDLC_MEDIA_DIR` | `./data/…` | 数据库与媒体目录 |
+| `SDLC_DB_DSN` | 必填（空即启动报错） | MySQL 数据源 `mysql://user:pass@host:3306/sdlc`（本地用 `compose/mysql.dev.yml`；K8s 走 Secret。密码特殊字符需 URL 百分号编码） |
+| `SDLC_MEDIA_DIR` | `./data/media` | 媒体文件目录（K8s/PVC 指绝对路径） |
 
 > **两仓版本对应**：进程内 agent 的飞书原文导入依赖姊妹仓 `claude-sdlc-skills` 的
 > `parse_doc.py --media-manifest`（≥ 2026-10-28 版本；旧版未知参数 exit 3 会被误报为

@@ -74,7 +74,7 @@
 |---|---|
 | `SDLC_AGENT_BASE_URL/_MODEL`、`SDLC_AGENT_ENABLED`、`SDLC_PLATFORM_URL`（改 K8s Service 名）、TZ | ConfigMap |
 | `SDLC_AGENT_API_KEY`、`SDLC_WRITE_TOKEN`、MySQL 账号密码（新增 `SDLC_DB_DSN`）、飞书应用凭据（先共用 Askly 应用） | Secret（chmod 思路 = K8s 权限面，不进 git） |
-| `SDLC_DB_PATH`/`SDLC_MEDIA_DIR`/`SDLC_AGENT_WORKSPACE_ROOT` | 改指 PVC 挂载点（如 `/data/...`） |
+| `SDLC_MEDIA_DIR`/`SDLC_AGENT_WORKSPACE_ROOT` | 改指 PVC 挂载点（如 `/data/...`）；~~SDLC_DB_PATH~~ 已退役（M2 起 `SDLC_DB_DSN`，见 §2.2 Secret 行） |
 | `SDLC_AGENT_SKILLS_REPO` | 改指镜像内路径（如 `/app/skills`，构建期固化版本） |
 | 需新增 `.env.example`（两仓通用配置文档化，防配置漂移） | **小改造** |
 
@@ -99,6 +99,14 @@
 `PRAGMA` ×2。**95% 差异集中在两点：占位符 `?` → `%s`、单连接 → 连接池。**
 
 **设计：Database 适配层吸收差异，仓储层近零改动**
+> **✅ 已实施（2026-10-29，M1~M4 批：cea2366/db57a25/05fa054/e66ebc1），实施修正三处**：
+> ① 方言点实数 = ON CONFLICT ×2（非 ×3）、REPLACE INTO ×0；② 事务模型 = **RLock 保留 + 实例槽 _tx_conn**
+> （本文 contextvar + RLock 退役方案被对抗审查推翻：MySQL 快照读不加锁，服务层 35 处「SELECT 守卫→UPDATE」
+> 的 TOCTOU 防护依赖全程持锁，退役须逐处 SELECT FOR UPDATE 审计——replicas=1 下保留锁零损失）；
+> ③ 实施新发现：字面 `%` ×7（三段式转换先 `%%` 后 `%s`）、MySQL 无 `CREATE INDEX IF NOT EXISTS`
+> （拆分器容忍 1061）、information_schema 返回列名大写、派生表必须别名、CTE 名 `desc` 撞保留字、
+> `by` 列保留字反引号、`SELECT ... WHERE` 无 FROM 需 `FROM DUAL`。测试 = testcontainers + CI service
+> 直连双模式；本机 137M 库经 `scripts/migrate-sqlite-to-mysql.py` 导入对账全 ✅。
 
 - 驱动：`PyMySQL` + `DBUtils PooledDB` 连接池（不引 SQLAlchemy/ORM——项目铁律是裸 SQL 全参数化 + 显式排序，仓储风格保持）。
 - 占位符：`Database.execute/query_*` 入口统一 `sql.replace('?', '%s')` → **147 处仓储 SQL 零改动**
@@ -196,7 +204,7 @@ InnoDB 下原子性成立，「DB 权威 + 轮询」的收益损失很小，而 
    `feishu_fetch` 版本探测通过。
 5. **验收门**：内网 IP `curl /api/health` OK；`verify-all.sh BASE=<内网地址>` 全绿；浏览器走通一条业务流。
 
-### 阶段 2：SQLite → MySQL——约 5~8 人日（含测试改造）
+### 阶段 2：SQLite → MySQL——约 5~8 人日（含测试改造）**✅ 2026-10-29 完成（M1 预备/M2 切换/M3 assistant 并入/M4 本机导入；验收门全过：202 单测 MySQL 后端全绿 + verify-all 12 黑盒全绿 + 守护索引首启建成 + 18 表对账）**
 
 1. `db.py` 适配层重写（连接池/contextvar 事务/占位符转换，§3.1 设计）；`schema.sql` + `migrations.py` MySQL 化。
 2. 方言点手改（ON CONFLICT ×3 等）+ 全库回归：pytest（策略见下）+ compose 双件套（server+MySQL 容器）跑 `verify-all.sh`。

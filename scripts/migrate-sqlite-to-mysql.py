@@ -19,12 +19,10 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import shutil
 import sqlite3
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any
 
 import pymysql
 import pymysql.cursors
@@ -138,7 +136,7 @@ def dry_run(snap: sqlite3.Connection, limits: dict[tuple[str, str], int]) -> Non
         _fail(f"VARCHAR 超长 {overlong} 行（扩列或截断后再导）")
     if bad_times:
         _fail("纯时间列存在非 Times.FMT 脏值（先清洗）：\n  " + "\n  ".join(bad_times[:20]))
-    print(f"  VARCHAR 超长：0 ✅    时间列脏值：0 ✅")
+    print("  VARCHAR 超长：0 ✅    时间列脏值：0 ✅")
 
 
 def migrate(snap: sqlite3.Connection, conn: pymysql.connections.Connection, batch: int = 500) -> None:
@@ -205,8 +203,8 @@ def main() -> int:
                 if int(cur.fetchone()["n"]) > 0:
                     _fail("目标库非空（加 --recreate 或换空库；导入不覆盖既有表）")
         if args.recreate:
-            from platform_sdlc.migrations import run_migrations
             from platform_sdlc.db import Database
+            from platform_sdlc.migrations import run_migrations
 
             run_migrations(Database(dsn))  # 全新建表（含账本空表；导入将整表复制源账本）
 

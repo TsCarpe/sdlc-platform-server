@@ -10,7 +10,7 @@
 
 ## 0. 一句话模型
 
-单服务（FastAPI）+ 单库（SQLite 单连接单写者）+ 任务队列单执行通道（进程内 openai-agents；外置 Runner 已于 2026-10-28 下线，`POST /api/tasks/next` 保留为外部回归脚本的原子领取面）。
+单服务（FastAPI）+ 单库（MySQL 8 + PyMySQL 连接池，EXEC-PLAN-K8s 阶段 2 起 SQLite 退役、进程内 RLock 串行保留）+ 任务队列单执行通道（进程内 openai-agents；外置 Runner 已于 2026-10-28 下线，`POST /api/tasks/next` 保留为外部回归脚本的原子领取面）。
 产物一律走 **草稿（draft）→ 人工采纳/发布（approve/publish）** 两态，agent 对正式产物**没有写通道**。
 域模型：**需求卡（requirement）是唯一聚合根**，其余实体全部挂在 `req_id` 下；无外键约束，关系靠服务层守卫保证。
 
@@ -52,9 +52,9 @@ flowchart LR
     end
     subgraph 数据
         REPO[repositories/* 11 个仓储<br/>SQL 全参数化]
-        DB[(SQLite platform.db<br/>单连接 + RLock，db.tx 可重入)]
+        DB[(MySQL 8 sdlc 库<br/>PyMySQL + DBUtils 池，RLock 串行 + db.tx 可重入)]
         MEDIA[("媒体文件<br/>data/media/{reqId}/{mediaId}")]
-        ASSIST[(assistant.db<br/>助理会话独立 SQLite)]
+        ASSIST[(chat_items 表<br/>助理会话并主库)]
     end
     WEB --> RT
     EXT --> RT
@@ -76,7 +76,7 @@ flowchart LR
   `orchestration.py`（作答/发布/开闸三钩子，挂路由成功后）+ `task.approve`（草稿采纳分流）；
   保留互调：`task.create_guarded → designs.assert_gen_allowed`（写面守卫）、`gate.checks → designs.view`（读面）；
   `gate.open` 事务内保留 `count_active` 预判承担「建轮与排评审任务」的原子性守卫（对抗审查 M1）。
-- async 路由里的同步服务调用一律 `asyncio.to_thread(...)`——SQLite/文件 IO 不冻结事件循环（进程内 agent 轮询、助理 SSE 与请求共享同一循环）。
+- async 路由里的同步服务调用一律 `asyncio.to_thread(...)`——数据库/文件 IO 不冻结事件循环（进程内 agent 轮询、助理 SSE 与请求共享同一循环）。
 - 循环体内无数据库查询（如 `sync_upsert` 的 case_no 批量预分配、`next_id` 一次性取号）。
 
 ---
@@ -85,7 +85,7 @@ flowchart LR
 
 ### 2.1 全量实体关系（15 张表，v4.1 增 req_block/req_comment）
 
-SQLite **不建外键**：实线表示服务层维护的逻辑归属；`iteration→requirement` 是弱引用（`requirement.iter` 指向迭代名，1:1 由服务层守卫 + 存活行检测保证）；`test_case.points` 对 `fr_point.id` 是 JSON 数组内的引用（RTM 覆盖率的计算依据，非 SQL 关系）。
+- **不建外键**（沿用 SQLite 时期约定）：实线表示服务层维护的逻辑归属；`iteration→requirement` 是弱引用（`requirement.iter` 指向迭代名，1:1 由服务层守卫 + 存活行检测保证）；`test_case.points` 对 `fr_point.id` 是 JSON 数组内的引用（RTM 覆盖率的计算依据，非 SQL 关系）。
 
 ```mermaid
 erDiagram
@@ -427,7 +427,7 @@ sequenceDiagram
     participant A as 进程内 AgentLoop（SDLC_AGENT_ENABLED 时）
     participant API as FastAPI /api/tasks/next（外部脚本领取面）
     participant EXE as 执行器
-    participant DB as SQLite task 表
+    participant DB as MySQL task 表
 
     A->>DB: claim(runner="openai-agents-inproc")（直调服务层，同一条 claim SQL）
     alt 领到
@@ -600,7 +600,7 @@ flowchart TD
 
 - `POST /api/assistant/chat`：SSE 流式（`data: {type:"delta",text}` … `{type:"done"}` / `{type:"error"}`）。
 - 工具面 `ASSISTANT_TOOLS`（7 个，**跨需求只读**）：search_requirements / get_requirement_summary / list_clarify_items / list_cases / get_gate_status / get_design_status / list_iterations。
-- 会话记忆存独立 SQLite `data/assistant.db`（不进 platform.db，单写者模型不变）；会话列表/清除端点齐备。
+- 会话记忆存主库 `chat_items` 表（原独立 assistant.db 已并入）；会话列表/清除端点齐备。
 - 提示词纪律：只答工具能支撑的内容、查不到如实说、引用带编号与状态、数据矛盾指出原始值。
 - X-Token：属 POST /api/ 写面，启用 write-token 的部署需带（与执行器回报同口径）。
 
@@ -610,7 +610,7 @@ flowchart TD
 
 | 机制 | 实现与口径 |
 |---|---|
-| **事务模型** | SQLite 单连接 + RLock；`db.tx()` = 服务操作粒度事务，**可重入**（嵌套调用加入外层，approve/publish 的多段写得以同事务）；关键模式 =「检查读与 UPDATE 同事务 + 谓词条件 UPDATE」（乐观锁、claim、finish、放行、软删全用它堵 TOCTOU/竞态） |
+| **事务模型** | MySQL（PyMySQL + DBUtils 池，autocommit 连接）+ **RLock 全局串行保留**；`db.tx()` = 服务操作粒度事务，**可重入**（嵌套调用加入外层，approve/publish 的多段写得以同事务）；关键模式 =「检查读与 UPDATE 同事务 + 谓词条件 UPDATE」（乐观锁、claim、finish、放行、软删全用它堵 TOCTOU/竞态——MySQL 快照读不加锁，串行锁是 TOCTOU 防护的载体，replicas=1/单 worker 下不退役） |
 | **软删除** | 仅 requirement：`deleted_at` 打标；`find()` 根过滤让已删需求对全部服务 404；编号不复用；存活 1:1 迭代守卫只数存活行（软删自动释放迭代名） |
 | **X-Token 写保护** | 中间件 `token_guard`（`main.py:102`）：仅拦**非 GET 且 /api/ 前缀**；`SDLC_WRITE_TOKEN` 为空不启用（v1 无登录共识）；不符返回 Spring 风格 401 体 |
 | **错误面** | 服务层抛 `ApiException(status, msg)` → 全局处理器转 `{error}`；`ConflictException` → 409 + `conflicts`；body 绑定失败固定文案 400（对齐 Java HttpMessageNotReadable）；API 路径 405/404 区分（对齐 Spring 语义）；兜底 500 只暴露异常类名 |

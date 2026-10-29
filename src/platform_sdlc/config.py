@@ -1,6 +1,6 @@
 """配置与数据目录定位（对应 Java application.yml + DataDirEnvironmentPostProcessor）。
 
-env 前缀 SDLC_：SDLC_PORT / SDLC_DB_PATH / SDLC_WRITE_TOKEN / SDLC_AGENT_ENABLED …
+env 前缀 SDLC_：SDLC_PORT / SDLC_DB_DSN / SDLC_WRITE_TOKEN / SDLC_AGENT_ENABLED …
 """
 
 from __future__ import annotations
