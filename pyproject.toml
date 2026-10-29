@@ -9,6 +9,8 @@ dependencies = [
     "pydantic>=2.7",
     "pydantic-settings>=2.3",
     "openai-agents>=0.2",
+    "pymysql[rsa]>=1.2.3",
+    "dbutils>=3.2.0",
 ]
 
 [dependency-groups]
@@ -18,6 +20,7 @@ dev = [
     "pyright>=1.1.350",
     "ruff>=0.5",
     "import-linter>=2.0",
+    "testcontainers>=4.15.0",
 ]
 
 [build-system]
@@ -26,6 +29,10 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/platform_sdlc"]
+
+[[tool.uv.index]]
+url = "https://mirrors.aliyun.com/pypi/simple/"
+default = true
 
 [tool.pyright]
 include = ["src", "tests"]

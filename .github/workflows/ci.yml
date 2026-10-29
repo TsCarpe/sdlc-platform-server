@@ -8,6 +8,24 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    # MySQL 后端（EXEC-PLAN-K8s 阶段 2）：pytest（经 SDLC_TEST_MYSQL_DSN 直连，不起 testcontainers）
+    # 与 export-openapi 临时实例共用同一 service；health-cmd 必配——端口通 ≠ 初始化完成，
+    # 否则契约门间歇红
+    services:
+      mysql:
+        image: mysql:8.0.40
+        env:
+          MYSQL_ROOT_PASSWORD: sdlc_ci
+          MYSQL_DATABASE: sdlc_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -psdlc_ci"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      SDLC_TEST_MYSQL_DSN: mysql://root:sdlc_ci@127.0.0.1:3306/sdlc_ci
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5

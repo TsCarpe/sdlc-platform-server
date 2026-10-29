@@ -1,0 +1,27 @@
+# 本地开发 MySQL（EXEC-PLAN-K8s 阶段 2）：服务本机 uvicorn 跑、数据层走容器。
+# 起停：docker compose -f compose/mysql.dev.yml up -d / down（数据卷 sdlc-mysql-data 持久）。
+# 服务侧配置：.env 写 SDLC_DB_DSN=mysql://root:sdlc@127.0.0.1:3306/sdlc
+# 测试侧直连：SDLC_TEST_MYSQL_DSN=mysql://root:sdlc@127.0.0.1:3306/sdlc（跳过 testcontainers 起容器）
+services:
+  mysql:
+    image: mysql:8.0.40
+    container_name: sdlc-mysql-dev
+    environment:
+      MYSQL_ROOT_PASSWORD: sdlc
+      MYSQL_DATABASE: sdlc
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=+08:00
+    ports:
+      - "3306:3306"
+    volumes:
+      - sdlc-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-psdlc"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+volumes:
+  sdlc-mysql-data:
