@@ -12,7 +12,6 @@ import json
 import logging
 import re
 from collections.abc import AsyncIterator
-from pathlib import Path
 from typing import Any
 
 from agents import Runner
@@ -22,7 +21,7 @@ from openai.types.responses import ResponseTextDeltaEvent
 
 from platform_sdlc.agent.assistant import (
     AssistantContext,
-    SqliteChatSession,
+    DbChatSession,
     build_assistant,
     list_session_ids,
 )
@@ -37,10 +36,6 @@ _SAFE_SID = re.compile(r"[^A-Za-z0-9._-]")
 
 def _sse(payload: dict[str, Any]) -> str:
     return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
-
-
-def _session_db(ctx: AppContext) -> Path:
-    return ctx.paths.data_dir / "assistant.db"  # M2 过渡：data_dir = media_dir.parent（与 SQLite 期磁盘布局一致），M3 并库收口
 
 
 def router(ctx: AppContext) -> APIRouter:
@@ -62,7 +57,7 @@ def router(ctx: AppContext) -> APIRouter:
             raise ApiException(400, "缺少必填字段：sessionId")
         if not message:
             raise ApiException(400, "缺少必填字段：message")
-        session = await asyncio.to_thread(SqliteChatSession, sid, _session_db(ctx))
+        session = DbChatSession(sid, ctx.db)  # M3 并入主库：构造零开销，无需 to_thread
 
         async def stream() -> AsyncIterator[str]:
             try:
@@ -87,11 +82,11 @@ def router(ctx: AppContext) -> APIRouter:
 
     @r.get("/api/assistant/sessions")
     async def sessions() -> list[str]:
-        return await asyncio.to_thread(list_session_ids, _session_db(ctx))
+        return await list_session_ids(ctx.db)
 
     @r.delete("/api/assistant/sessions/{sid}")
     async def clear_session(sid: str) -> dict[str, Any]:
-        session = SqliteChatSession(_SAFE_SID.sub("", sid)[:64], _session_db(ctx))
+        session = DbChatSession(_SAFE_SID.sub("", sid)[:64], ctx.db)
         await session.clear_session()
         return {"ok": True, "cleared": sid}
 

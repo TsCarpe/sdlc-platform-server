@@ -10,11 +10,8 @@ from __future__ import annotations
 import asyncio
 import json
 import re
-import sqlite3
-import threading
 from collections.abc import Callable
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
 from agents import (
@@ -30,6 +27,7 @@ from agents import (
 from openai import AsyncOpenAI
 
 from platform_sdlc.config import Settings
+from platform_sdlc.db import Database
 from platform_sdlc.repositories import Repos
 from platform_sdlc.services import Services
 
@@ -208,118 +206,66 @@ ASSISTANT_TOOLS: list[Tool] = [search_requirements, get_requirement_summary, lis
                    list_cases, get_gate_status, get_design_status, list_iterations]
 
 
-class SqliteChatSession:
-    session_settings: SessionSettings | None = None  # Session 协议成员：sqlite 会话无会话级设置
+class DbChatSession:
+    """Session 协议的 MySQL 实现（并入主库 chat_items，EXEC-PLAN-K8s 阶段 2 M3）：
+    原独立 assistant.db / 模块级共享单连接 / _SESSION_LOCK 全退役——统一走 Database
+    （连接池 + RLock 串行；单条写 autocommit，add_items/pop_item 的读-写批次进 tx）。
+    顺带修掉 SQLite 时期两处方言坑：LIMIT -1 哨兵（MySQL 语法错）与 rowid 隐式列。"""
 
-    """Session 协议的 sqlite 实现：独立文件，多轮记忆（对齐 SQLiteSession 接口面）。
+    session_settings: SessionSettings | None = None  # Session 协议成员：无会话级设置
 
-    连接模型（AUDIT D5-1）：进程内共享单连接 + 模块级 RLock——原「每请求新连接且不关闭」在
-    SSE 多会话并发写下必然 database is locked；add_items 的 MAX(idx)+INSERT 批次整体进临界区。"""
-
-    def __init__(self, session_id: str, db_path: Path) -> None:
+    def __init__(self, session_id: str, db: Database) -> None:
         self.session_id = session_id
-        self._db_path = db_path
-
-    def _conn(self) -> sqlite3.Connection:
-        return _shared_session_conn(self._db_path)
+        self._db = db
 
     async def get_items(self, limit: int | None = None) -> list[Any]:
+        # limit=None 时不能传 LIMIT -1（MySQL 语法错）——拆两条 SQL
+        sql = ("SELECT data FROM chat_items WHERE session_id=? ORDER BY idx DESC LIMIT ?"
+               if limit is not None else "SELECT data FROM chat_items WHERE session_id=? ORDER BY idx DESC")
+        params = (self.session_id, limit) if limit is not None else (self.session_id,)
+
         def impl() -> list[Any]:
-            with _SESSION_LOCK:
-                rows = self._conn().execute(
-                    "SELECT data FROM chat_items WHERE session_id=? ORDER BY idx DESC LIMIT ?",
-                    (self.session_id, limit if limit is not None else -1)).fetchall()
-            return [json.loads(r[0]) for r in reversed(rows)]
+            rows = self._db.query_all(sql, params)
+            return [json.loads(str(r["data"])) for r in reversed(rows)]
 
         return await asyncio.to_thread(impl)
 
     async def add_items(self, items: list[Any]) -> None:
         def impl() -> None:
-            with _SESSION_LOCK:
-                conn = self._conn()
-                cur = conn.execute("SELECT COALESCE(MAX(idx), -1) FROM chat_items WHERE session_id=?",
-                                   (self.session_id,))
-                idx = int(cur.fetchone()[0]) + 1
-                for item in items:
-                    conn.execute("INSERT INTO chat_items(session_id, idx, data) VALUES(?,?,?)",
-                                 (self.session_id, idx, json.dumps(item, ensure_ascii=False)))
-                    idx += 1
-                conn.commit()
+            with self._db.tx():  # MAX(idx)+INSERT 批次整体一个事务（多会话并发写下序号不撞）
+                base = self._db.query_scalar("SELECT COALESCE(MAX(idx), -1) FROM chat_items WHERE session_id=?",
+                                             (self.session_id,))
+                idx = int(base) + 1 if base is not None else 0
+                self._db.executemany(
+                    "INSERT INTO chat_items(session_id, idx, data) VALUES(?,?,?)",
+                    [(self.session_id, idx + i, json.dumps(it, ensure_ascii=False)) for i, it in enumerate(items)],
+                )
 
         await asyncio.to_thread(impl)
 
     async def pop_item(self) -> Any:
         def impl() -> Any:
-            with _SESSION_LOCK:
-                conn = self._conn()
-                row = conn.execute(
-                    "SELECT idx, data FROM chat_items WHERE session_id=? ORDER BY idx DESC LIMIT 1",
-                    (self.session_id,)).fetchone()
+            with self._db.tx():
+                row = self._db.query_one(
+                    "SELECT idx, data FROM chat_items WHERE session_id=? ORDER BY idx DESC LIMIT 1", (self.session_id,))
                 if row is None:
                     return None
-                conn.execute("DELETE FROM chat_items WHERE session_id=? AND idx=?", (self.session_id, row[0]))
-                conn.commit()
-                return json.loads(row[1])
+                self._db.execute("DELETE FROM chat_items WHERE session_id=? AND idx=?",
+                                 (self.session_id, int(row["idx"])))
+                return json.loads(str(row["data"]))
 
         return await asyncio.to_thread(impl)
 
     async def clear_session(self) -> None:
-        def impl() -> None:
-            with _SESSION_LOCK:
-                conn = self._conn()
-                conn.execute("DELETE FROM chat_items WHERE session_id=?", (self.session_id,))
-                conn.commit()
-
-        await asyncio.to_thread(impl)
+        await asyncio.to_thread(self._db.execute, "DELETE FROM chat_items WHERE session_id=?", (self.session_id,))
 
 
-_SESSION_LOCK = threading.RLock()
-_session_conn: sqlite3.Connection | None = None
-_session_path: Path | None = None
+async def list_session_ids(db: Database) -> list[str]:
+    def impl() -> list[str]:
+        return [str(r["session_id"]) for r in db.query_all(
+            "SELECT session_id FROM chat_items GROUP BY session_id ORDER BY MIN(id)")]
 
-
-def _shared_session_conn(db_path: Path) -> sqlite3.Connection:
-    """assistant.db 的进程内共享单连接（WAL + busy_timeout + 建表，惰性初始化；路径变更时重建）。"""
-    global _session_conn, _session_path
-    with _SESSION_LOCK:
-        conn = _session_conn
-        if conn is None or db_path != _session_path:
-            if conn is not None:
-                conn.close()
-            db_path.parent.mkdir(parents=True, exist_ok=True)
-            conn = sqlite3.connect(str(db_path), check_same_thread=False)
-            conn.execute("PRAGMA journal_mode=WAL")
-            conn.execute("PRAGMA busy_timeout=5000")
-            conn.execute(
-                "CREATE TABLE IF NOT EXISTS chat_items ("
-                "session_id TEXT NOT NULL, idx INTEGER NOT NULL, data TEXT NOT NULL,"
-                " PRIMARY KEY (session_id, idx))")
-            _session_conn = conn
-            _session_path = db_path
-        return conn
-
-
-def close_shared_session_db() -> None:
-    """进程停机时显式关闭共享连接（lifespan shutdown 调用）。"""
-    global _session_conn, _session_path
-    with _SESSION_LOCK:
-        conn, _session_conn = _session_conn, None
-        _session_path = None
-        if conn is not None:
-            conn.close()
-
-
-def list_session_ids(db_path: Path) -> list[str]:
-    import sqlite3
-
-    if not db_path.exists():
-        return []
-    conn = sqlite3.connect(str(db_path))
-    try:
-        rows = conn.execute("SELECT session_id, MIN(rowid) FROM chat_items GROUP BY session_id ORDER BY MIN(rowid)").fetchall()
-        return [str(r[0]) for r in rows]
-    finally:
-        conn.close()
+    return await asyncio.to_thread(impl)
 
 
 def build_assistant(settings: Settings) -> Agent[AssistantContext]:

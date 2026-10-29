@@ -46,11 +46,10 @@ class Settings(BaseSettings):
 
 @dataclass(frozen=True)
 class ResolvedPaths:
-    """启动期一次解析完成的绝对路径；全程序只读这一份。
-    MySQL 化后无 db 文件；data_dir = media_dir.parent（assistant.db 等数据目录文件的锚点，M3 收口）。"""
+    """启动期一次解析完成的绝对路径；全程序只读这一份（MySQL 化后无 db 文件，
+    assistant 会话亦并入主库——数据目录锚点仅剩 media_dir）。"""
 
     media_dir: Path
-    data_dir: Path
     workspace_root: Path
     repo_root: Path
 
@@ -85,4 +84,4 @@ def resolve_paths(settings: Settings, cwd: Path | None = None) -> ResolvedPaths:
         rel = "" if ws_raw in ("..", "./", ".") else ws_raw
         workspace_root = repo_root / rel
 
-    return ResolvedPaths(media_dir=media_dir, data_dir=media_dir.parent, workspace_root=workspace_root, repo_root=repo_root)
+    return ResolvedPaths(media_dir=media_dir, workspace_root=workspace_root, repo_root=repo_root)

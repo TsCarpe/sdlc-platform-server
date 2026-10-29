@@ -76,10 +76,7 @@ def create_app(settings: Settings | None = None, cwd: Path | None = None) -> Fas
                 await sweeper
             if ctx.agent is not None:
                 await ctx.agent.stop()
-            from platform_sdlc.agent.assistant import close_shared_session_db
-
-            close_shared_session_db()  # assistant.db 共享连接显式关闭（AUDIT D5-1）
-            db.close()  # 连接池显式关闭（M2：未关连接占 max_connections）
+            db.close()  # 连接池显式关闭（M2：未关连接占 max_connections；assistant 已并主库同池）
 
     app = FastAPI(title="sdlc-platform", lifespan=lifespan, redirect_slashes=False)
     app.state.db = db  # 测试 teardown 的显式 close 通道（不经 TestClient lifespan 的裸 create_app 场景）

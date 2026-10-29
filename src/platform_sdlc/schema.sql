@@ -80,3 +80,12 @@ CREATE TABLE IF NOT EXISTS req_change ( id BIGINT AUTO_INCREMENT PRIMARY KEY, re
 CREATE INDEX idx_req_change_req ON req_change(req_id);
 CREATE TABLE IF NOT EXISTS req_change_item ( id BIGINT AUTO_INCREMENT PRIMARY KEY, change_id BIGINT NOT NULL, block_id VARCHAR(64) COLLATE utf8mb4_bin NOT NULL, op VARCHAR(8) NOT NULL, old_text MEDIUMTEXT DEFAULT (''), new_text MEDIUMTEXT DEFAULT (''), old_attrs TEXT DEFAULT (''), new_attrs TEXT DEFAULT ('') ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 CREATE INDEX idx_req_change_item_change ON req_change_item(change_id);
+-- 助理会话（M3 并入主库，原独立 assistant.db 退役）：session_id+idx 定位消息序，data=JSON 串；
+-- 自增 id 承担 SQLite 时期 rowid 的会话先序职责（list_session_ids ORDER BY MIN(id)）
+CREATE TABLE IF NOT EXISTS chat_items (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  session_id VARCHAR(64) COLLATE utf8mb4_bin NOT NULL,
+  idx INT NOT NULL,
+  data MEDIUMTEXT DEFAULT (''),
+  UNIQUE KEY uq_chat_session_idx (session_id, idx)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
