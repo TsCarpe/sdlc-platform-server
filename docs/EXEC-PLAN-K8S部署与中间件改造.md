@@ -171,15 +171,17 @@ InnoDB 下原子性成立，「DB 权威 + 轮询」的收益损失很小，而 
 - `.dockerignore`（data/ tasks/ sdlc/ logs/ backups/ .venv .git static/）。
 - K8s manifests：`Deployment sdlc-server`（**replicas=1 硬约束**——MySQL 虽消除单写者，但 AgentLoop
   进程内执行、共享 workspace、单 uvicorn worker 模型仍在；水平扩列远期）、
-  `Service`（内网直访）、`PVC`、`ConfigMap`/`Secret`、`CronJob sdlc-backup`、probes（`/api/health`，
+  `Service`（内网直访）、`PVC`、`ConfigMap`/`Secret`、~~`CronJob sdlc-backup`~~（✅ 2026-10-29 拍板移除：备份走公司 DB 平台，见 §3.6）、probes（`/api/health`，
   readiness 加 MySQL 连通性）、`terminationGracePeriodSeconds`（SSE 流与在跑任务软着陆——超时任务由
   recover-stale 兜底回收）。
 - compose 文件（本地/单机迭代载体，MySQL/RocketMQ 容器一起拉起）。
 
 ### 3.6 备份与日志
 
-- 备份：阶段 1（SQLite 期）CronJob 跑 `backup.sh` 语义（sqlite3 .backup → PVC backups/）；
-  阶段 2 后换 `mysqldump --single-transaction` CronJob → PVC/对象存储，保留 N 份滚动 + **每季 restore 演练**。
+- 备份：~~mysqldump CronJob → PVC/对象存储~~（**✅ 2026-10-29 拍板：不自建备份 CronJob，依赖公司
+  MySQL 平台的备份/恢复能力**，§8-3 同步闭环）。`scripts/backup.sh`（mysqldump 版）保留为本地开发
+  自助快照工具。**边界提示**：PVC 上的 `data/media`、`tasks/`、`sdlc/` 工作区是文件数据，不在 DB
+  备份覆盖内——需恢复时靠 PVC 快照/手工 rsync 自助，runbook 里记一笔。
 - 日志：uvicorn 全部 stdout（K8s 采集接公司体系）；`logs/` 目录退役。
 
 ### 3.7 验证脚本适配
@@ -195,8 +197,24 @@ InnoDB 下原子性成立，「DB 权威 + 轮询」的收益损失很小，而 
 
 ### 阶段 1：容器化 + K8s 上线（原架构原样，SQLite + PVC）——约 2~3 人日
 
+> **✅ 已实施（2026-10-29，批次 A~F；实际顺序倒置——阶段 2 MySQL 先收官，容器化在 MySQL 基线上进行）**：
+> 交付物 = `Dockerfile.server`（多阶段：node 构建 web → python:3.12-slim + uv 两步 sync + skills 仓固化
+> /opt/app/skills + tzdata/curl/jq + 非 root + `--timeout-graceful-shutdown 30`）+ `.dockerignore` +
+> `deploy/build.sh`（两仓 rsync 暂存 .build/ + REVISION 版本固化 + parse_doc --media-manifest 构建期门禁 +
+> SWR 代理前置探测）+ `deploy/k8s.tpl`（replicas=1 写死 / Recreate / httpGet 三探针 / initContainer 建目录 /
+> envFrom ConfigMap+Secret / securityContext 分层防 init 冲突）+ `deploy/k8s/` PVC·ConfigMap·Secret 三静态件 +
+> 仓根 `aliprod.groovy`（自渲染 sed+apply，不依赖共享库——平台侧出 Python 变体后可切）+
+> `compose/server.verify.yml`（本地容器验证，独立项目名 sdlc-verify 与 dev 栈隔离）+ `docs/部署runbook.md` +
+> readiness 端点（`/api/health/ready` 池租借 ping 不取 RLock；`/api/health` 保持静态作 liveness——204 测试含解耦回归）。
+> 方案经全新上下文对抗式审查（1 P0 + 4 P1 全吸收：init×runAsNonRoot 冲突 / 镜像补 curl / compose 补
+> AGENT_ENABLED / verify-all 的 SDLC_VERIFY_AGENT 分支 pause 矛盾修正 / SSE 收尾参数）。
+> **容器内首验实录**：单容器冒烟全过（health/ready 双 200、TZ +08:00、非 root uid=1000、curl/jq 在位、
+> skills REVISION=49ef0b3）；verify-all **335 PASS / 0 FAIL**（含 verify-token 自建实例，DSN 走 13306，
+> tasks/ 绑定挂载对齐宿主夹具面）；**verify-agent 真模型端到端通过（M6 遗留正式补掉**：source_import
+> 9 块落库 → quality_check 14 澄清/锚点 46/53 → digest 全链）。剩余 = §8 待运维项闭环后按 runbook 上内网集群。
+
 1. `Dockerfile.server`(+`.dockerignore`) + compose 本地起 → `verify-all.sh` 全绿（容器内首验）。
-2. K8s manifests（Deployment/PVC/Service/ConfigMap/Secret/probes/备份 CronJob）→ 内网集群上线。
+2. K8s manifests（Deployment/PVC/Service/ConfigMap/Secret/probes）→ 内网集群上线（备份 CronJob 已拍板移除，§3.6）。
 3. 数据：全新起库（✅ §6），PVC 空挂即可，无迁移步骤。
 4. 任务通道：**进程内 agent（唯一通道，✅ §0/§8-4 拍板）**——skills 仓 `claude-sdlc-skills` 在
    `Dockerfile.server` 构建期固化进镜像（版本 ≥ 2026-10-28），`SDLC_AGENT_SKILLS_REPO` 指镜像内
@@ -236,7 +254,7 @@ Namespace: sdlc
 │   ├─ ConfigMap (SDLC_AGENT_* 非密/TZ/URL)  │  ┌─────────────┐
 │   └─ Secret (API_KEY/WRITE_TOKEN/DB DSN)   │  │ RocketMQ    │◄── task.created
 │   （skills 仓固化进镜像 /app/skills）       │  └─────────────┘
-│ CronJob sdlc-backup (mysqldump)            │
+│ （备份不自建 CronJob——走公司 DB 平台，2026-10-29 拍板）│
 │ Service sdlc-server ← 内网 IP 直访（无 TLS 需求）
 └────────────────────────────────────────────┘
 ```
@@ -265,7 +283,7 @@ Namespace: sdlc
 2. `scripts/verify-all.sh BASE=<内网地址>` 全绿（自带进程内 agent 暂停/恢复）；
 3. 浏览器走通完整业务流：建卡 → source_import → 质检 → 澄清答复 → 发布 → 设计 → 门禁；
 4. `verify-agent.mjs` / `verify-assistant.mjs` 通过（需模型余额）；
-5. K8s 韧性演练：pod 删除重建数据无损；备份 CronJob 产出可恢复（restore 演练过一次才算数）；
+5. K8s 韧性演练：pod 删除重建数据无损（备份不自建——2026-10-29 拍板走公司 DB 平台，恢复保障在平台侧）；
 6. （阶段 3 后）MQ 断连演练：轮询兜底不丢任务。
 
 任一不满足 = 上线未完成。失败判据：任一 verify 非零退出 / SPA 白屏 / 业务流断链 / 数据计数不一致。
@@ -279,8 +297,9 @@ Namespace: sdlc
    仍待确认：SDLC namespace 归属、CronJob 权限。
 2. **RocketMQ**（仍悬置，不阻塞阶段 1-2）：✅ 公司走 Apache 4.x；仍待确认 HTTP/5.x 端点 +
    是否接受 §3.2「降级为可选优化」。
-3. **MySQL**：✅ 公司标准组件（账号/地址经 Apollo 注入）。仍待确认：建库申请流程、Python Pod 直连
-   网络策略、备份是否走公司 DB 平台。
+3. **MySQL**：✅ 公司标准组件（账号/地址经 Apollo 注入）。✅ **备份已拍板（2026-10-29）：走公司
+   DB 平台，不自建 CronJob**（PVC 文件数据不在 DB 备份内，边界见 §3.6）。
+   仍待确认：建库申请流程、Python Pod 直连网络策略。
 4. **任务通道**：✅ **完整能力**（2026-10-28 修订，同日执行完毕）：飞书能力改由进程内 agent 的
    Python 接入承载（`DESIGN-飞书接入Python化.md`，凭据先共用 Askly 应用）；runner 已于 2026-10-28
    下线（A/B 级评审扇出由进程内 spawn_reviewer 工具承载），容器化只部署 server（进程内通道）。

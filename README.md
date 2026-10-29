@@ -72,23 +72,29 @@ rsync -a --delete dist/ ../sdlc-platform-server/static/
 
 ## 数据
 
-`data/{platform.db, media/}`（首启自动建库 + 幂等迁移）。接入既有数据：
-`cp -R <旧仓>/server/data/ ./`（迁移前先 `scripts/backup.sh` 快照）。
+MySQL（`SDLC_DB_DSN`）+ `data/media/`（媒体文件；K8s 下由 PVC 承载）。首启自动建表 + 幂等迁移。
+本地开发库快照：`scripts/backup.sh`（mysqldump 版，`--single-transaction` 运行中可备，保留 30 份）。
 
 ## 验收 / 回归
 
 ```bash
 uv run pytest                # 单元回归（迁移器/仓储/守卫/API 键形）
-scripts/verify-all.sh        # 黑盒全量回归（需服务已启动；10 个 verify-*.mjs）
+scripts/verify-all.sh        # 黑盒全量回归（需服务已启动；verify-token 自建实例 + 12 个 verify-*.mjs）
 node scripts/verify-agent.mjs      # agent 执行侧端到端冒烟（需模型余额）
 node scripts/verify-assistant.mjs  # 查询聊天助理冒烟（需模型余额）
-scripts/backup.sh            # SQLite 快照到 backups/（挂 cron，保留 30 份）
-                              # 注意：库为 WAL 模式，直接 cp 库文件会丢未 checkpoint 数据——备份只信本脚本（sqlite3 .backup）
 ```
 
 静态检查（贡献者）：`uv run pyright && uv run ruff check src tests`（pyright strict 全量）。
 
+## 线上部署（K8s · ACK）
+
+镜像构建 `deploy/build.sh`（多阶段：web 前端 + skills 仓固化进镜像，基础镜像走 SWR docker.io 代理）；
+部署件 `deploy/k8s.tpl` + `deploy/k8s/`（PVC/ConfigMap/Secret）+ 仓根 `aliprod.groovy`（Jenkins 自渲染）。
+全流程、一次性准备与验收门见 [docs/部署runbook.md](docs/部署runbook.md)；容器本地验证用
+`compose/server.verify.yml`。健康端点：`/api/health`（静态，liveness/startup）与
+`/api/health/ready`（含 MySQL 连通性，readiness）。
+
 ## 安全边界（继承 v1 共识）
 
 无登录（内网互信）；默认绑 0.0.0.0（对外暴露前明确评估）；写防护可启用 `SDLC_WRITE_TOKEN`（写接口要求 X-Token 头）；
-SQL 全参数化；数据可随时迁出（SQLite 单文件 + media 目录）。
+SQL 全参数化；库（MySQL）由公司 DB 平台备份，文件面（media/任务工作区）走 PVC——备份边界见 runbook §8。
