@@ -126,14 +126,15 @@ class ReqChangeRepo:
         if not block_ids:
             return set()
         seeds = ",".join("?" for _ in block_ids)
-        # NULLIF 防 attrs_json='' 空串（json_extract 对空串抛 malformed JSON，对 NULL 返回 NULL）
+        # NULLIF 防 attrs_json='' 空串（MySQL JSON_EXTRACT 对空串/非法 JSON 抛错，对 NULL 返回 NULL）；
+        # CTE 名禁用 desc（MySQL 保留字）
         rows = self.db.query_all(
-            "WITH RECURSIVE desc(block_id) AS ("
+            "WITH RECURSIVE desc_blk(block_id) AS ("
             f"  SELECT block_id FROM req_block WHERE req_id=? AND deleted='' AND block_id IN ({seeds})"
             "  UNION ALL"
-            "  SELECT c.block_id FROM req_block c JOIN desc d"
+            "  SELECT c.block_id FROM req_block c JOIN desc_blk d"
             "    ON c.req_id=? AND c.deleted=''"
-            "   AND json_extract(NULLIF(c.attrs_json, ''), '$.parent') = d.block_id"
-            ") SELECT block_id FROM desc",
+            "   AND JSON_UNQUOTE(JSON_EXTRACT(NULLIF(c.attrs_json, ''), '$.parent')) = d.block_id"
+            ") SELECT block_id FROM desc_blk",
             (req_id, *block_ids, req_id))
         return {str(r["block_id"]) for r in rows}

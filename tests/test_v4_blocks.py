@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -20,9 +21,9 @@ from platform_sdlc.services.block import BlockService
 from platform_sdlc.services.requirement import RequirementService
 
 
-def _legacy_db(tmp_path: Path) -> Database:
+def _legacy_db(make_isolated_db: Callable[[], Database]) -> Database:
     """裸 schema 库（建表不跑账本），供「先造存量数据再触发迁移」的测试。"""
-    db = Database(tmp_path / "legacy.db")
+    db = make_isolated_db()
     db.executescript(_SCHEMA)
     db.execute("INSERT INTO requirement(id,name,source_type,status) VALUES('REQ-2026-001','迁移验证','feishu','clarifying')")
     return db
@@ -37,8 +38,8 @@ def _insert_doc_artifact(db: Database, blocks: list[dict[str, object]]) -> None:
 
 # ---------- 迁移：doc artifact → req_block / req_comment ----------
 
-def test_migration_moves_doc_artifact_to_blocks(tmp_path: Path) -> None:
-    db = _legacy_db(tmp_path)
+def test_migration_moves_doc_artifact_to_blocks(tmp_path: Path, make_isolated_db: Callable[[], Database]) -> None:
+    db = _legacy_db(make_isolated_db)
     _insert_doc_artifact(db, [
         {"id": "fs-title", "type": "title", "text": "需求标题", "path": ""},
         {"id": "fs-h1", "type": "heading", "level": 2, "text": "背景", "path": "需求标题"},
@@ -77,8 +78,8 @@ def test_migration_moves_doc_artifact_to_blocks(tmp_path: Path) -> None:
     assert len(db.query_all("SELECT * FROM req_comment WHERE req_id='REQ-2026-001'")) == 2
 
 
-def test_migration_skips_broken_doc_artifact(tmp_path: Path) -> None:
-    db = _legacy_db(tmp_path)
+def test_migration_skips_broken_doc_artifact(tmp_path: Path, make_isolated_db: Callable[[], Database]) -> None:
+    db = _legacy_db(make_isolated_db)
     db.execute(
         "INSERT INTO artifact(req_id,type,markdown,content_json,version) VALUES('REQ-2026-001','doc','','{bad json',1)"
     )
@@ -87,8 +88,8 @@ def test_migration_skips_broken_doc_artifact(tmp_path: Path) -> None:
     assert db.query_scalar("SELECT COUNT(*) FROM req_comment") == 0
 
 
-def test_clarify_origin_backfill(tmp_path: Path) -> None:
-    db = _legacy_db(tmp_path)
+def test_clarify_origin_backfill(tmp_path: Path, make_isolated_db: Callable[[], Database]) -> None:
+    db = _legacy_db(make_isolated_db)
     db.execute(
         "INSERT INTO clarify_item(req_id,seq,level,question,status) VALUES('REQ-2026-001','P1','yellow','q','pending')"
     )
@@ -97,8 +98,8 @@ def test_clarify_origin_backfill(tmp_path: Path) -> None:
     assert db.query_scalar("SELECT origin FROM clarify_item WHERE req_id='REQ-2026-001'") == "skill"
 
 
-def test_anchor_health_audit(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
-    db = _legacy_db(tmp_path)
+def test_anchor_health_audit(tmp_path: Path, make_isolated_db: Callable[[], Database], caplog: pytest.LogCaptureFixture) -> None:
+    db = _legacy_db(make_isolated_db)
     _insert_doc_artifact(db, [
         {"id": "fs-a", "type": "paragraph", "text": "a", "path": ""},
         {"id": "fs-b", "type": "paragraph", "text": "b", "path": ""},
@@ -119,8 +120,8 @@ def test_anchor_health_audit(tmp_path: Path, caplog: pytest.LogCaptureFixture) -
 
 # ---------- 运行期：重建行携带 origin（与账本回填同批的关键同期点） ----------
 
-def test_push_artifacts_sets_skill_origin(tmp_path: Path) -> None:
-    db = Database(tmp_path / "platform.db")
+def test_push_artifacts_sets_skill_origin(tmp_path: Path, make_database: Callable[..., Database]) -> None:
+    db = make_database()
     run_migrations(db)
     repos = Repos.create(db)
     svc = RequirementService(db, repos, BlockService(db, repos, tmp_path))
@@ -139,8 +140,8 @@ def test_push_artifacts_sets_skill_origin(tmp_path: Path) -> None:
 
 # ---------- 仓储面 ----------
 
-def test_req_block_repo(tmp_path: Path) -> None:
-    db = Database(tmp_path / "platform.db")
+def test_req_block_repo(tmp_path: Path, make_database: Callable[..., Database]) -> None:
+    db = make_database()
     run_migrations(db)
     repo = Repos.create(db).req_block
 
@@ -167,8 +168,8 @@ def test_req_block_repo(tmp_path: Path) -> None:
     assert repo.empty("REQ-X") is False
 
 
-def test_req_comment_repo(tmp_path: Path) -> None:
-    db = Database(tmp_path / "platform.db")
+def test_req_comment_repo(tmp_path: Path, make_database: Callable[..., Database]) -> None:
+    db = make_database()
     run_migrations(db)
     repo = Repos.create(db).req_comment
 
@@ -188,8 +189,8 @@ def test_req_comment_repo(tmp_path: Path) -> None:
     assert repo.has_platform("REQ-X") is True
 
 
-def test_clarify_item_roundtrip_origin(tmp_path: Path) -> None:
-    db = Database(tmp_path / "platform.db")
+def test_clarify_item_roundtrip_origin(tmp_path: Path, make_database: Callable[..., Database]) -> None:
+    db = make_database()
     run_migrations(db)
     repos = Repos.create(db)
     repos.clarify_item.insert(ClarifyItem(

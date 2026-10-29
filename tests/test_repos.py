@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-import os
-import shutil
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -25,14 +24,10 @@ from platform_sdlc.models import (
 from platform_sdlc.models import TestCase as TestCaseEntity  # 别名：避免 pytest 收集 Test* 类
 from platform_sdlc.repositories import Repos
 
-# 存量库副本抽查（可选）：SDLC_EXISTING_DB=/path/to/platform.db uv run pytest 才启用；
-# 默认跳过（原 backend/ 为 Java v2 时代目录已删除，原硬编码路径恒 skipif——AUDIT D7-5）
-EXISTING_DB = Path(os.environ["SDLC_EXISTING_DB"]).resolve() if os.environ.get("SDLC_EXISTING_DB") else None
-
 
 @pytest.fixture()
-def repos(tmp_path: Path) -> Repos:
-    db = Database(tmp_path / "platform.db")
+def repos(tmp_path: Path, make_database: Callable[..., Database]) -> Repos:
+    db = make_database()
     run_migrations(db)
     return Repos.create(db)
 
@@ -149,23 +144,5 @@ def test_media_iteration_comment_frpoint(repos: Repos) -> None:
     assert repos.test_case.next_web_id("REQ-1") == "WEB-002"
 
 
-@pytest.mark.skipif(not (EXISTING_DB and EXISTING_DB.exists()), reason="无存量库（SDLC_EXISTING_DB 未配置）")
-def test_existing_db_smoke(tmp_path: Path) -> None:
-    """存量库副本：迁移幂等 + 列表聚合可读（抽查真实数据形状）。"""
-    assert EXISTING_DB is not None  # skipif 已保证；此处仅为类型收窄
-    work = tmp_path / "existing"
-    work.mkdir()
-    shutil.copy(EXISTING_DB, work / "platform.db")
-    db = Database(work / "platform.db")
-    run_migrations(db)
-    run_migrations(db)  # 幂等
-    repos = Repos.create(db)
-    rows = repos.requirement.list_all(None, None)
-    assert isinstance(rows, list)
-    cases = repos.test_case.list(None, None, None, None, None)
-    for c in cases[:5]:
-        assert isinstance(c.verify_refs, list) and isinstance(c.case_no, int | type(None))
-    iters = repos.iteration.list_all()
-    for it in iters[:5]:
-        assert it.design_phase in ("none", "draft", "final", "skipped")
-        assert it.gate_stage in ("none", "active", "released")
+# 存量库副本抽查段已随 SQLite 退役（M2）：本机库的迁移验证改由
+# scripts/migrate-sqlite-to-mysql.py 的 dry-run 硬门 + 导入后对账承载（EXEC-PLAN-K8s 阶段 2 M4 批）

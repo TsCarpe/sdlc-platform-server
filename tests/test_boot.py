@@ -13,8 +13,8 @@ from platform_sdlc.main import create_app
 
 
 @pytest.fixture()
-def client(tmp_path: Path) -> Iterator[TestClient]:
-    settings = Settings(_env_file=None, db_path=str(tmp_path / "data" / "platform.db"), media_dir=str(tmp_path / "data" / "media"))  # pyright: ignore[reportCallIssue]
+def client(tmp_path: Path, db_dsn: str) -> Iterator[TestClient]:
+    settings = Settings(_env_file=None, db_dsn=db_dsn, media_dir=str(tmp_path / "data" / "media"))  # pyright: ignore[reportCallIssue]
     app = create_app(settings, cwd=tmp_path)
     with TestClient(app, raise_server_exceptions=False) as c:
         yield c
@@ -26,10 +26,12 @@ def test_health_shape(client: TestClient) -> None:
     assert r.json() == {"ok": True, "app": "sdlc-platform", "version": "0.2.0"}
 
 
-def test_migrations_idempotent(tmp_path: Path) -> None:
-    settings = Settings(_env_file=None, db_path=str(tmp_path / "data" / "platform.db"))  # pyright: ignore[reportCallIssue]
-    create_app(settings, cwd=tmp_path)  # 首次：建库 + 全量迁移
-    create_app(settings, cwd=tmp_path)  # 二次：幂等无异常
+def test_migrations_idempotent(tmp_path: Path, db_dsn: str) -> None:
+    settings = Settings(_env_file=None, db_dsn=db_dsn)  # pyright: ignore[reportCallIssue]
+    app1 = create_app(settings, cwd=tmp_path)  # 首次：建库 + 全量迁移
+    app1.state.db.close()
+    app2 = create_app(settings, cwd=tmp_path)  # 二次：幂等无异常（表/索引已存在的 1050/1061 容忍实测）
+    app2.state.db.close()
 
 
 def test_unknown_path_error_shape(client: TestClient) -> None:
@@ -42,8 +44,8 @@ def test_unknown_path_error_shape(client: TestClient) -> None:
     assert r2.json()["error"].startswith("请求方法不支持：")
 
 
-def test_token_guard(tmp_path: Path) -> None:
-    settings = Settings(_env_file=None, db_path=str(tmp_path / "data" / "platform.db"), write_token="secret")  # pyright: ignore[reportCallIssue]
+def test_token_guard(tmp_path: Path, db_dsn: str) -> None:
+    settings = Settings(_env_file=None, db_dsn=db_dsn, write_token="secret")  # pyright: ignore[reportCallIssue]
     app = create_app(settings, cwd=tmp_path)
     with TestClient(app) as c:
         denied = c.post("/api/anything", json={})

@@ -13,8 +13,8 @@ class DraftRepo:
     def upsert(self, d: DraftArtifact, at: str) -> None:
         self.db.execute(
             "INSERT INTO draft_artifact(req_id,type,md,content_json,task_id,updated_at) VALUES(?,?,?,?,?,?) "
-            "ON CONFLICT(req_id,type) DO UPDATE SET md=excluded.md, content_json=excluded.content_json, "
-            "task_id=excluded.task_id, updated_at=excluded.updated_at",
+            "ON DUPLICATE KEY UPDATE md=VALUES(md), content_json=VALUES(content_json), "
+            "task_id=VALUES(task_id), updated_at=VALUES(updated_at)",
             (d.req_id, d.type, d.md, d.content_json, d.task_id, at),
         )
 

@@ -7,7 +7,7 @@ BlockService.diff_blocks（LIS 判 move）；impact 冻结章节一律 heading b
 
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
 
@@ -24,14 +24,17 @@ _BODY_TITLE = {"title": "口径修订", "detail": "PM 确认后提单", "propose
 
 
 @pytest.fixture()
-def env(tmp_path: Path) -> Iterator[tuple[TestClient, Database, Repos]]:
-    settings = Settings(_env_file=None, db_path=str(tmp_path / "data" / "platform.db"),  # pyright: ignore[reportCallIssue]
+def env(tmp_path: Path, db_dsn: str, make_database: Callable[..., Database]) -> Iterator[tuple[TestClient, Database, Repos]]:
+    settings = Settings(_env_file=None, db_dsn=db_dsn,  # pyright: ignore[reportCallIssue]
                         media_dir=str(tmp_path / "data" / "media"))
     app = create_app(settings, cwd=tmp_path)
     client = TestClient(app, raise_server_exceptions=False)
-    db = Database(tmp_path / "data" / "platform.db")
+    db = make_database()  # 断言第二连接（app 连接经 app.state.db 在 finally 关——TestClient 未经 with 不跑 lifespan）
     repos = Repos.create(db)
-    yield client, db, repos
+    try:
+        yield client, db, repos
+    finally:
+        app.state.db.close()
 
 
 def _seed(repos: Repos, req_id: str) -> None:

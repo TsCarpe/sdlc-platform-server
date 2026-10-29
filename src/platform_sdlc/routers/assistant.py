@@ -40,7 +40,7 @@ def _sse(payload: dict[str, Any]) -> str:
 
 
 def _session_db(ctx: AppContext) -> Path:
-    return ctx.paths.db.parent / "assistant.db"
+    return ctx.paths.data_dir / "assistant.db"  # M2 过渡：data_dir = media_dir.parent（与 SQLite 期磁盘布局一致），M3 并库收口
 
 
 def router(ctx: AppContext) -> APIRouter:
@@ -78,7 +78,7 @@ def router(ctx: AppContext) -> APIRouter:
             except TimeoutError:
                 log.warning("助理回复超时 sid=%s（%dmin 上限）", sid, ctx.settings.agent_timeout_min)
                 yield _sse({"type": "error", "message": f"回复超时（{ctx.settings.agent_timeout_min} 分钟上限），请稍后重试"})
-            except Exception as e:  # noqa: BLE001——流中异常以 error 事件收尾（前端可展示）；服务端同步留痕（AUDIT D7-6）
+            except Exception as e:  # noqa: BLE001  流中异常以 error 事件收尾（前端可展示）；服务端同步留痕（AUDIT D7-6）
                 log.warning("助理 SSE 流异常 sid=%s：%s: %s", sid, type(e).__name__, e)
                 yield _sse({"type": "error", "message": f"{type(e).__name__}: {e}"})
 

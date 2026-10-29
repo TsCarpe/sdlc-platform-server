@@ -20,7 +20,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from platform_sdlc.common import ApiException, ConflictException, ErrorResult
 from platform_sdlc.config import Settings, resolve_paths
-from platform_sdlc.db import Database
+from platform_sdlc.db import Database, dsn_display
 from platform_sdlc.migrations import run_migrations
 from platform_sdlc.repositories import Repos
 from platform_sdlc.routers import register_routers
@@ -53,7 +53,7 @@ async def _stale_sweeper(services: Services, timeout_min: int) -> None:
 def create_app(settings: Settings | None = None, cwd: Path | None = None) -> FastAPI:
     settings = settings or Settings()
     paths = resolve_paths(settings, cwd)
-    db = Database(paths.db)
+    db = Database(settings.db_dsn)
     run_migrations(db)
     repos = Repos.create(db)
     services = Services.create(db, repos, paths.media_dir, paths.workspace_root, settings.media_max_bytes)
@@ -61,7 +61,7 @@ def create_app(settings: Settings | None = None, cwd: Path | None = None) -> Fas
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
-        log.info("启动：db=%s media=%s static=%s", paths.db, paths.media_dir, settings.static_dir)
+        log.info("启动：db=%s media=%s static=%s", dsn_display(settings.db_dsn), paths.media_dir, settings.static_dir)
         if settings.agent_enabled:
             from platform_sdlc.agent.loop import AgentLoop
 
@@ -79,8 +79,10 @@ def create_app(settings: Settings | None = None, cwd: Path | None = None) -> Fas
             from platform_sdlc.agent.assistant import close_shared_session_db
 
             close_shared_session_db()  # assistant.db 共享连接显式关闭（AUDIT D5-1）
+            db.close()  # 连接池显式关闭（M2：未关连接占 max_connections）
 
     app = FastAPI(title="sdlc-platform", lifespan=lifespan, redirect_slashes=False)
+    app.state.db = db  # 测试 teardown 的显式 close 通道（不经 TestClient lifespan 的裸 create_app 场景）
     _install_exception_handlers(app)
     _install_middleware(app, settings)
     register_routers(app, ctx)

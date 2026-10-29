@@ -13,7 +13,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any, cast, get_origin
 
@@ -33,14 +33,17 @@ from platform_sdlc.schemas import wire
 
 
 @pytest.fixture()
-def env(tmp_path: Path) -> Iterator[tuple[TestClient, Database, Repos]]:
-    settings = Settings(_env_file=None, db_path=str(tmp_path / "data" / "platform.db"),  # pyright: ignore[reportCallIssue]
+def env(tmp_path: Path, db_dsn: str, make_database: Callable[..., Database]) -> Iterator[tuple[TestClient, Database, Repos]]:
+    settings = Settings(_env_file=None, db_dsn=db_dsn,  # pyright: ignore[reportCallIssue]
                         media_dir=str(tmp_path / "data" / "media"))
     app = create_app(settings, cwd=tmp_path)
     client = TestClient(app, raise_server_exceptions=False)
-    db = Database(tmp_path / "data" / "platform.db")
+    db = make_database()  # 断言第二连接（app 连接经 app.state.db 在 finally 关——TestClient 未经 with 不跑 lifespan）
     repos = Repos.create(db)
-    yield client, db, repos
+    try:
+        yield client, db, repos
+    finally:
+        app.state.db.close()
 
 
 def _mk_card(client: TestClient, name: str = "v5 澄清契约") -> str:
@@ -451,8 +454,8 @@ def test_incremental_flows_whitelist_and_pids(env: tuple[TestClient, Database, R
         "INSERT INTO clarify_item(req_id,seq,level,theme,question,ctx,answer,answered_at,quote,"
         "anchor,status,note,origin,src_comment_id,options,module,layer) "
         "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-        (req_id, "L01", "yellow", "t", "评论升级问题", "", "", "", "", "", "pending", "",
-         "local", None, "", "", ""))
+        (req_id, "L01", "yellow", "t", "评论升级问题", "", "", None, "", "", "pending", "",
+         "local", None, "", "", ""))  # answered_at None（DATETIME 列拒空串；'' 与 None 读侧同义）
     merge = _approve_bundle(client, req_id, _v5_bundle(
         cid,
         flows=[{"role": "用户", "step": "提交", "next": "审核", "anchor": "p1",

@@ -84,6 +84,7 @@ class IterationRepo:
 
     def ensure(self, name: str, created_at: str) -> None:
         self.db.execute(
-            "INSERT INTO iteration(name, created_at) SELECT ?, ? WHERE NOT EXISTS (SELECT 1 FROM iteration WHERE name=?)",
+            # FROM DUAL：MySQL 的 SELECT 无 FROM 子句不许带 WHERE（SQLite 允许）
+            "INSERT INTO iteration(name, created_at) SELECT ?, ? FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM iteration WHERE name=?)",
             (name, created_at, name),
         )

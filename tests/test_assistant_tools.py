@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -19,8 +20,8 @@ NOW = "2026-10-01 10:00:00"
 
 
 @pytest.fixture()
-def env(tmp_path: Path) -> tuple[Repos, Services]:
-    db = Database(tmp_path / "platform.db")
+def env(tmp_path: Path, make_database: Callable[..., Database]) -> tuple[Repos, Services]:
+    db = make_database()
     run_migrations(db)
     repos = Repos.create(db)
     services = Services.create(db, repos, tmp_path / "media", tmp_path)

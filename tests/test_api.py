@@ -13,13 +13,12 @@ from platform_sdlc.main import create_app
 
 
 @pytest.fixture()
-def client(tmp_path: Path) -> Iterator[TestClient]:
+def client(tmp_path: Path, db_dsn: str) -> Iterator[TestClient]:
     # _env_file 为 pydantic-settings 运行时私参（类型 stub 未声明），传 None 隔离本机 .env
     settings = Settings(
-        # _env_file 为 pydantic-settings 运行时私参（类型 stub 未声明），传 None 隔离本机 .env
         _env_file=None,  # pyright: ignore[reportCallIssue]
-        db_path=str(tmp_path / "data" / "platform.db"), media_dir=str(tmp_path / "data" / "media"))
-    with TestClient(create_app(settings, cwd=tmp_path)) as c:
+        db_dsn=db_dsn, media_dir=str(tmp_path / "data" / "media"))
+    with TestClient(create_app(settings, cwd=tmp_path)) as c:  # with 退出跑 lifespan → 池 close，DROP 不卡 MDL
         yield c
 
 

@@ -7,6 +7,7 @@ from __future__ import annotations
 import copy
 import importlib.util
 import json
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -60,8 +61,8 @@ def _seed_media(repos: Repos, req_id: str) -> None:
 
 
 @pytest.fixture()
-def env(tmp_path: Path) -> tuple[Database, Repos, Services, Path]:
-    db = Database(tmp_path / "platform.db")
+def env(tmp_path: Path, make_database: Callable[..., Database]) -> tuple[Database, Repos, Services, Path]:
+    db = make_database()
     run_migrations(db)
     repos = Repos.create(db)
     services = Services.create(db, repos, tmp_path / "media", tmp_path)
@@ -421,11 +422,11 @@ def test_claim_quality_check_guard_blocks_empty(env: tuple[Database, Repos, Serv
     assert got is not None and got.type == "quality_check" and got.status == "running"
 
 
-def test_backfill_text_cards_import(tmp_path: Path) -> None:
+def test_backfill_text_cards_import(make_isolated_db: Callable[[], Database]) -> None:
     from platform_sdlc.migrations import _backfill_text_cards_import
     from platform_sdlc.migrations import run_migrations as rm
 
-    db2 = Database(tmp_path / "legacy2.db")
+    db2 = make_isolated_db()
     rm(db2)  # 先建全 schema（账本全跑完，本库无数据）
     db2.execute("INSERT INTO requirement(id,name,source_type,status) VALUES('REQ-2026-100','已有导入任务','text','submitted')")
     db2.execute("INSERT INTO requirement(id,name,source_type,status) VALUES('REQ-2026-101','飞书卡','feishu','submitted')")

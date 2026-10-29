@@ -19,8 +19,9 @@ class Settings(BaseSettings):
     port: int = 8888
 
     write_token: str = ""  # 为空不启用；设置后非 GET 的 /api 写接口要求 X-Token 头
-    db_path: str = "./data/platform.db"  # 相对路径走 resolve_paths 的数据目录定位规则
-    media_dir: str = "./data/media"
+    # MySQL DSN（EXEC-PLAN-K8s 阶段 2）：空串 = 启动即报错带指引（漏配要 crash-loop 可见，不给静默默认）
+    db_dsn: str = ""
+    media_dir: str = "./data/media"  # 相对路径基于 cwd 直解（./data/media → <cwd>/data/media）
     media_max_bytes: int = 64 * 1024 * 1024  # 媒体上传上限：路由层 Content-Length 预检 + 服务层兜底
     static_dir: str = "static"  # vite 构建产物目录（约定 uvicorn 以 server/ 为工作目录启动）
 
@@ -45,10 +46,11 @@ class Settings(BaseSettings):
 
 @dataclass(frozen=True)
 class ResolvedPaths:
-    """启动期一次解析完成的绝对路径；全程序只读这一份。"""
+    """启动期一次解析完成的绝对路径；全程序只读这一份。
+    MySQL 化后无 db 文件；data_dir = media_dir.parent（assistant.db 等数据目录文件的锚点，M3 收口）。"""
 
-    db: Path
     media_dir: Path
+    data_dir: Path
     workspace_root: Path
     repo_root: Path
 
@@ -64,36 +66,17 @@ def _is_external(p: str) -> bool:
 
 
 def resolve_paths(settings: Settings, cwd: Path | None = None) -> ResolvedPaths:
-    """数据目录自适应定位（移植 DataDirEnvironmentPostProcessor，backend 语义换成 server）。
+    """路径定位（MySQL 化后无 db 文件，media_dir 相对路径基于 cwd 直解）。
 
-    规则（db_path 为相对路径时）：
-      1. 工作目录下已存在该数据目录 → 就用它（server/ 启动、独立部署目录）
-      2. 工作目录下有 server/ 子目录（仓库根启动）→ 落到 server/data
-      3. 都没有 → 在工作目录创建 data/（全新环境）
+    规则（media_dir 为相对路径时）：./data/media → <cwd>/data/media（uvicorn 以仓根为 cwd）；
+    K8s / 测试传绝对路径直接采用。data_dir = media_dir.parent（数据目录锚点：
+    assistant.db 等目录级文件挂在它下面）。
     """
     cwd = (cwd or Path.cwd()).resolve()
     repo_root = cwd.parent if cwd.name == "server" else (cwd if (cwd / "server").is_dir() else cwd)
 
-    db_raw = settings.db_path
-    if _is_external(db_raw):
-        db = Path(db_raw).expanduser()
-    else:
-        p = Path(db_raw.removeprefix("./"))
-        db_file = p.name or "platform.db"
-        parent_name = p.parent.name if p.parent != Path(".") else "data"
-        if p.parent != Path(".") and (cwd / p.parent).is_dir():
-            db = cwd / p.parent / db_file  # 规则 1
-        elif (cwd / "server").is_dir() and not (cwd / parent_name).is_dir():
-            db = cwd / "server" / parent_name / db_file  # 规则 2
-        else:
-            db = cwd / parent_name / db_file  # 规则 3
-        db = _ensure_parent(db)
-
     media_raw = settings.media_dir
-    if _is_external(media_raw):
-        media_dir = Path(media_raw).expanduser()
-    else:
-        media_dir = _ensure_parent(db.parent / media_raw.removeprefix("./").removeprefix("data/"))
+    media_dir = Path(media_raw).expanduser() if _is_external(media_raw) else _ensure_parent(cwd / media_raw.removeprefix("./"))
 
     ws_raw = settings.agent_workspace_root
     if _is_external(ws_raw):
@@ -102,4 +85,4 @@ def resolve_paths(settings: Settings, cwd: Path | None = None) -> ResolvedPaths:
         rel = "" if ws_raw in ("..", "./", ".") else ws_raw
         workspace_root = repo_root / rel
 
-    return ResolvedPaths(db=db, media_dir=media_dir, workspace_root=workspace_root, repo_root=repo_root)
+    return ResolvedPaths(media_dir=media_dir, data_dir=media_dir.parent, workspace_root=workspace_root, repo_root=repo_root)

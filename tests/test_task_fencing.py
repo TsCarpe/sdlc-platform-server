@@ -14,6 +14,7 @@ import asyncio
 import copy
 import json
 import subprocess
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any, cast
 
@@ -62,8 +63,8 @@ def _with_guard(doc: dict[str, Any]) -> dict[str, Any]:
 
 
 @pytest.fixture()
-def env(tmp_path: Path) -> tuple[Repos, Services, Path]:
-    db = Database(tmp_path / "platform.db")
+def env(tmp_path: Path, make_database: Callable[..., Database]) -> tuple[Repos, Services, Path]:
+    db = make_database()
     run_migrations(db)
     repos = Repos.create(db)
     services = Services.create(db, repos, tmp_path / "media", tmp_path)
@@ -228,9 +229,9 @@ def test_retry_reason_whitelist(env: tuple[Repos, Services, Path]) -> None:
 
 # ---------- recover-stale 归属语义（P1-5） ----------
 
-def test_recover_stale_requires_runner_or_all(tmp_path: Path) -> None:
+def test_recover_stale_requires_runner_or_all(tmp_path: Path, db_dsn: str) -> None:
     """裸调用拒绝（400）；按 runner 或显式 all=true 才执行全量/归属恢复。"""
-    settings = Settings(_env_file=None, db_path=str(tmp_path / "platform.db"),  # pyright: ignore[reportCallIssue]
+    settings = Settings(_env_file=None, db_dsn=db_dsn,  # pyright: ignore[reportCallIssue]
                         media_dir=str(tmp_path / "media"))
     app = create_app(settings, cwd=tmp_path)
     with TestClient(app) as c:

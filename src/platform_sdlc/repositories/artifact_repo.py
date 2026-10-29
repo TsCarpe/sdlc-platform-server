@@ -13,9 +13,10 @@ class ArtifactRepo:
     def upsert(self, req_id: str, type_: str, markdown: str, content_json: str, at: str) -> None:
         """重复推送 = 覆盖并 version+1。"""
         self.db.execute(
+            # MySQL upsert：VALUES(col) 旧语法（5.7~8.x 全系可用，8.0.20+ 仅 deprecation warning）
             "INSERT INTO artifact(req_id,type,markdown,content_json,version,pushed_at) VALUES(?,?,?,?,1,?) "
-            "ON CONFLICT(req_id,type) DO UPDATE SET markdown=excluded.markdown, content_json=excluded.content_json, "
-            "version=artifact.version+1, pushed_at=excluded.pushed_at",
+            "ON DUPLICATE KEY UPDATE markdown=VALUES(markdown), content_json=VALUES(content_json), "
+            "version=version+1, pushed_at=VALUES(pushed_at)",
             (req_id, type_, markdown, content_json, at),
         )
 

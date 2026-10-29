@@ -45,10 +45,11 @@ class TestCaseRepo:
 
     def allocate_case_nos(self, n: int) -> int:
         """批量分配 n 个全局序号，返回起始号（含）。走 seq_case_no 单调账本（仅增不减）；
-        UPDATE+SELECT 在事务内一次持锁完成（对齐 Java「单连接下无竞态」论断，显式更稳）。"""
-        with self.db.tx() as conn:
-            conn.execute("UPDATE seq_case_no SET val = val + ? WHERE id = 1", (n,))
-            row = conn.execute("SELECT val FROM seq_case_no WHERE id = 1").fetchone()
+        UPDATE+SELECT 在事务内一次完成（RLock 全程持锁 + InnoDB 行锁，无竞态窗口）。
+        M2 起 tx() 不再 yield 连接本体——事务内嵌套走 db.execute/query_one（RLock 同线程重入安全）。"""
+        with self.db.tx():
+            self.db.execute("UPDATE seq_case_no SET val = val + ? WHERE id = 1", (n,))
+            row = self.db.query_one("SELECT val FROM seq_case_no WHERE id = 1")
         v = int(row["val"]) if row is not None else n
         return v - n + 1
 

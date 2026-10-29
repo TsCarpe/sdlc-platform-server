@@ -12,13 +12,14 @@ from __future__ import annotations
 
 import os
 import uuid
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from urllib.parse import unquote, urlparse
 
 import pymysql
 import pytest
 
 from platform_sdlc import models
+from platform_sdlc.db import Database
 
 models.TestCase.__test__ = False  # type: ignore[attr-defined]
 
@@ -61,7 +62,7 @@ def mysql_dsn() -> Iterator[str]:
 
 @pytest.fixture()
 def db_dsn(mysql_dsn: str) -> Iterator[str]:
-    """函数级独立 schema：M2 起每测试的 Database / Settings 都从这里取 DSN。"""
+    """函数级独立 schema：每测试的 Database / Settings 都从这里取 DSN。"""
     name = f"sdlc_{uuid.uuid4().hex[:8]}"
     _admin_execute(mysql_dsn, f"CREATE DATABASE `{name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci")
     base = mysql_dsn.rsplit("/", 1)[0]
@@ -69,3 +70,47 @@ def db_dsn(mysql_dsn: str) -> Iterator[str]:
         yield f"{base}/{name}"
     finally:
         _admin_execute(mysql_dsn, f"DROP DATABASE `{name}`")
+
+
+@pytest.fixture()
+def make_isolated_db(mysql_dsn: str) -> Iterator[Callable[[], Database]]:
+    """独立 schema 的 Database 工厂（legacy 存量库 / 二次建库场景）：每次调用 =
+    CREATE DATABASE 全新库 + Database 实例；teardown 统一 close 后 DROP（依赖反序保证不卡 MDL）。"""
+    made: list[Database] = []
+    names: list[str] = []
+
+    def _make() -> Database:
+        name = f"sdlc_{uuid.uuid4().hex[:8]}"
+        _admin_execute(mysql_dsn, f"CREATE DATABASE `{name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci")
+        db = Database(f"{mysql_dsn.rsplit('/', 1)[0]}/{name}")
+        names.append(name)
+        made.append(db)
+        return db
+
+    try:
+        yield _make
+    finally:
+        for db in made:
+            db.close()
+        for name in names:
+            _admin_execute(mysql_dsn, f"DROP DATABASE `{name}`")
+
+
+@pytest.fixture()
+def make_database(db_dsn: str) -> Iterator[Callable[..., Database]]:
+    """Database 工厂 + 登记：测试内每次调用建一个实例（app 连接 / 断言第二连接 / legacy 库皆经此），
+    teardown 统一 close 后 db_dsn 才 DROP DATABASE（未关连接会卡 MDL 锁）。"""
+
+    # 建出的实例登记在闭包列表：finalize 顺序 make_database → db_dsn（依赖反序），close 先于 DROP
+    made: list[Database] = []
+
+    def _tracked(dsn: str = db_dsn) -> Database:
+        db = Database(dsn)
+        made.append(db)
+        return db
+
+    try:
+        yield _tracked
+    finally:
+        for db in made:
+            db.close()

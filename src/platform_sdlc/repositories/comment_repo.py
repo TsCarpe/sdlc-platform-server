@@ -12,7 +12,7 @@ class CommentRepo:
 
     def insert(self, c: CaseComment) -> None:
         self.db.execute(
-            "INSERT INTO case_comment(req_id,case_id,by,text,created_at) VALUES(?,?,?,?,?)",
+            "INSERT INTO case_comment(req_id,case_id,`by`,text,created_at) VALUES(?,?,?,?,?)",  # by 为 MySQL 保留字
             (c.req_id, c.case_id, c.by, c.text, c.created_at),
         )
 
