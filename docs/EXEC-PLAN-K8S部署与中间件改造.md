@@ -255,6 +255,12 @@ Namespace: sdlc
 
 ## §7 验收总门（每次上线 + 每季度回归）
 
+> **阶段 2 验收实录（2026-10-29，M6 批）**：① pytest 202/202（MySQL 后端）；② verify-all 12 黑盒全绿
+> （MySQL 实例 + 导入真数据，全程 11s 无劣化）；③ 业务流黑盒覆盖（verify-*.mjs 建卡→质检→澄清→发布→
+> 设计→门禁免模型全链）；④ verify-agent 真模型端到端未跑（需模型余额——阶段 1 容器化首验时补）；
+> ⑤ 备份/恢复演练过（mysqldump --single-transaction 1.1M gzip → 临时库恢复四表 COUNT 一致）；
+> 部署核对项：8.0.40 / utf8mb4_0900_ai_ci / STRICT_TRANS_TABLES / wait_timeout 28800 / max_allowed_packet 64M 全达标。
+
 1. `uv run pytest` 全绿（MySQL 后端）；
 2. `scripts/verify-all.sh BASE=<内网地址>` 全绿（自带进程内 agent 暂停/恢复）；
 3. 浏览器走通完整业务流：建卡 → source_import → 质检 → 澄清答复 → 发布 → 设计 → 门禁；
