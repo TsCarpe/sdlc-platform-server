@@ -53,3 +53,20 @@ def test_token_guard(tmp_path: Path, db_dsn: str) -> None:
         assert denied.json()["error"].startswith("未授权")  # 统一 {error} 形状（AUDIT T-10）
         ok = c.post("/api/anything", json={}, headers={"X-Token": "secret"})
         assert ok.status_code != 401  # 404（无此路由）但已过令牌
+
+
+def test_ready_ok(client: TestClient) -> None:
+    r = client.get("/api/health/ready")
+    assert r.status_code == 200
+    assert r.json() == {"ok": True, "db": "up"}
+
+
+def test_ready_503_when_db_closed_but_health_alive(tmp_path: Path, db_dsn: str) -> None:
+    settings = Settings(_env_file=None, db_dsn=db_dsn)  # pyright: ignore[reportCallIssue]
+    app = create_app(settings, cwd=tmp_path)
+    app.state.db.close()  # 幂等；ping 的 _closed 检查在此生效
+    with TestClient(app) as c:
+        not_ready = c.get("/api/health/ready")
+        assert not_ready.status_code == 503
+        assert not_ready.json()["error"].startswith("数据库未就绪")
+        assert c.get("/api/health").status_code == 200  # liveness 与 DB 解耦（防重启风暴承诺钉测试）

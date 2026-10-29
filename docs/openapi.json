@@ -25,6 +25,26 @@
     }
    }
   },
+  "/api/health/ready": {
+   "get": {
+    "summary": "Ready",
+    "operationId": "ready_api_health_ready_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "type": "object",
+         "title": "Response Ready Api Health Ready Get"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/requirements": {
    "post": {
     "summary": "Create",

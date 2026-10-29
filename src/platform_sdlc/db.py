@@ -276,3 +276,12 @@ class Database:
             if not self._closed:
                 self._pool.close()
                 self._closed = True
+
+    def ping(self) -> None:
+        """连通性探测（K8s readiness 专用）：借出即 ping（PooledDB ping=1），不取全局 RLock——
+        长事务持锁期间 readiness 不应排队被误判摘流；池满即抛错不阻塞。池已关闭/借出失败抛异常，
+        由端点转 503（PooledDB.close() 后 connection() 会静默新开连接，_closed 检查必要）。"""
+        if self._closed:
+            raise RuntimeError("连接池已关闭")
+        conn = self._pool.connection()
+        conn.close()  # DBUtils 语义：归还池（借出时的 ping=1 已完成探测）

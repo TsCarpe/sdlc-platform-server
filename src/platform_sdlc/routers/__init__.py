@@ -22,7 +22,7 @@ def register_routers(app: FastAPI, ctx: AppContext) -> None:
         tasks,
     )
 
-    app.include_router(health.router)
+    app.include_router(health.router(ctx))
     app.include_router(requirements.router(ctx))
     app.include_router(changes.router(ctx))
     app.include_router(cases.router(ctx))
