@@ -220,6 +220,10 @@ InnoDB 下原子性成立，「DB 权威 + 轮询」的收益损失很小，而 
 > 卷等运行契约浓缩进 runbook §5 交接表）。`deploy/build.sh` 增配置暂存 + DSN 非空构建期门禁；
 > `compose/server.verify.yml` 改 baked 形态验证（栈不再注入 DSN/AGENT_ENABLED）。原 §7 运维确认清单
 > 与上线动作归运维侧。镜像推送（PUSH=1）能力保留，待运维定 SWR region 后启用。
+> **同日二次调整（前端出镜像）**：`Dockerfile.server` 更名 `Dockerfile` 并撤除 stage1 node 构建——
+> 镜像收窄为纯后端 API（`static/` 缺省即纯 API 模式，`main._mount_static` 既有分支零代码改动）；
+> 前端 dist 由部署侧静态托管，须与 `/api` 同源反代（平台无 CORS 中间件，跨域直连需先加
+> CORSMiddleware）；`deploy/build.sh` 同步去 web 仓暂存与 node 基础镜像探测。
 
 1. `Dockerfile.server`(+`.dockerignore`) + compose 本地起 → `verify-all.sh` 全绿（容器内首验）。
 2. ~~K8s manifests（Deployment/PVC/Service/ConfigMap/Secret/probes）→ 内网集群上线~~（2026-10-30 归运维，交付物已撤出仓）。

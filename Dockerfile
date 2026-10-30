@@ -1,20 +1,11 @@
-# SDLC 平台后端镜像（EXEC-PLAN-K8s 阶段 1）。
-# 多阶段：stage1 node 构建 web 前端 → stage2 python 运行时 + skills 仓固化。
-# 构建前置：deploy/build.sh 已把 web 仓源码暂存 .build/web/、skills 仓暂存 .build/skills/
-# （两仓在仓外进不了构建上下文；.dockerignore 黑名单不命中 .build/）。
-# 基础镜像走 SWR 的 docker.io 代理（公司内网拉取通路）；代理路径若不含 library/ 段，
-# 备选格式 swr.cn-north-4.myhuaweicloud.com/ddn-k8s/library/<img>（以实测为准，见 build.sh 前置探测）。
+# SDLC 平台后端镜像（纯 API）。
+# 2026-10-30 前端出镜像：web dist 由部署侧静态托管（与 /api 同源反代，平台无 CORS 中间件）；
+# static/ 不存在即纯 API 模式——main._mount_static 既有分支，零代码改动。
+# 构建前置：deploy/build.sh 已把 skills 仓暂存 .build/skills/、配置暂存 .build/env
+# （仓外内容进不了构建上下文；.dockerignore 黑名单不命中 .build/）。
+# 基础镜像走 SWR 的 docker.io 代理（公司内网拉取通路）。
 
-# ---------- stage 1：web 前端构建（vite：base './' 零 env，同源 /api 无 CORS） ----------
-FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/node:20 AS web-builder
-WORKDIR /web
-ARG NPM_REGISTRY=https://registry.npmjs.org
-COPY .build/web/package.json .build/web/package-lock.json ./
-RUN npm config set registry "$NPM_REGISTRY" && npm ci
-COPY .build/web/ ./
-RUN npm run build
-
-# ---------- stage 2：运行时 ----------
+# ---------- 运行时 ----------
 FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/python:3.12-slim
 
 # TZ 生效两层：tzdata（slim 无 zoneinfo 时 TZ 名解析失败回落 UTC——Times.now() naive 本地时间，
@@ -40,11 +31,10 @@ RUN uv sync --frozen --no-dev --no-install-project --compile-bytecode
 COPY src/ ./src/
 RUN uv sync --frozen --no-dev
 
-# skills 仓（构建期固化版本，REVISION 留档溯源）+ 前端产物（stage1 产出）
+# skills 仓（构建期固化版本，REVISION 留档溯源）
 # + 配置 baked（build.sh 暂存 .build/env → /opt/app/.env，pydantic-settings cwd 直读；密钥进镜像层
-#   为内网开发环境既定取舍——镜像勿推公网仓库；K8s 交付物已撤出仓，编排归运维）
+#   为内网开发环境既定取舍——镜像勿推公网仓库；K8s 编排归运维）
 COPY .build/skills/ /opt/app/skills/
-COPY --from=web-builder /web/dist ./static/
 COPY .build/env /opt/app/.env
 
 # 镜像级默认（路径类固化；环境变量优先于 env 文件，/opt/app/.env 里配同名路径键不生效。

@@ -88,8 +88,9 @@ node scripts/verify-assistant.mjs  # 查询聊天助理冒烟（需模型余额�
 
 ## 镜像交付（K8s 编排归运维）
 
-镜像构建 `deploy/build.sh`（多阶段：web 前端 + skills 仓固化进镜像，基础镜像走 SWR docker.io 代理；
-配置构建期 baked——`deploy/env.image` 打进 `/opt/app/.env`，模板 `deploy/env.image.example`）。
+镜像构建 `deploy/build.sh`（纯后端 API 镜像：skills 仓固化 + 配置 baked 进 `/opt/app/.env`，模板
+`deploy/env.image.example`，基础镜像走 SWR docker.io 代理；前端 dist 不在镜像，另行静态托管并与
+`/api` 同源反代）。
 K8s 编排/集群配置归运维；运行契约（端口/卷/探针/单副本硬约束）与移交确认项见
 [docs/部署runbook.md](docs/部署runbook.md) §5；容器本地验证用 `compose/server.verify.yml`。
 健康端点：`/api/health`（静态，liveness/startup）与 `/api/health/ready`（含 MySQL 连通性，readiness）。

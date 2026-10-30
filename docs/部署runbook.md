@@ -4,12 +4,13 @@
 > （`sdlc-platform-server:local`；需推送时 `PUSH=1` 待运维定 SWR region 后一条命令）。
 > 配置走**构建期 baked**：`deploy/env.image` → `/opt/app/.env`（pydantic-settings cwd 直读，
 > 运行期环境变量仍可覆盖文件值）。
-> 配套件：`Dockerfile.server` / `deploy/build.sh` / `deploy/env.image.example` / `compose/server.verify.yml`。
+> 配套件：`Dockerfile` / `deploy/build.sh` / `deploy/env.image.example` / `compose/server.verify.yml`。
 > 计划与决策记录见 `docs/EXEC-PLAN-K8S部署与中间件改造.md`。
 
 ## 1. 交付物形态与硬约束
 
-- 形态：单容器单进程（uvicorn :8888）+ 单卷 `/data`（media/tasks/sdlc 工作区文件面）+ MySQL
+- 形态：**纯后端 API 单容器**（uvicorn :8888；前端 dist 不在镜像——由部署侧静态托管，与 `/api`
+  同源反代，平台无 CORS 中间件）+ 单卷 `/data`（media/tasks/sdlc 工作区文件面）+ MySQL
   （公司标准组件，Pod 直连）。**配置已 baked 进镜像，运行侧无需注入任何 env**（覆盖排障除外）。
 - **replicas=1 不可改**：db 层 RLock 进程内全局串行（「SELECT 守卫→UPDATE」TOCTOU 防护依赖全程持锁）+
   AgentLoop 进程内任务执行——双副本即双进程，任务原子 claim 单通道与全部守卫失效。
@@ -20,9 +21,9 @@
 
 ## 2. 构建前置（构建机 = 本地开发机）
 
-- docker / rsync / git / node ≥18 / uv / bash（`deploy/build.sh` 与 verify 脚本面）
-- 两仓就位：`~/IdeaProjects/sdlc-platform-web`（前端源码）、`~/IdeaProjects/claude-sdlc-skills`
-  （技能仓，版本须 ≥ 2026-10-28 即 `parse_doc.py --media-manifest`——build.sh 有构建期门禁）
+- docker / rsync / git / uv / bash（`deploy/build.sh` 与 verify 脚本面）
+- skills 仓就位：`~/IdeaProjects/claude-sdlc-skills`（技能仓，版本须 ≥ 2026-10-28 即
+  `parse_doc.py --media-manifest`——build.sh 有构建期门禁）
 - 配置文件：`cp deploy/env.image.example deploy/env.image` 填真值（gitignore 不入库；DSN 密码特殊字符
   必须 URL 百分号编码）。⚠ 密钥（DSN 密码/API_KEY/写令牌/飞书 secret）将进镜像层——内网开发环境既定
   取舍，**镜像勿推公网仓库**。
@@ -35,7 +36,7 @@ ENV_FILE=deploy/env.verify deploy/build.sh       # 验证栈专用配置（见 �
 REGISTRY=… ORG=… PUSH=1 deploy/build.sh          # 构建并推 SWR（需先 docker login；region 待运维定）
 ```
 
-- build.sh 自动完成：web/skills 两仓 rsync 暂存（`.build/`，已 gitignore）→ skills 版本写
+- build.sh 自动完成：skills 仓 rsync 暂存（`.build/`，已 gitignore）→ skills 版本写
   `REVISION` 进镜像 → `parse_doc --media-manifest` 门禁 → **配置暂存 + DSN 非空门禁（空 = 构建期红）**
   → 基础镜像代理可达性探测 → build →（PUSH=1 时）push。
 - **skills 版本固化与排障**：`docker run --rm <image> cat /opt/app/skills/REVISION` 即得构建时固化的
@@ -71,6 +72,7 @@ docker compose -f compose/server.verify.yml down -v
 | 探针 | liveness/startup = `GET /api/health`（静态）；readiness = `GET /api/health/ready`（含 MySQL 连通） |
 | 副本 | **replicas=1 硬约束**（见 §1）；发布策略建议 Recreate（RWO 单卷 + 双进程即破红线），停机窗口最坏 2~3 分钟 |
 | 配置 | 已 baked 进镜像（`/opt/app/.env`），运行侧零注入；环境变量可临时覆盖（优先级高于文件） |
+| 前端 | dist **另行静态部署**（nginx 等），须与 `/api` 同源反代——平台无 CORS 中间件；跨域直连需先给平台加 CORSMiddleware |
 | 数据库 | MySQL 8（utf8mb4_0900_ai_ci / STRICT_TRANS_TABLES）；首启自动建表（schema.sql 全量 + 幂等迁移），需可写 DDL |
 | agent | 需模型端点（OpenAI 兼容）网络可达 + 余额；`curl -X POST /api/agent/pause` 可停领不停服 |
 | 时区 | 镜像内已固化 Asia/Shanghai |
