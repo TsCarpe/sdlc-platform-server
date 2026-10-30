@@ -25,4 +25,4 @@ __pycache__/
 .env
 .DS_Store
 debug_server.py
-# 保留进上下文：src/、pyproject.toml、uv.lock、deploy/、.build/（skills 暂存 + baked 配置 env）
+# 保留进上下文：src/、pyproject.toml、uv.lock、deploy/、skills/（vendor 副本）、.build/（baked 配置 env）

@@ -19,11 +19,11 @@
 - 日志：容器 stdout。
 - 时区 Asia/Shanghai 已固化进镜像（tzdata + ENV + /etc/localtime 三层；容器内 `date` 非 +08:00 = 立即排查）。
 
-## 2. 构建前置（构建机 = 本地开发机）
+## 2. 构建前置（构建机 = 服务器，单一仓 clone 即可）
 
-- docker / rsync / git / uv / bash（`deploy/build.sh` 与 verify 脚本面）
-- skills 仓就位：`~/IdeaProjects/claude-sdlc-skills`（技能仓，版本须 ≥ 2026-10-28 即
-  `parse_doc.py --media-manifest`——build.sh 有构建期门禁）
+- docker / git / python3 / uv / bash（`deploy/build.sh` 与 verify 脚本面；rsync 已不需要）
+- **本仓单 clone**：skills 已 vendor 进仓 `skills/`（原独立仓 claude-sdlc-skills 2026-10-30 定格归档，
+  版本随本仓 commit 原子钉死）；构建前 `git pull` 本仓即可
 - 配置文件：`cp deploy/env.image.example deploy/env.image` 填真值（gitignore 不入库；DSN 密码特殊字符
   必须 URL 百分号编码）。⚠ 密钥（DSN 密码/API_KEY/写令牌/飞书 secret）将进镜像层——内网开发环境既定
   取舍，**镜像勿推公网仓库**。
@@ -36,12 +36,11 @@ ENV_FILE=deploy/env.verify deploy/build.sh       # 验证栈专用配置（见 �
 REGISTRY=… ORG=… PUSH=1 deploy/build.sh          # 构建并推 SWR（需先 docker login；region 待运维定）
 ```
 
-- build.sh 自动完成：skills 仓 rsync 暂存（`.build/`，已 gitignore）→ skills 版本写
-  `REVISION` 进镜像 → `parse_doc --media-manifest` 门禁 → **配置暂存 + DSN 非空门禁（空 = 构建期红）**
-  → 基础镜像代理可达性探测 → build →（PUSH=1 时）push。
-- **skills 版本固化与排障**：`docker run --rm <image> cat /opt/app/skills/REVISION` 即得构建时固化的
-  commit 与主题；升级 skills 仓后重新 build 即更新（镜像不可变，无运行时漂移）。
-- 已知耦合：feishu fetch 用镜像内 venv python 调 skills 仓脚本——skills 脚本依赖必须 ⊆ 主仓依赖
+- build.sh 自动完成：skills 版本门禁（仓内 vendored 副本 `parse_doc --media-manifest`）→
+  **配置暂存 + DSN 非空门禁（空 = 构建期红）** → 基础镜像代理可达性探测 → build →（PUSH=1 时）push。
+- **版本即镜像 tag**：skills 已 vendor 进仓（版本随本仓 commit 原子钉死），镜像 tag `日期-短rev`
+  即完整版本——排障对 git rev 即可，无独立 skills 版本面。
+- 已知耦合：feishu fetch 用镜像内 venv python 调 skills 脚本——skills 脚本依赖必须 ⊆ 主仓依赖
   （当前纯 stdlib 成立；若 skills 将来引第三方库，需同步进 pyproject）。
 
 ## 4. 容器内验证（每次交付必过；任一不满足 = 交付未完成）

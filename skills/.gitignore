@@ -1,0 +1,22 @@
+.DS_Store
+*.local.md
+.tmp-upload/
+.idea/
+.serena/
+.claude/
+__pycache__/
+
+# 本地工具产物
+.agents/
+.playwright-cli/
+.playwright-mcp/
+.zcode/
+skills-lock.json
+node_modules/
+
+# 本地演示项目（未随仓库发布）
+platform-demo/
+
+# PoC 本地产物（评估期；已移出 git 追踪，本地保留）
+poc/
+/outputs/

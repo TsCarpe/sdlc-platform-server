@@ -1,0 +1,43 @@
+# 执行范例（真实项目 TC-01 单用例实测精简版）
+
+> 单用例完整执行示范：姿势应用 → 等待稳定 → 证据三连 → 判定 → 口径冲突处理 → 回填。历史实例，界面细节以当期项目为准。
+> 本范例展示的是**单用例证据标准**（子 agent 上下文内的行为）；exec 阶段主上下文的派发/回传视角见同目录 `exec-dispatch.md`。
+
+## 背景 → 计划
+
+用例：管理员五步向导创建评选活动（名称=创建验证-冒烟，全默认配置），断言四面：
+- 页面：列表新增行，状态=未开始
+- 接口：save 返回 success=true + status=not_started
+- 落库：主行 + 维度 5 / 名额 4 / 评审人 2 / 封面 1 / **合作方全量快照行**
+- console：无 error
+
+## 执行（精选步骤）
+
+1. 点「创建活动」→ `chrome-devtools:wait_for ["下一步","活动名称"]` 页面就绪
+2. 步骤一按姿势表填：名称 `chrome-devtools:fill`；类别下拉 `chrome-devtools:evaluate_script` DOM click 文本匹配；日期 `chrome-devtools:evaluate_script` focus+`chrome-devtools:type_text`+Enter 逐个键入并复核 value；名额 `chrome-devtools:fill_form`
+3. 步骤二介绍 `chrome-devtools:click` 容器→`chrome-devtools:type_text`；封面 `chrome-devtools:upload_file`（文件在 `<项目>/.tmp-upload/`）
+4. 🔍 探针：时间链填完后复核推导字段——评审开始自动=活动截止次日（发现页面为四输入推导模型，见下方「口径冲突」）
+5. 提交后 `chrome-devtools:wait_for` 列表特征文本，**证据三连同消息并行**：`chrome-devtools:take_screenshot` + `chrome-devtools:list_network_requests` + `chrome-devtools:list_console_messages`
+6. MySQL：`chrome-devtools:get_network_request` 取 save 响应确认；业务键定位落库（`WHERE name='创建验证-冒烟'` 子查询），多表 COUNT 聚合一条 SQL
+
+## 判定：失败 → BUG-01（口径冲突处理示范）
+
+落库合作方快照行数=1，但直调 `/v1/activity/get_partner_list`（鉴权头按 ui-recipe 组装）实返 3 个合作方。用例预期「全部合作方落全量快照」出自已拍板口径 → **三去向判定**：
+
+- 需求/拍板口径明确（D-01 落改）→ 实现偏离 = **登记 BUG-01**（若需求未定 → 转 Q 待裁决；若用例写错 → 修用例并在 exec-log 留档；禁止静默按实现校正预期）
+
+其余断言四面全过（时间链六字段、子表行数、封面 business_type）。判定：**失败（R1）→ BUG-01**，P0 快报立即报告用户。
+
+## 失败形态速查（本例实测）
+
+| 现象 | 归因 |
+|---|---|
+| 合作方快照行数 1 ≠ 合作方总数 3 | 实现口径违背（前端 partnerList 只传 1 个+后端未展开）→ BUG |
+| 日期 `chrome-devtools:fill` 后值丢失/空 | `chrome-devtools:fill` 误用——date-picker 必须键盘路径 |
+| 评审人已选人数回零 | 按 selected class 判断后重复点击，把已选项点掉——多选必须同步连点+计数复核 |
+
+## 回填（三处）
+
+- exec-log.md 追加一段：结果/证据引用（截图名+接口+SQL 摘引）/备注（含口径冲突判定过程与观察项）
+- cases.md：TC-01 结果字段 `失败（R1）→ BUG-01` + 缺陷跟踪表登记（描述含拍板口径出处）
+- cases.md 头部进度 0/74 → 1/74

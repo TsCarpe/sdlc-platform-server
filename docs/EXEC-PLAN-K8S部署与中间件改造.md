@@ -224,6 +224,13 @@ InnoDB 下原子性成立，「DB 权威 + 轮询」的收益损失很小，而 
 > 镜像收窄为纯后端 API（`static/` 缺省即纯 API 模式，`main._mount_static` 既有分支零代码改动）；
 > 前端 dist 由部署侧静态托管，须与 `/api` 同源反代（平台无 CORS 中间件，跨域直连需先加
 > CORSMiddleware）；`deploy/build.sh` 同步去 web 仓暂存与 node 基础镜像探测。
+> **同日三次调整（skills vendor 进仓，构建单仓自包含）**：镜像在服务器上构建，两仓 clone/pull 的
+> 维护税与「忘 pull skills 版本漂移」风险实测不划算——claude-sdlc-skills 仓定格归档，内容 vendor
+> 进本仓 `skills/`（剔除 .git/poc/开发机痕迹后 1.7M），版本随本仓 commit 原子钉死；REVISION 溯源
+> 机制撤销（镜像 tag 即完整版本）；`deploy/build.sh` 去 SKILLS_REPO/rsync/REVISION 三段，前置仅
+> docker/git/python3；`config.py` agent_skills_repo 默认 `./skills`（顺带修掉 tests/test_v5_clarify
+> 注释所记的「CI 单仓 checkout 读 ~/IdeaProjects 必 fail」隐患）。本地 Claude Code 技能库
+> （~/.agents/skills/sdlc-*，手工同步副本）同步源改为本仓 `skills/skills/`。
 
 1. `Dockerfile.server`(+`.dockerignore`) + compose 本地起 → `verify-all.sh` 全绿（容器内首验）。
 2. ~~K8s manifests（Deployment/PVC/Service/ConfigMap/Secret/probes）→ 内网集群上线~~（2026-10-30 归运维，交付物已撤出仓）。

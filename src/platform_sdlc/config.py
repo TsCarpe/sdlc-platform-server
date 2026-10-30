@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     agent_base_url: str = ""
     agent_model: str = ""
     agent_api_key: str = ""
-    agent_skills_repo: str = "~/IdeaProjects/claude-sdlc-skills"
+    agent_skills_repo: str = "./skills"  # 仓内 vendor 副本（原独立仓 claude-sdlc-skills 已归档）；相对 cwd=仓根解析
     agent_workspace_root: str = "."
 
     # 飞书接入（DESIGN-飞书接入Python化 §6/§8）：凭据为空 = 无飞书能力（prompt 不生成

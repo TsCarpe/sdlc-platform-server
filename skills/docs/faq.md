@@ -1,0 +1,108 @@
+# FAQ 与术语表
+
+## FAQ
+
+### 安装与触发
+
+**Q：装了 skill 但没有被触发？**
+A：① 确认安装位置被识别——`npx skills list` 或会话内问 AI「当前有哪些 sdlc 开头的 skill」；② 触发依赖 frontmatter description 与你说的话匹配，中文触发词见各 SKILL.md（如「需求体检」「评审关口」「AI 测试」「质疑一下这个方案」「配置项盘点」）；③ 也可以显式用斜杠命令：`/sdlc-intent`、`/sdlc-gate <需求名>`、`/sdlc-test cases <需求名>` 等。
+
+**Q：能只装其中一两个 skill 吗？**
+A：可以。`npx skills add` 交互选择或 `-s` 指定；plugin 渠道整包安装但每个 skill 独立使用。唯一例外：**sdlc-gate 与 sdlc-test 存在关卡互认**（gate 放行后代改用例审核状态）——单独用 sdlc-test 时该机制自动退化为人工确认，不报错；单独用 sdlc-gate 无影响。
+
+**Q：`npx skills update` 报 Failed to update 怎么办？**
+A：多发生在**版本间有文件移动/删除**时（如 v0.5.0 → v0.5.1 的 runner 模板迁域）——skills CLI 的 update 对 skill 内文件集增删处理不了，且不给出原因。恢复路径（实测有效）：
+
+```bash
+npx skills list -g                                          # 先确认装了哪些
+npx skills remove <skill名> -g -y
+npx skills add TsCarpe/claude-sdlc-skills -g -a claude-code -s <skill名> -y
+```
+
+注意 `-s` 每次只认一个 skill 名（不支持逗号分隔）。plugin 渠道用 `/plugin` 重装不受此影响。
+
+**Q：外部依赖（MCP / CLI / 内置工具）缺失会怎样？**
+A：每个 skill 对外部依赖都声明了降级路径，缺了不炸，但能力打折（下表）：
+
+| 外部依赖 | 谁用 | 缺失时行为 |
+|---|---|---|
+| mysql MCP | sdlc-gate（核对表结构）、sdlc-design（存量勘察核对表结构）、sdlc-test（落库核验） | gate 角色降级纯文档比对；design 按设计内声明的表结构并注明；test 落库断言降级「疑似」并注明 |
+| chrome-devtools MCP | sdlc-test exec | 降级 Playwright（再缺失则该阶段阻塞，不是跳过） |
+| codegraph MCP | sdlc-design（存量勘察）、sdlc-test static | 降级定向 grep + 读文件，结果注明证据降级 |
+| lark-cli | sdlc-intent（飞书文档/评论区）、sdlc-sync（push-artifacts 拉飞书原文快照） | intent 用本地 markdown 文件路径输入，跳过评论区整合；sync 无原文快照可推（快照是质检依据版本），先补 lark-cli 再推 |
+| YApi MCP | sdlc-test cases（接口契约摄入） | 跳过该信息源，用例按需求文档推导 |
+| Figma MCP（如 `figma-context-mcp`） | sdlc-ui-visual（基准获取） | 改用基准图模式；无结构化数据与原版 SVG 下载 |
+| Python 3 | sdlc-intent / sdlc-gate / sdlc-test / sdlc-guardrails / sdlc-ui-visual（脚本） | 走人工核对/降级留档；guard_exec 会警示人工降级形态 |
+| PyYAML | sdlc-guardrails engine | 引擎无法解析规则文件；安装 `pip install pyyaml` 后重试 |
+| Pillow | sdlc-ui-visual compare.py | 脚本报错并提示 `pip3 install Pillow`；像素比对不可用 |
+| Playwright / Node / npm | sdlc-test spec 回归档 | 回归轮降级为 agent 逐用例执行，失去 runner 加速 |
+| git | sdlc-release-check（diff）、sdlc-guardrails（pre-commit） | release-check 无法生成 diff；pre-commit 兜底不可用 |
+| 平台环境（`SDLC_PLATFORM_URL` / `SDLC_PLATFORM_REPO`） | sdlc-sync | 平台不可用时本地工作流完整可用（降级 = 现状）；连接拒绝先确认平台已启动 |
+| Agent 工具（子代理） | sdlc-gate / sdlc-doubt | 核心机制依赖，缺失则该 skill 不可用 |
+
+**Q：和任务框架（如 Trellis）是什么关系？必须配合使用吗？**
+A：不必须。9 个 skill 均可独立运行（sdlc-gate/sdlc-doubt 对项目规范目录的引用均带「读不到则降级」声明；sdlc-design 的 Trellis 交接契约框架无关）。配合任务框架体验更好——大需求的 parent/child 切片、规范注入等由 [large-req-playbook.md](large-req-playbook.md) 描述的机制承接，任何框架或纯目录约定都能复刻。
+
+### 使用建议
+
+**Q：从哪个 skill 开始用？**
+A：按依赖重量渐进（详见 README「按需采用，不必全装」）：sdlc-intent（零依赖）→ sdlc-release-check（零 MCP，任意 git 仓库即用）→ sdlc-doubt → sdlc-design（codegraph / mysql MCP 可选、均带降级，digest 确认后即可用）→ sdlc-gate → sdlc-test（依赖最重）。
+
+**Q：sdlc-test 适用什么技术栈？**
+A：按「Java 后端 + MySQL + Web 前端（Element Plus 系组件库）」打磨；static 阶段的前后端代码定位可适配任意栈（codegraph/grep），exec 阶段的交互姿势手册以 Element Plus 为锚点，其他组件库需自行沉淀姿势（手册结构可直接复用）。
+
+**Q：sdlc-ui-visual 必须配 Figma MCP 和浏览器自动化吗？**
+A：不必须。①基准图模式零 figma 依赖：用户给设计稿截图即可走完整比对闭环，期望值清单靠图像分析/人工读数（只是少了结构化数据自动提取与原版 SVG 图标下载）；②自动截图不可用时，用户手动截图同样能喂给 `scripts/compare.py --actual` 跑像素比对；③栈无关：方法论通用，Vue2/element-ui 姿势在 references/stack-vue2-element.md，换栈重写该文件即可。所有降级都要求**显式声明证据降级**，不得假称完成比对（判负红线，见该 skill evals）。
+
+**Q：jev-ultrafast（目标驱动浏览器 agent）会接入 sdlc-test exec 吗？**
+A：暂缓。评估结论（2026-09-20）：阶段 A 通过、阶段 B 有条件通过——盲区可静态预判（无 role 弹层控件分诊 fallback）、verify 拦截有效、6.5s/任务，建议双通道（jev 主跑 + agent fallback）而非单通道替代；但接入前置条件「置信门槛规则（DONE 且 confidence<0.5 → 转 fallback）」尚未代码化。PoC 评估记录属本地工作目录，未随仓库分发。
+
+**Q：单人开发/小团队值得用吗？**
+A：sdlc-intent（把 PRD 消化成结构化共识）、sdlc-doubt（决策前对抗复查）单人即有收益；sdlc-gate 的多子代理评审在「设计+用例两份产物都存在」时收益最大；确认点/关卡体系本质是「AI 推进、人裁决」的纪律，与团队规模无关。
+
+**Q：任务框架（如 Trellis）/飞书里已经 ack 了设计文档，为什么还不能开发？**
+A：ack 是**流程性定稿信号**（设计「做完了」），不是质量确认（「对不对」）。放行唯一口径 = sdlc-gate 裁决闭环（issues 头部「评审状态=已放行」，含 --release 落改闭环校验全绿）。guard_dev 开发入口校验拦截的正是「ack 被当成放行信号直接开码」——飞书技术文档的评阅是设计产物的下游发布通道（配套规范见 [feishu-tech-review-guide.md](dev-standards-reference/details/feishu-tech-review-guide.md)；产出该文档的 sdlc-doc 为源项目全局 skill，不在本仓），同样不构成放行。时序：确认点② ack（定稿）→ sdlc-gate 评审+裁决 → 放行 → 确认点③ child prd → 开发。
+
+**Q：我没过 gate 就直接开发了，为什么没拦住？**
+A：旧版触发词只覆盖「待评审」，没有覆盖「开始开发」这个时刻；现已补两处：① sdlc-gate 的 description 增加「开始开发 / 直接开发 / 拆任务 / 写代码 / 实现功能」触发；② 收到开发请求先走「开发请求入口」，查 `sdlc/<需求名>/review/` 最新 issues。`guard_dev` 是**调用即校验、未调用不生效**——没有任务框架启动钩子的项目，由开发会话入口先运行；未放行时模型应停下并指向 `/sdlc-gate`。你明确要求跳过时，会先要你显式确认，再写 `review/exemptions/exemption-<日期>.md` 留痕；A/B 级 degraded 不接受豁免绕过。
+
+**Q：开发完成验证（compile/boot/冒烟）为什么前置到开发侧，不全留给 sdlc-test？**
+A：静态检查查不了「起不起得来」；开发阶段验证失败在**同一上下文内修复**最便宜，后置到 exec 才发现则要换会话重载全部背景，且整轮测试编排（关卡+环境+派发）报废。业界同构：DoD「code compiles」是开发完成定义、冒烟是进入深度测试的准入门槛而非替代——开发阶段验「能不能跑」，测试阶段验「跑得对不对」。机制：`/sdlc-test dev` 产 verify 留档，static/exec 入口（guard_exec 检查5）反查留档倒逼，漏跑会被测试入口拦下。
+
+**Q：产物为什么都写成 Markdown 文件而不是对话里输出？**
+A：产物落盘（`sdlc/<需求名>/`）是这套工作流的底座之一——跨会话可恢复（进度与关卡状态持久化在文件头部）、可逐行核对（人工关卡的核对对象）、可追溯（跨产物 `命名空间.编号` 引用）。会话内输出是易碎的。
+
+### 深入阅读
+
+**Q：想理解这套体系为什么这样设计 / 改某个机制前看什么？**
+A：见 [docs/README.md](README.md) 导读——三条阅读路径（上手用 / 理解方法论 / 深入设计）+ 按问题找文档索引。改 sdlc-test 行为前先读它的[设计决策记录](sdlc-test-design.md)（D1-D22），机制都有当时的取舍理由。
+
+## 术语表
+
+| 术语 | 释义 |
+|---|---|
+| digest | 需求梳理文档：对 PRD 的忠实结构化转述（角色/概念/流程图/状态机/规则口径），sdlc-intent 第一段产物 |
+| audit | 需求体检报告：按七层缺陷维度（概念/状态机/数据字段/规则逻辑/角色覆盖/文档质量/外部参照）分级的缺陷清单 |
+| pm-checklist | 待 PM 澄清清单：🔴/🟡/🔵 分级的问题表，带答复列可直接回传 |
+| 三件套 | digest + audit + pm-checklist，存于 `sdlc/<需求名>/intake/` |
+| 确认点①②③ | 大需求三段式的三个人工核对关口：①业务全貌逐行核对 ②技术骨架（D 表八类别齐套）③child prd 评审（见 playbook） |
+| Q 表 | 待确认项表（问题/当前假设/阻塞范围三列）；硬阻塞=未决口径只锁对应功能点的开发，不阻塞全局 |
+| D 表 | 关键实现决策表，八类别必答（并发/对账/状态联动/统计口径/权限/回显/时间格式/外部降级），漏答不得过确认点② |
+| D 表/规则编号 | 跨产物引用统一 `命名空间.编号`：需求.FR-xx / 体检.P-xx / 功能.F-xx / 确认.Q-xx / 设计.D-xx / 用例.TC-xx / 缺陷.BUG-xx |
+| 三段式 | 大需求自顶向下拆分：第一段业务全貌 → 第二段技术骨架 → 第三段逐功能点切片（骨架 child 先行） |
+| parent / child | 需求级容器任务 / 可独立交付的切片任务（三层金字塔的顶层与底层） |
+| 骨架 child | 第一个切片任务，交付枚举/常量/DDL/公共子结构，完成后业务 child 才放行 |
+| 横切功能点 | 无独立触发角色、代码落点分散多接口的功能（如定时状态流转），随宿主 child 交付 + 核验矩阵补验 |
+| fresh-context 子代理 | 无历史会话记忆的独立 AI 实例——对抗式审查的前提，避免被主会话结论带偏 |
+| 关卡1 / 关卡2 | sdlc-test 的两道**人工**关口：用例审核、报告复验（状态持久化在用例文件头部） |
+| 开发放行守卫 | **机器**守卫（guard_dev.py）：开发入口校验 review 最新一份 issues「评审状态=已放行」——ack≠放行。与关卡1/2 是两条轴：机器守卫 vs 人工关口 |
+| 开发完成验证 | **机器**验证（verify_dev.py，/sdlc-test dev）：compile/boot/冒烟按风险分级执行并留档（C 级 compile+boot；A/B 级全量）；static/exec 入口反查留档 |
+| 冒烟清单 | `sdlc/<需求名>/dev/smoke.md`：agent 从 cases.md P0/核心用例推导落盘的 API 直调清单（四种断言 DSL，计划-验证-执行） |
+| 关卡互认 | sdlc-gate 放行后代改 sdlc-test 关卡1 状态——裁决已覆盖人工用例审核 |
+| RECONCILE 四分类 | 子代理输出的过滤框架：契约误读（不进清单）/ 有效可行动（进）/ 有效权衡（进，标权衡）/ 噪音（不进） |
+| 三类分歧 | 交叉审查发现的设计↔用例口径不一致，按去向分三类：一补用例、二回查设计、三升级用户拍板 |
+| 三去向 | 执行中发现口径冲突的处置：实现偏离=BUG / 需求未定=转 Q / 用例写错=修用例留档；禁止静默按实现校正 |
+| 证据降级 | 外部依赖缺失时退而求其次的取证方式，须在产物中注明（不许静默放行） |
+| 基线 | 双义注意：guardrails 的存量违规基线（`--check` 扫出的旧账报告，不阻塞编辑）≠ release-check 的基线分支（diff 对比的 master/main） |
+| 反合理化表 | sdlc-test 的「借口 vs 现实」表（references/anti-rationalization.md 全量，SKILL.md 留高频三条），拦截执行 AI 的自我合理化路径 |
+| evals | skill 的评估场景文件：规范格式 = 官方 JSON 结构（skills/query/files/expected_behavior）+ 判负红线节，新场景一律此格式；存量场景为 md 勾选清单形态，按批次迁移中。手动回归用、红线判负（规范见 [CONTRIBUTING.md](../CONTRIBUTING.md)） |

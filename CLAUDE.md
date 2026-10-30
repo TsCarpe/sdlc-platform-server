@@ -9,7 +9,8 @@ EXEC-PLAN-K8s 阶段 2 起 SQLite 已退役；uvicorn 单 worker / K8s replicas=
 串行模型不可多进程），
 任务队列 + 进程内单执行通道（openai-agents；外置 runner 已于 2026-10-28 下线，A/B 级评审扇出由
 进程内 spawn_reviewer 工具承载），产物走「草稿 → 人工采纳/发布」两态。
-前端在姊妹仓 `sdlc-platform-web`（构建产物拷入 `static/` 同源托管）。权威文档：人读契约 = `docs/ER图与业务流程.md` §13、
+前端在姊妹仓 `sdlc-platform-web`（2026-10-30 起不在后端镜像——dist 部署侧静态托管并与 /api 同源反代，
+平台无 CORS 中间件）；skills 已 vendor 进本仓 `skills/`（构建单仓自包含）。权威文档：人读契约 = `docs/ER图与业务流程.md` §13、
 机器契约 = `docs/openapi.json`（CI 快照门）；`docs/DESIGN-v4-需求平台权威化.md`（v4 设计）与 `docs/EXEC-PLAN-v4.md`（实施计划）。
 环境变量（SDLC_AGENT_* / SDLC_WRITE_TOKEN 等）见 README。
 

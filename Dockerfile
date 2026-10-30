@@ -1,8 +1,8 @@
-# SDLC 平台后端镜像（纯 API）。
+# SDLC 平台后端镜像（纯 API，单仓自包含）。
 # 2026-10-30 前端出镜像：web dist 由部署侧静态托管（与 /api 同源反代，平台无 CORS 中间件）；
 # static/ 不存在即纯 API 模式——main._mount_static 既有分支，零代码改动。
-# 构建前置：deploy/build.sh 已把 skills 仓暂存 .build/skills/、配置暂存 .build/env
-# （仓外内容进不了构建上下文；.dockerignore 黑名单不命中 .build/）。
+# skills 仓已 vendor 进本仓 skills/（原 claude-sdlc-skills 独立仓定格归档）——构建只依赖本仓 clone；
+# 配置由 deploy/build.sh 暂存 .build/env（gitignore，含密钥）。
 # 基础镜像走 SWR 的 docker.io 代理（公司内网拉取通路）。
 
 # ---------- 运行时 ----------
@@ -31,10 +31,10 @@ RUN uv sync --frozen --no-dev --no-install-project --compile-bytecode
 COPY src/ ./src/
 RUN uv sync --frozen --no-dev
 
-# skills 仓（构建期固化版本，REVISION 留档溯源）
+# skills（仓内 vendor 副本；版本随本仓 commit 原子钉死，镜像 tag 即完整版本）
 # + 配置 baked（build.sh 暂存 .build/env → /opt/app/.env，pydantic-settings cwd 直读；密钥进镜像层
 #   为内网开发环境既定取舍——镜像勿推公网仓库；K8s 编排归运维）
-COPY .build/skills/ /opt/app/skills/
+COPY skills/ /opt/app/skills/
 COPY .build/env /opt/app/.env
 
 # 镜像级默认（路径类固化；环境变量优先于 env 文件，/opt/app/.env 里配同名路径键不生效。
