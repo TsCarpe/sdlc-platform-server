@@ -17,3 +17,5 @@ logs/
 /.playwright-mcp/
 /tasks/
 /.build/
+/deploy/env.image
+/deploy/env.verify

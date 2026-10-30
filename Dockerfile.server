@@ -40,14 +40,17 @@ RUN uv sync --frozen --no-dev --no-install-project --compile-bytecode
 COPY src/ ./src/
 RUN uv sync --frozen --no-dev
 
-# skills 仓（构建期固化版本，REVISION 留档溯源）+ 前端产物（stage1 产出）+ preStop 脚本
+# skills 仓（构建期固化版本，REVISION 留档溯源）+ 前端产物（stage1 产出）
+# + 配置 baked（build.sh 暂存 .build/env → /opt/app/.env，pydantic-settings cwd 直读；密钥进镜像层
+#   为内网开发环境既定取舍——镜像勿推公网仓库；K8s 交付物已撤出仓，编排归运维）
 COPY .build/skills/ /opt/app/skills/
 COPY --from=web-builder /web/dist ./static/
-COPY deploy/prestop.py /opt/app/prestop.py
+COPY .build/env /opt/app/.env
 
-# 镜像级默认（K8s 由 ConfigMap 显式同值注入保可见性；绝对路径直解且程序不建目录——K8s 侧 initContainer 负责）
+# 镜像级默认（路径类固化；环境变量优先于 env 文件，/opt/app/.env 里配同名路径键不生效。
+# 绝对路径直解且程序不建目录——/data 挂卷后目录须存在，卷内目录由运维侧负责）
 ENV SDLC_AGENT_SKILLS_REPO=/opt/app/skills SDLC_MEDIA_DIR=/data/media SDLC_AGENT_WORKSPACE_ROOT=/data/ws
-RUN mkdir -p /data/media /data/ws && chown -R appuser:appuser /opt/app /data
+RUN mkdir -p /data/media /data/ws && chmod 600 /opt/app/.env && chown -R appuser:appuser /opt/app /data
 
 USER appuser
 EXPOSE 8888

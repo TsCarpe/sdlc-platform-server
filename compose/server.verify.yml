@@ -1,5 +1,7 @@
-# 本地容器验证（EXEC-PLAN-K8s 阶段 1 批次 D）：server 镜像 + MySQL 全套起容器，宿主跑黑盒回归。
+# 本地容器验证（目标形态 = 配置 baked 进镜像，2026-10-30 起）：server 镜像 + MySQL 全套起容器，宿主跑黑盒回归。
 # 用法（顺序勿乱——verify-all 会暂停/恢复进程内 agent，verify-agent 要在恢复后独立跑）：
+#   ⓪ cp deploy/env.verify.example deploy/env.verify && ENV_FILE=deploy/env.verify deploy/build.sh
+#      （DSN/AGENT_ENABLED baked 进镜像；本栈 environment 不再注入这两项——起栈即验证 baked 通道生效）
 #   ① SERVER_IMAGE=sdlc-platform-server:local SDLC_AGENT_API_KEY=<key> \
 #      docker compose -f compose/server.verify.yml up -d --wait
 #      （--wait 只等容器 running/healthcheck，不等应用绑定端口——起后 curl /api/health 就绪再跑 ②）
@@ -8,7 +10,7 @@
 #   ③ SDLC_AGENT_BASE_URL/MODEL/API_KEY=… node scripts/verify-agent.mjs http://127.0.0.1:8888   # 真模型冒烟
 #   ④ docker compose -f compose/server.verify.yml down -v
 # 宿主 3306 映射为 13306：与 compose/mysql.dev.yml（3306）可并存，无需先停开发库。
-# agent 三元组密钥经宿主 env 透传，不落本文件。
+# agent 三元组密钥经宿主 env 透传，不落本文件（环境变量优先于镜像内 .env——覆盖语义本身在验证契约内）。
 # 独立项目名：与同目录 mysql.dev.yml 区分项目（compose 默认项目名 = 目录名「compose」——不显式
 # 命名的话，两文件的 mysql 服务同项目互顶，up 验证栈会静默重建开发库容器）。
 name: sdlc-verify
@@ -44,8 +46,8 @@ services:
       - "127.0.0.1:8888:8888"
     environment:
       TZ: Asia/Shanghai
-      SDLC_DB_DSN: mysql://root:sdlc@mysql:3306/sdlc   # 容器网络内走服务名；宿主侧对应 13306
-      SDLC_AGENT_ENABLED: "true"   # Settings 默认 false——verify-agent 第一步断言 enabled，漏配必红
+      # DSN / AGENT_ENABLED 已 baked 进镜像（deploy/env.verify → /opt/app/.env），此处不再注入——
+      # 起栈即验证配置在镜像里真实生效；agent 三元组仍走宿主 env 透传（密钥不进验证镜像）
       SDLC_AGENT_BASE_URL: ${SDLC_AGENT_BASE_URL:-}
       SDLC_AGENT_MODEL: ${SDLC_AGENT_MODEL:-}
       SDLC_AGENT_API_KEY: ${SDLC_AGENT_API_KEY:-}

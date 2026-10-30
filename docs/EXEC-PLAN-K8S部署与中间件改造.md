@@ -211,10 +211,18 @@ InnoDB 下原子性成立，「DB 权威 + 轮询」的收益损失很小，而 
 > **容器内首验实录**：单容器冒烟全过（health/ready 双 200、TZ +08:00、非 root uid=1000、curl/jq 在位、
 > skills REVISION=49ef0b3）；verify-all **335 PASS / 0 FAIL**（含 verify-token 自建实例，DSN 走 13306，
 > tasks/ 绑定挂载对齐宿主夹具面）；**verify-agent 真模型端到端通过（M6 遗留正式补掉**：source_import
-> 9 块落库 → quality_check 14 澄清/锚点 46/53 → digest 全链）。剩余 = §8 待运维项闭环后按 runbook 上内网集群。
+> 9 块落库 → quality_check 14 澄清/锚点 46/53 → digest 全链）。
+>
+> **⚠ 2026-10-30 目标收窄（分工调整）**：K8s 编排/集群配置全部移交运维，本仓交付边界 = 自带配置的
+> Docker 镜像（配置构建期 baked：`deploy/env.image` → `/opt/app/.env`，pydantic-settings 直读；
+> 密钥进镜像层为内网开发环境既定取舍）。**K8s 交付物同日撤出仓**：`deploy/k8s/` 三静态件、`deploy/k8s.tpl`、
+> 仓根 `aliprod.groovy`、`deploy/prestop.py` 删除（Dockerfile 同步去 prestop COPY；探针/单副本/Recreate/
+> 卷等运行契约浓缩进 runbook §5 交接表）。`deploy/build.sh` 增配置暂存 + DSN 非空构建期门禁；
+> `compose/server.verify.yml` 改 baked 形态验证（栈不再注入 DSN/AGENT_ENABLED）。原 §7 运维确认清单
+> 与上线动作归运维侧。镜像推送（PUSH=1）能力保留，待运维定 SWR region 后启用。
 
 1. `Dockerfile.server`(+`.dockerignore`) + compose 本地起 → `verify-all.sh` 全绿（容器内首验）。
-2. K8s manifests（Deployment/PVC/Service/ConfigMap/Secret/probes）→ 内网集群上线（备份 CronJob 已拍板移除，§3.6）。
+2. ~~K8s manifests（Deployment/PVC/Service/ConfigMap/Secret/probes）→ 内网集群上线~~（2026-10-30 归运维，交付物已撤出仓）。
 3. 数据：全新起库（✅ §6），PVC 空挂即可，无迁移步骤。
 4. 任务通道：**进程内 agent（唯一通道，✅ §0/§8-4 拍板）**——skills 仓 `claude-sdlc-skills` 在
    `Dockerfile.server` 构建期固化进镜像（版本 ≥ 2026-10-28），`SDLC_AGENT_SKILLS_REPO` 指镜像内

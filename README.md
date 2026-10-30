@@ -86,15 +86,15 @@ node scripts/verify-assistant.mjs  # 查询聊天助理冒烟（需模型余额�
 
 静态检查（贡献者）：`uv run pyright && uv run ruff check src tests`（pyright strict 全量）。
 
-## 线上部署（K8s · ACK）
+## 镜像交付（K8s 编排归运维）
 
-镜像构建 `deploy/build.sh`（多阶段：web 前端 + skills 仓固化进镜像，基础镜像走 SWR docker.io 代理）；
-部署件 `deploy/k8s.tpl` + `deploy/k8s/`（PVC/ConfigMap/Secret）+ 仓根 `aliprod.groovy`（Jenkins 自渲染）。
-全流程、一次性准备与验收门见 [docs/部署runbook.md](docs/部署runbook.md)；容器本地验证用
-`compose/server.verify.yml`。健康端点：`/api/health`（静态，liveness/startup）与
-`/api/health/ready`（含 MySQL 连通性，readiness）。
+镜像构建 `deploy/build.sh`（多阶段：web 前端 + skills 仓固化进镜像，基础镜像走 SWR docker.io 代理；
+配置构建期 baked——`deploy/env.image` 打进 `/opt/app/.env`，模板 `deploy/env.image.example`）。
+K8s 编排/集群配置归运维；运行契约（端口/卷/探针/单副本硬约束）与移交确认项见
+[docs/部署runbook.md](docs/部署runbook.md) §5；容器本地验证用 `compose/server.verify.yml`。
+健康端点：`/api/health`（静态，liveness/startup）与 `/api/health/ready`（含 MySQL 连通性，readiness）。
 
 ## 安全边界（继承 v1 共识）
 
 无登录（内网互信）；默认绑 0.0.0.0（对外暴露前明确评估）；写防护可启用 `SDLC_WRITE_TOKEN`（写接口要求 X-Token 头）；
-SQL 全参数化；库（MySQL）由公司 DB 平台备份，文件面（media/任务工作区）走 PVC——备份边界见 runbook §8。
+SQL 全参数化；库（MySQL）由公司 DB 平台备份，文件面（media/任务工作区）走 PVC——备份边界见 runbook §6。
